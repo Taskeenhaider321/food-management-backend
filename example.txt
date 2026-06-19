@@ -1,0 +1,32 @@
+// Example controller usage
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { TabPermissionGuard } from '../auth/guards/tab-permission.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RequireTab } from '../auth/decorators/tab-permission.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+
+@Controller('employees')
+export class EmployeeController {
+  
+  @Get('protected')
+  @UseGuards(JwtAuthGuard)
+  async getProtectedData(@CurrentUser() user) {
+    return { message: 'Protected data', user: user.Name };
+  }
+
+  @Get('trainer-only')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('trainer', 'auditor')
+  async getTrainerData() {
+    return { message: 'Trainer/Auditor only data' };
+  }
+
+  @Get('hr-creation')
+  @UseGuards(JwtAuthGuard, TabPermissionGuard)
+  @RequireTab('HR', 'creation')
+  async createEmployee(@CurrentUser() user) {
+    return { message: 'Can create employees', user: user.Name };
+  }
+}

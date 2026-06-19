@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MRM Notification</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f9; }
+      .email-container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); overflow: hidden; }
+      .header { background-color: #dc2626; color: #ffffff; padding: 20px; text-align: center; }
+      .content { padding: 30px; color: #333333; }
+      .footer { background-color: #f1f1f1; text-align: center; padding: 20px; color: #777777; }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>MRM Alert - FSQ360</h1>
+      </div>
+      <div class="content">
+        <h2>Management Review Meeting Alert</h2>
+        <p><strong>Meeting Details:</strong></p>
+        <ul>
+          <li><strong>Date:</strong> <%= meetingDate %></li>
+          <li><strong>Time:</strong> <%= meetingTime %></li>
+          <li><strong>Location:</strong> <%= location %></li>
+        </ul>
+        <p><strong>Agenda:</strong></p>
+        <p><%= agenda %></p>
+        <p>Please ensure your attendance and prepare necessary documents.</p>
+        <p>Best regards,<br />Team FSQ-360</p>
+      </div>
+      <div class="footer">
+        <p><em>*Please do not reply to this email. This is a computer-generated email.</em></p>
+      </div>
+    </div>
+  </body>
+</html>

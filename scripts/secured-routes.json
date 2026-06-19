@@ -1,0 +1,2018 @@
+[
+  {
+    "key": "EP_DELETE_CHECKLIST_DELETEALLCHECKLIST",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/checklist/all",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CHECKLIST_DELETECHECKLIST",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/checklist",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_COMPANIES_DELETE_COMPANY_COMPANYID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/companies/:companyId",
+    "file": "src\\admin-management\\company\\company.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CONDUCT_AUDITS_DELETEALLCONDUCTAUDITS",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/conduct-audits/all",
+    "file": "src\\internal-audit\\conduct-audits\\conduct-audits.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CONDUCT_AUDITS_DELETECONDUCTAUDIT",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/conduct-audits",
+    "file": "src\\internal-audit\\conduct-audits\\conduct-audits.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CONDUCT_HACCP_DELETE_ALL_CONDUCT_HACCP",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/conduct-haccp/all",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CONDUCT_HACCP_DELETE_CONDUCT_HACCP",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/conduct-haccp",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CORRECTIVE_ACTION_DELETEALLCORRECTIVEACTIONS",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/corrective-action/all",
+    "file": "src\\internal-audit\\corrective-action\\corrective-action.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_CORRECTIVE_ACTION_DELETECORRECTIVEACTION",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/corrective-action",
+    "file": "src\\internal-audit\\corrective-action\\corrective-action.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DECISION_TREE_DELETE_ALL_DECISION_TREES",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/decision-tree/all",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DECISION_TREE_DELETE_DECISION_TREE",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/decision-tree",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DELETEALLMAINTENANCERECORDS",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/preventive-maintenance/all",
+    "file": "src\\maintenance-program\\preventive-maintenance\\preventive-maintenance.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DELETEALLWORKREQUESTS",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/work-requests/all",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DELETEMAINTENANCEBYID_MAINTAINANCEID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/preventive-maintenance/:id",
+    "file": "src\\maintenance-program\\preventive-maintenance\\preventive-maintenance.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DELETEWORKREQUESTBYID_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/work-requests/:id",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_DEPARTMENTS_DELETE_DEPARTMENT_DEPARTMENTID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/departments/:departmentId",
+    "file": "src\\admin-management\\department\\department.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_EMPLOYEES_DELETEALLEMPLOYEES",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/employees/all",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_EMPLOYEES_DELETEEMPLOYEE_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/employees/:id",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_EQUIPMENT_DELETEALLEQUIPMENT",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/equipments/all",
+    "file": "src\\maintenance-program\\equipment\\equipment.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_EQUIPMENT_DELETEEQUIPMENT_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/equipments/:id",
+    "file": "src\\maintenance-program\\equipment\\equipment.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_FOOD_SAFETY_DELETE_ALL_FOOD_SAFETY",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/food-safety/all",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_FOOD_SAFETY_DELETE_FOOD_SAFETY",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/food-safety",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_HACCP_TEAM_DELETE_ALL_HACCP_TEAMS",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/haccp-team/all",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_HACCP_TEAM_DELETE_HACCP_TEAM_TEAMID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/haccp-team/:teamId",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_INTERNAL_AUDITOR_DELETEALLAUDITORS",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/internal-auditor/all",
+    "file": "src\\internal-audit\\internal-auditor\\internal-auditor.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_INTERNAL_AUDITOR_DELETEAUDITOR",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/internal-auditor",
+    "file": "src\\internal-audit\\internal-auditor\\internal-auditor.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MACHINERY_DELETEALLMACHINERY",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/machines/all",
+    "file": "src\\maintenance-program\\machinery\\machinery.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MACHINERY_DELETEMACHINERY_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "DELETE",
+    "path": "/machines/:id",
+    "file": "src\\maintenance-program\\machinery\\machinery.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MEETING_MINUTES_DELETE_MINUTES",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/meeting-minutes/:id",
+    "file": "src\\review-meetings\\meeting-minutes\\meeting-minutes.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MONTHLY_AUDIT_PLAN_DELETEMONTHLYPLAN",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/monthly-audit-plan",
+    "file": "src\\internal-audit\\monthly-auditing-plan\\monthly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MONTHLY_TRAINING_PLANS_DELETEALLMONTHLYPLANS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/monthly-training-plans/all",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MONTHLY_TRAINING_PLANS_DELETEMONTHLYPLAN_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/monthly-training-plans/:id",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MRM_DELETE_ALL_MRMS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/mrm/all",
+    "file": "src\\review-meetings\\mrm\\mrm.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_MRM_DELETE_MRM",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/mrm",
+    "file": "src\\review-meetings\\mrm\\mrm.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_NOTIFICATION_DELETE_ALL_NOTIFICATIONS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/notification/all",
+    "file": "src\\review-meetings\\notification\\notification.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_NOTIFICATION_DELETE_NOTIFICATION",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/notification",
+    "file": "src\\review-meetings\\notification\\notification.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PARTICIPANTS_DELETE_ALL_PARTICIPANTS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/meeting-participants/all",
+    "file": "src\\review-meetings\\meeting-participants\\meeting-participants.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PARTICIPANTS_DELETE_PARTICIPANTS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/meeting-participants",
+    "file": "src\\review-meetings\\meeting-participants\\meeting-participants.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PERSONAL_REQUISITIONS_DELETEALLPERSONALRECUISION",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/personal-requisitions/all",
+    "file": "src\\competency-management\\personal-requisition\\personal-requisition.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PERSONAL_REQUISITIONS_DELETEPERSONALREQUISITION_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/personal-requisitions/:id",
+    "file": "src\\competency-management\\personal-requisition\\personal-requisition.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PROCESS_OWNER_DELETEALLPROCESSES",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/process-owner/all",
+    "file": "src\\internal-audit\\process-owner\\process-owner.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PROCESS_OWNER_DELETEPROCESS_PROCESSID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/process-owner/:processId",
+    "file": "src\\internal-audit\\process-owner\\process-owner.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PROCESSES_DELETE_ALL_PROCESSES",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/processes/all",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PROCESSES_DELETE_PROCESS",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/processes",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PRODUCT_DELETE_ALL_PRODUCTS",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/product/all",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_PRODUCT_DELETE_PRODUCT_PRODUCTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "DELETE",
+    "path": "/product/:productId",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_RBAC_DERIVED_MODULE_BY_ID",
+    "moduleKey": "RBAC",
+    "method": "DELETE",
+    "path": "/rbac/derived-modules/:derivedModuleId",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_REPORTS_DELETEALLREPORTS",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/reports/all",
+    "file": "src\\internal-audit\\reports\\reports.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_REPORTS_DELETEREPORT",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/reports",
+    "file": "src\\internal-audit\\reports\\reports.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_REVIEW_PLANS_DELETE_PLAN",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/review-plans/:id",
+    "file": "src\\review-meetings\\review-plan\\review-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_REVIEW_TEAM_DELETE_MEMBER",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "DELETE",
+    "path": "/review-team/:id",
+    "file": "src\\review-meetings\\review-team\\review-team.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_SUPPLIERS_DELETE_ALL_SUPPLIERS",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/suppliers/all",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_SUPPLIERS_DELETE_SUPPLIER",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/suppliers",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_TRAINERS_DELETEALLTRAINERS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/trainers/all",
+    "file": "src\\competency-management\\trainer\\trainer.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_TRAINERS_DELETETRAINER_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/trainers/:id",
+    "file": "src\\competency-management\\trainer\\trainer.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_TRAININGS_DELETEALLTRAININGS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/trainings/all",
+    "file": "src\\competency-management\\training\\training.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_TRAININGS_DELETETRAINING_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/trainings/:id",
+    "file": "src\\competency-management\\training\\training.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_USERS_DELETE_USER_USERID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/users/:id",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_USERS_ID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/users/:id",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_YEARLY_AUDIT_PLAN_DELETEALLYEARLYAUDITPLANS",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/yearly-audit-plan/all",
+    "file": "src\\internal-audit\\yearly-auditing-plan\\yearly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_YEARLY_AUDIT_PLAN_DELETEYEARLYAUDITPLAN_PLANID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "DELETE",
+    "path": "/yearly-audit-plan/:planId",
+    "file": "src\\internal-audit\\yearly-auditing-plan\\yearly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_YEARLY_TRAINING_PLANS_DELETEALLYEARLYPLANS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/yearly-training-plans/all",
+    "file": "src\\competency-management\\yearly-training-plan\\yearly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_DELETE_YEARLY_TRAINING_PLANS_DELETEYEARLYPLAN_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "DELETE",
+    "path": "/yearly-training-plans/:id",
+    "file": "src\\competency-management\\yearly-training-plan\\yearly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_CHECKLIST_GETCHECKLISTBYID_CHECKLISTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/checklist/:checklistId",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_GET_CHECKLIST_GETCHECKLISTS_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/checklist/all/:departmentId",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_GET_COMPANIES_GET_ALL_COMPANIES",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/companies/all",
+    "file": "src\\admin-management\\company\\company.controller.ts"
+  },
+  {
+    "key": "EP_GET_COMPANIES_GET_COMPANY",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/companies/:companyId",
+    "file": "src\\admin-management\\company\\company.controller.ts"
+  },
+  {
+    "key": "EP_GET_CONDUCT_AUDITS_GET_CONDUCT_AUDIT_BY_AUDITID_AUDITID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/conduct-audits/by-audit/:auditId",
+    "file": "src\\internal-audit\\conduct-audits\\conduct-audits.controller.ts"
+  },
+  {
+    "key": "EP_GET_CONDUCT_AUDITS_GET_CONDUCT_AUDITS_BY_CHECKLISTID_CHECKLISTID_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/conduct-audits/by-checklist/:checklistId/:departmentId",
+    "file": "src\\internal-audit\\conduct-audits\\conduct-audits.controller.ts"
+  },
+  {
+    "key": "EP_GET_CONDUCT_AUDITS_READCONDUCTAUDITS_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/conduct-audits/all/:departmentId",
+    "file": "src\\internal-audit\\conduct-audits\\conduct-audits.controller.ts"
+  },
+  {
+    "key": "EP_GET_CONDUCT_HACCP_GET_ALL_CONDUCT_HACCP_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/conduct-haccp/all/:departmentId",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_GET_CONDUCT_HACCP_GET_APPROVED_CONDUCT_HACCP_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/conduct-haccp/approved/:departmentId",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_GET_CONDUCT_HACCP_GET_CONDUCT_HACCP_HACCPID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/conduct-haccp/:haccpId",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_GET_CORRECTIVE_ACTION_READCORRECTIVEACTIONBYID_ACTIONID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/corrective-action/by-action/:actionId",
+    "file": "src\\internal-audit\\corrective-action\\corrective-action.controller.ts"
+  },
+  {
+    "key": "EP_GET_CORRECTIVE_ACTION_READCORRECTIVEACTIONBYREPORTID_REPORTID_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/corrective-action/by-report/:reportId/:departmentId",
+    "file": "src\\internal-audit\\corrective-action\\corrective-action.controller.ts"
+  },
+  {
+    "key": "EP_GET_DECISION_TREE_GET_ALL_DECISION_TREES_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/decision-tree/all/:departmentId",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_GET_DECISION_TREE_GET_APPROVED_DECISION_TREES_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/decision-tree/approved/:departmentId",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_GET_DECISION_TREE_GET_DECISION_TREE_TREEID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/decision-tree/:treeId",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_GET_DEPARTMENTS",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/departments/analytics",
+    "file": "src\\admin-management\\department\\department.controller.ts"
+  },
+  {
+    "key": "EP_GET_DEPARTMENTS_GET_DEPARTMENT_COMPANYID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/departments/company",
+    "file": "src\\admin-management\\department\\department.controller.ts"
+  },
+  {
+    "key": "EP_GET_DEPARTMENTS_ID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/departments/:id",
+    "file": "src\\admin-management\\department\\department.controller.ts"
+  },
+  {
+    "key": "EP_GET_EMPLOYEES",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/employees/all",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_GET_EMPLOYEES_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/employees/:id",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_GET_EMPLOYEES_READEMPLOYEE_DEPARTMENTID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/employees/department/:departmentId",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_GET_EQUIPMENT_READALLEQUIPMENT_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/equipments/all/:departmentId",
+    "file": "src\\maintenance-program\\equipment\\equipment.controller.ts"
+  },
+  {
+    "key": "EP_GET_EQUIPMENT_READEQUIPMENT_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/equipments/:id",
+    "file": "src\\maintenance-program\\equipment\\equipment.controller.ts"
+  },
+  {
+    "key": "EP_GET_FOOD_SAFETY_GET_ALL_FOOD_SAFETY_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/food-safety/all/:departmentId",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_FOOD_SAFETY_GET_FOOD_SAFETY_PLANID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/food-safety/:planId",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_FORM_RECORDS_GET_RECORD_BY_RECORDID_RECORDID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/form-records/get-record-by-recordId/:recordId",
+    "file": "src\\document-management\\form-records\\form-records.controller.ts"
+  },
+  {
+    "key": "EP_GET_FORM_RECORDS_GET_RESPONSES_BY_FORMID_FORMID_DEPARTMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/form-records/get-responses-by-formId/:formId/:departmentId",
+    "file": "src\\document-management\\form-records\\form-records.controller.ts"
+  },
+  {
+    "key": "EP_GET_GET_ALL_FORMS_DEPARTMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/list-of-forms/all/:departmentId",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_GET_GET_DOCUMENTBYID_DOCUMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/documents/:documentId",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_GET_GET_DOCUMENTS_DEPARTMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/documents/:departmentId",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_GET_GET_FORM_BY_ID_FORMID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/list-of-forms/:formId",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_GET_GET_FORMS_TO_FILL_DEPARTMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/list-of-forms/to-fill/:departmentId",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_GET_GETALLMAINTENANCERECORDS_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/preventive-maintenance/all/:departmentId",
+    "file": "src\\maintenance-program\\preventive-maintenance\\preventive-maintenance.controller.ts"
+  },
+  {
+    "key": "EP_GET_GETALLWORKREQUESTS_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/work-requests/all/:departmentId",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_GET_GETMAINTENANCEBYID_MAINTAINANCEID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/preventive-maintenance/:id",
+    "file": "src\\maintenance-program\\preventive-maintenance\\preventive-maintenance.controller.ts"
+  },
+  {
+    "key": "EP_GET_GETMAINTENANCEBYMACHINEID_MACHINEID_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/preventive-maintenance/by-machine/:machineId/:departmentId",
+    "file": "src\\maintenance-program\\preventive-maintenance\\preventive-maintenance.controller.ts"
+  },
+  {
+    "key": "EP_GET_GETWORKREQUESTBYID_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/work-requests/:id",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_GET_GETWORKREQUESTSBYMACHINEID_MACHINEID_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/work-requests/by-machine/:machineId/:departmentId",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_GET_HACCP_TEAM_GET_ALL_HACCP_TEAMS_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/haccp-team/all/:departmentId",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_GET_HACCP_TEAM_GET_APPROVED_HACCP_TEAMS_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/haccp-team/approved/:departmentId",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_GET_HACCP_TEAM_GET_HACCP_TEAM_TEAMID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/haccp-team/:teamId",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_GET_INTERNAL_AUDITOR_READAUDITOR_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/internal-auditor/all/:departmentId",
+    "file": "src\\internal-audit\\internal-auditor\\internal-auditor.controller.ts"
+  },
+  {
+    "key": "EP_GET_MACHINERY_READALLMACHINERY_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/machines/all/:departmentId",
+    "file": "src\\maintenance-program\\machinery\\machinery.controller.ts"
+  },
+  {
+    "key": "EP_GET_MACHINERY_READMACHINERY_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/machines/:id",
+    "file": "src\\maintenance-program\\machinery\\machinery.controller.ts"
+  },
+  {
+    "key": "EP_GET_MEETING_MINUTES_GET_ALL_MINUTES",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/meeting-minutes/all",
+    "file": "src\\review-meetings\\meeting-minutes\\meeting-minutes.controller.ts"
+  },
+  {
+    "key": "EP_GET_MEETING_MINUTES_GET_MINUTES",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/meeting-minutes/:id",
+    "file": "src\\review-meetings\\meeting-minutes\\meeting-minutes.controller.ts"
+  },
+  {
+    "key": "EP_GET_MEETING_MINUTES_GET_MINUTES_BY_PLAN",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/meeting-minutes/by-plan/:planId",
+    "file": "src\\review-meetings\\meeting-minutes\\meeting-minutes.controller.ts"
+  },
+  {
+    "key": "EP_GET_MONTHLY_AUDIT_PLAN_READMONTHLYAUDITPLAN_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/monthly-audit-plan/:departmentId",
+    "file": "src\\internal-audit\\monthly-auditing-plan\\monthly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_MONTHLY_AUDIT_PLAN_READMONTHLYAUDITPLANBYID_PLANID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/monthly-audit-plan/:planId",
+    "file": "src\\internal-audit\\monthly-auditing-plan\\monthly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_MONTHLY_TRAINING_PLANS_ANALYTICS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/monthly-training-plans/analytics",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_MONTHLY_TRAINING_PLANS_READMONTHLYPLAN_DEPARTMENTID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/monthly-training-plans",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_MONTHLY_TRAINING_PLANS_RECORD_DETAILS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/monthly-training-plans/record-details/:id",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_MRM_GET_ALL_MRMS_DEPARTMENTID",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/mrm/all/:departmentId",
+    "file": "src\\review-meetings\\mrm\\mrm.controller.ts"
+  },
+  {
+    "key": "EP_GET_MRM_GET_MRMBYID_MRMID",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/mrm/:id",
+    "file": "src\\review-meetings\\mrm\\mrm.controller.ts"
+  },
+  {
+    "key": "EP_GET_MY_TRAININGS_ASSIGNED",
+    "moduleKey": "MY_TRAININGS",
+    "method": "GET",
+    "path": "/monthly-training-plans/assigned",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_NOTIFICATION_GET_ALL_NOTIFICATIONS_DEPARTMENTID",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/notification/all/:departmentId",
+    "file": "src\\review-meetings\\notification\\notification.controller.ts"
+  },
+  {
+    "key": "EP_GET_NOTIFICATION_GET_NOTIFICATION",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/notification/:id",
+    "file": "src\\review-meetings\\notification\\notification.controller.ts"
+  },
+  {
+    "key": "EP_GET_PARTICIPANTS_GET_ALL_PARTICIPANTS_DEPARTMENTID",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/meeting-participants/all/:departmentId",
+    "file": "src\\review-meetings\\meeting-participants\\meeting-participants.controller.ts"
+  },
+  {
+    "key": "EP_GET_PARTICIPANTS_GET_PARTICIPANT",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/meeting-participants/:id",
+    "file": "src\\review-meetings\\meeting-participants\\meeting-participants.controller.ts"
+  },
+  {
+    "key": "EP_GET_PERSONAL_REQUISITIONS_READALLPERSONALRECUISITION_COMPANYID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/personal-requisitions/all/:companyId",
+    "file": "src\\competency-management\\personal-requisition\\personal-requisition.controller.ts"
+  },
+  {
+    "key": "EP_GET_PERSONAL_REQUISITIONS_READPERSONALRECUISITION_DEPARTMENTID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/personal-requisitions/:departmentId",
+    "file": "src\\competency-management\\personal-requisition\\personal-requisition.controller.ts"
+  },
+  {
+    "key": "EP_GET_PROCESS_OWNER_READPROCESS_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/process-owner/all/:departmentId",
+    "file": "src\\internal-audit\\process-owner\\process-owner.controller.ts"
+  },
+  {
+    "key": "EP_GET_PROCESSES_GET_ALL_PROCESSES_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/processes/all/:departmentId",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_GET_PROCESSES_GET_APPROVED_PROCESSES_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/processes/approved/:departmentId",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_GET_PROCESSES_GET_PROCESS_DETAIL_PROCESSID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/processes/detail/:processId",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_GET_PROCESSES_GET_PROCESS_PROCESSID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/processes/:processId",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_GET_PRODUCT_GET_ALL_PRODUCTS_DEPARTMENTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/product/all/:departmentId",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_GET_PRODUCT_GET_PRODUCT_PRODUCTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "GET",
+    "path": "/product/:productId",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_DERIVED_MODULE_BY_ID",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/derived-modules/:derivedModuleId",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_DERIVED_MODULES",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/derived-modules",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_MASTER_MODULE_DETAILS_MASTERMODULEID",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/master-modules/:masterModuleId/details",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_MASTER_MODULES",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/master-modules",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_MASTER_PERMISSIONS",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/master-permissions",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_MASTER_PERMISSIONS_MODULE_MODULEID",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/master-permissions/module/:moduleId",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_MASTER_RESOURCES",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/master-resources",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_PERMISSION_TREE",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/permission-tree",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_RBAC_ROLES",
+    "moduleKey": "RBAC",
+    "method": "GET",
+    "path": "/rbac/roles",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_GET_READALLCALIBRATION_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/calibration-record/all/:departmentId",
+    "file": "src\\maintenance-program\\calibration-record\\calibration-record.controller.ts"
+  },
+  {
+    "key": "EP_GET_READALLCHANGEREQUEST_COMPANYID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/change-requests/all/:companyId",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_GET_READALLDOCUMENTS_DEPARTMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/upload-documents/all/:departmentId",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_GET_READCALIBRATIONBYEQUIPMENTID_EQUIPMENTID_DEPARTMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "GET",
+    "path": "/calibration-record/by-equipment/:equipmentId/:departmentId",
+    "file": "src\\maintenance-program\\calibration-record\\calibration-record.controller.ts"
+  },
+  {
+    "key": "EP_GET_READCHANGEREQUEST_DEPARTMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/change-requests/:departmentId",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_GET_READCHANGEREQUESTBYID_REQUESTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/change-requests/:requestId",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_GET_READDOCUMENTBYID_DOCUMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "GET",
+    "path": "/upload-documents/:documentId",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_GET_REPORTS_READREPORTBYAUDITID_AUDITID_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/reports/by-audit/:auditId/:departmentId",
+    "file": "src\\internal-audit\\reports\\reports.controller.ts"
+  },
+  {
+    "key": "EP_GET_REPORTS_READREPORTBYID_REPORTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/reports/:reportId",
+    "file": "src\\internal-audit\\reports\\reports.controller.ts"
+  },
+  {
+    "key": "EP_GET_REPORTS_READREPORTS_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/reports/all/:departmentId",
+    "file": "src\\internal-audit\\reports\\reports.controller.ts"
+  },
+  {
+    "key": "EP_GET_REVIEW_PLANS_GET_ALL_PLANS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/review-plans/all",
+    "file": "src\\review-meetings\\review-plan\\review-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_REVIEW_PLANS_GET_PLAN",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/review-plans/:id",
+    "file": "src\\review-meetings\\review-plan\\review-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_REVIEW_TEAM_GET_ALL_MEMBERS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/review-team/all",
+    "file": "src\\review-meetings\\review-team\\review-team.controller.ts"
+  },
+  {
+    "key": "EP_GET_REVIEW_TEAM_GET_MEMBER",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "GET",
+    "path": "/review-team/:id",
+    "file": "src\\review-meetings\\review-team\\review-team.controller.ts"
+  },
+  {
+    "key": "EP_GET_SUPPLIERS_GET_ALL_SUPPLIERS_DEPARTMENTID",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "GET",
+    "path": "/suppliers/all/:departmentId",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_GET_SUPPLIERS_GET_SUPPLIER_SUPPLIERID",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "GET",
+    "path": "/suppliers/:id",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_GET_TRAINERS_ME",
+    "moduleKey": "MY_TRAININGS",
+    "method": "GET",
+    "path": "/trainers/me",
+    "file": "src\\competency-management\\trainer\\trainer.controller.ts"
+  },
+  {
+    "key": "EP_GET_TRAINERS_READTRAINER_DEPARTMENTID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/trainers/:departmentId",
+    "file": "src\\competency-management\\trainer\\trainer.controller.ts"
+  },
+  {
+    "key": "EP_GET_TRAININGS_READTRAINING_DEPARTMENTID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/trainings/:departmentId",
+    "file": "src\\competency-management\\training\\training.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS_COMPANY_COMPANYID_DEPARTMENT_DEPARTMENTID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users/company/:companyId/department/:departmentId",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS_GET_ALL_USERS_DEPARTMENTID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users/department/:departmentId/summary",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS_GET_USER_USERID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users/:id",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS_GET_USERBYCOMPANY_COMPANYID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users/company/:companyId",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS_GET_USERSBYDEPARTMENT_DEPARTMENTID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users/department/:departmentId",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_USERS_ID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "GET",
+    "path": "/users/:id",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_GET_YEARLY_AUDIT_PLAN_READYEARLYAUDITPLAN_DEPARTMENTID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/yearly-audit-plan/all/:departmentId",
+    "file": "src\\internal-audit\\yearly-auditing-plan\\yearly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_YEARLY_AUDIT_PLAN_READYEARLYAUDITPLANBYID_PLANID",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "GET",
+    "path": "/yearly-audit-plan/:planId",
+    "file": "src\\internal-audit\\yearly-auditing-plan\\yearly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_GET_YEARLY_TRAINING_PLANS_READYEARLYPLAN_DEPARTMENTID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "GET",
+    "path": "/yearly-training-plans",
+    "file": "src\\competency-management\\yearly-training-plan\\yearly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_ACCEPTMWR_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/work-requests/:id/accept",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_APPROVE_CHANGEREQUEST",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/change-requests/approve",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_APPROVE_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/documents/approve",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_APPROVE_UPLOADED_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/upload-documents/approve",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_APPROVEFORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/list-of-forms/approve",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_CHANGEMWRPRIORITY_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/work-requests/:id/change-priority",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_CHECKLIST_APPROVECHECKLIST",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "PATCH",
+    "path": "/checklist/approve",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_CHECKLIST_DISAPPROVECHECKLIST",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "PATCH",
+    "path": "/checklist/disapprove",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_COMMENT_DOCUMENT_DOCUMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/upload-documents/comment/:documentId",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_COMPANIES_UPDATE_COMPANY",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/companies/:companyId",
+    "file": "src\\admin-management\\company\\company.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_COMPLETEMWR_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/work-requests/:id/complete",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_CONDUCT_HACCP_APPROVE_CONDUCT_HACCP",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/conduct-haccp/approve",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_CONDUCT_HACCP_DISAPPROVE_CONDUCT_HACCP",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/conduct-haccp/disapprove",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DECISION_TREE_APPROVE_DECISION_TREE",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/decision-tree/approve",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DECISION_TREE_DISAPPROVE_DECISION_TREE",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/decision-tree/disapprove",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DECISION_TREE_UPDATE_DECISION_TREE_TREEID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/decision-tree/:treeId",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DEPARTMENTS_UPDATE_DEPARTMENT",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/departments",
+    "file": "src\\admin-management\\department\\department.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DISAPPROVE_CHANGEREQUEST",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/change-requests/disapprove",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DISAPPROVE_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/documents/disapprove",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DISAPPROVE_UPLOADED_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/upload-documents/disapprove",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_DISAPPROVEFORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/list-of-forms/disapprove",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_EMPLOYEES_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/employees/:id",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_FOOD_SAFETY_APPROVE_FOOD_SAFETY",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/food-safety/approve",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_FOOD_SAFETY_DISAPPROVE_FOOD_SAFETY",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/food-safety/disapprove",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_FOOD_SAFETY_UPDATE_FOOD_SAFETY_PLANID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/food-safety/:planId",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_FORM_RECORDS_ADDCOMMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/form-records/addComment",
+    "file": "src\\document-management\\form-records\\form-records.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_FORM_RECORDS_VERIFY_RESPONSE",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/form-records/verify-response",
+    "file": "src\\document-management\\form-records\\form-records.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_HACCP_TEAM_APPROVEHACCPTEAM",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/haccp-team/approve",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_HACCP_TEAM_DISAPPROVEHACCPTEAM",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/haccp-team/disapprove",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_MONTHLY_TRAINING_PLANS_ASSIGNEMPLOYEE",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/monthly-training-plans/assign",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_MONTHLY_TRAINING_PLANS_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/monthly-training-plans/:id",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_MONTHLY_TRAINING_PLANS_UPDATE_TRAINING_STATUS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/monthly-training-plans/training-status",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_MONTHLY_TRAINING_PLANS_UPLOAD_IMAGES",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/monthly-training-plans/images",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_MY_TRAININGS_CONDUCT_EMPLOYEE",
+    "moduleKey": "MY_TRAININGS",
+    "method": "PATCH",
+    "path": "/monthly-training-plans/conduct-employee",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_MY_TRAININGS_EVALUATE",
+    "moduleKey": "MY_TRAININGS",
+    "method": "PATCH",
+    "path": "/monthly-training-plans/evaluate",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PERSONAL_REQUISITIONS_UPDATEPERSONSTATUS",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/personal-requisitions",
+    "file": "src\\competency-management\\personal-requisition\\personal-requisition.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PROCESSES_APPROVE_PROCESS",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/processes/approve",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PROCESSES_DISAPPROVE_PROCESS",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/processes/disapprove",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PROCESSES_UPDATE_PROCESS_PROCESSID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/processes/:processId",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PRODUCT_APPROVE_PRODUCT",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/product/approve",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PRODUCT_DISAPPROVE_PRODUCT",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/product/disapprove",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_PRODUCT_UPDATE_PRODUCT_PRODUCTID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PATCH",
+    "path": "/product/:productId",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_RBAC_ASSIGN_ROLE",
+    "moduleKey": "RBAC",
+    "method": "PATCH",
+    "path": "/rbac/assign-role",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_RBAC_DERIVED_MODULE_BY_ID",
+    "moduleKey": "RBAC",
+    "method": "PATCH",
+    "path": "/rbac/derived-modules/:derivedModuleId",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REJECT_CHANGEREQUEST",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/change-requests/reject",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REJECT_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/documents/reject",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REJECT_UPLOADED_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/upload-documents/reject",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REJECTFORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/list-of-forms/reject",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REJECTMWR_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/work-requests/:id/reject",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_RESUBMITMWR_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/work-requests/:id/resubmit",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REVIEW_CHANGEREQUEST",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/change-requests/review",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REVIEW_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/documents/review",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REVIEW_UPLOADED_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/upload-documents/review",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_REVIEWFORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/list-of-forms/review",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_SUPPLIERS_APPROVE_SUPPLIER",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/suppliers/approve",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_SUPPLIERS_DISAPPROVE_SUPPLIER",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/suppliers/disapprove",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_TRAINERS_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/trainers/:id",
+    "file": "src\\competency-management\\trainer\\trainer.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_TRAININGS_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/trainings/:id",
+    "file": "src\\competency-management\\training\\training.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_UPDATEMWR_ID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/work-requests/:id",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_USERS_ASSIGN_ROLE_USERID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/users/:id/assign-role",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_USERS_REASSIGN_ACCESS_USERID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/users/:id/reassign-access",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_USERS_SUSPEND_USER_USERID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/users/:id/suspend",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_PATCH_YEARLY_TRAINING_PLANS_ID",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "PATCH",
+    "path": "/yearly-training-plans/:id",
+    "file": "src\\competency-management\\yearly-training-plan\\yearly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_POST_ADDCALIBRATION_EQUIPMENTID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "POST",
+    "path": "/calibration-record/:equipmentId",
+    "file": "src\\maintenance-program\\calibration-record\\calibration-record.controller.ts"
+  },
+  {
+    "key": "EP_POST_ADDCHANGEREQUEST",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "POST",
+    "path": "/change-requests",
+    "file": "src\\document-management\\change-request\\change-request.controller.ts"
+  },
+  {
+    "key": "EP_POST_ADDPREVENTIVEMAINTAINCE_MACHINEID",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "POST",
+    "path": "/preventive-maintenance/:machineId",
+    "file": "src\\maintenance-program\\preventive-maintenance\\preventive-maintenance.controller.ts"
+  },
+  {
+    "key": "EP_POST_CHECKLIST_ADDCHECKLIST",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/checklist",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_POST_COMPANIES_CREATE_COMPANY",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "POST",
+    "path": "/companies",
+    "file": "src\\admin-management\\company\\company.controller.ts"
+  },
+  {
+    "key": "EP_POST_CONDUCT_AUDITS_ADDCONDUCTAUDIT",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/conduct-audits",
+    "file": "src\\internal-audit\\conduct-audits\\conduct-audits.controller.ts"
+  },
+  {
+    "key": "EP_POST_CONDUCT_HACCP_CREATE_CONDUCT_HACCP",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "POST",
+    "path": "/conduct-haccp",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_POST_CORRECTIVE_ACTION_ADDCORRECTIVEACTION",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/corrective-action",
+    "file": "src\\internal-audit\\corrective-action\\corrective-action.controller.ts"
+  },
+  {
+    "key": "EP_POST_CREATE_DOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "POST",
+    "path": "/documents",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_POST_CREATE_FORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "POST",
+    "path": "/list-of-forms",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_POST_CREATEWORKREQUEST",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "POST",
+    "path": "/work-requests",
+    "file": "src\\maintenance-program\\work-request\\work-request.controller.ts"
+  },
+  {
+    "key": "EP_POST_DECISION_TREE_CREATE_DECISION_TREE",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "POST",
+    "path": "/decision-tree",
+    "file": "src\\food-safety\\decision-tree\\decision-tree.controller.ts"
+  },
+  {
+    "key": "EP_POST_DEPARTMENTS_CREATE_DEPARTMENT",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "POST",
+    "path": "/departments",
+    "file": "src\\admin-management\\department\\department.controller.ts"
+  },
+  {
+    "key": "EP_POST_EMPLOYEES_ADDEMPLOYEE",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "POST",
+    "path": "/employees",
+    "file": "src\\competency-management\\employee\\employee.controller.ts"
+  },
+  {
+    "key": "EP_POST_EQUIPMENT_ADDEQUIPMENT",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/equipments/:id",
+    "file": "src\\maintenance-program\\equipment\\equipment.controller.ts"
+  },
+  {
+    "key": "EP_POST_FOOD_SAFETY_CREATE_FOOD_SAFETY",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "POST",
+    "path": "/food-safety",
+    "file": "src\\food-safety\\food-safety-plan\\food-safety-plan.controller.ts"
+  },
+  {
+    "key": "EP_POST_FORM_RECORDS_SUBMIT_RESPONSE",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "POST",
+    "path": "/form-records/submit-response",
+    "file": "src\\document-management\\form-records\\form-records.controller.ts"
+  },
+  {
+    "key": "EP_POST_HACCP_TEAM_CREATE_HACCP_TEAM",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "POST",
+    "path": "/haccp-team",
+    "file": "src\\food-safety\\haccp-team\\haccp-team.controller.ts"
+  },
+  {
+    "key": "EP_POST_INTERNAL_AUDITOR_ADDAUDITOR",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/internal-auditor",
+    "file": "src\\internal-audit\\internal-auditor\\internal-auditor.controller.ts"
+  },
+  {
+    "key": "EP_POST_MACHINERY_ADDMACHINERY",
+    "moduleKey": "MAINTENANCE_PROGRAM",
+    "method": "PATCH",
+    "path": "/machines/:id",
+    "file": "src\\maintenance-program\\machinery\\machinery.controller.ts"
+  },
+  {
+    "key": "EP_POST_MEETING_MINUTES_CREATE_MINUTES",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/meeting-minutes",
+    "file": "src\\review-meetings\\meeting-minutes\\meeting-minutes.controller.ts"
+  },
+  {
+    "key": "EP_POST_MONTHLY_AUDIT_PLAN_ADDMONTHLYAUDITINGPLAN",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/monthly-audit-plan",
+    "file": "src\\internal-audit\\monthly-auditing-plan\\monthly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_POST_MONTHLY_TRAINING_PLANS_ADDMONTHLYPLAN",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "POST",
+    "path": "/monthly-training-plans",
+    "file": "src\\competency-management\\monthly-training-plan\\monthly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_POST_MRM_CREATE_MRM",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/mrm",
+    "file": "src\\review-meetings\\mrm\\mrm.controller.ts"
+  },
+  {
+    "key": "EP_POST_NOTIFICATION_CREATE_NOTIFICATION",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/notification",
+    "file": "src\\review-meetings\\notification\\notification.controller.ts"
+  },
+  {
+    "key": "EP_POST_PARTICIPANTS_CREATE_PARTICIPANTS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/meeting-participants",
+    "file": "src\\review-meetings\\meeting-participants\\meeting-participants.controller.ts"
+  },
+  {
+    "key": "EP_POST_PERSONAL_REQUISITIONS_ADDPERSONALRECUISITION",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "POST",
+    "path": "/personal-requisitions",
+    "file": "src\\competency-management\\personal-requisition\\personal-requisition.controller.ts"
+  },
+  {
+    "key": "EP_POST_PROCESS_OWNER_ADDPROCESS",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/process-owner",
+    "file": "src\\internal-audit\\process-owner\\process-owner.controller.ts"
+  },
+  {
+    "key": "EP_POST_PROCESSES_CREATE_PROCESS",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "POST",
+    "path": "/processes",
+    "file": "src\\food-safety\\processes\\processes.controller.ts"
+  },
+  {
+    "key": "EP_POST_PRODUCT_CREATE_PRODUCT",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "POST",
+    "path": "/product",
+    "file": "src\\food-safety\\product\\product.controller.ts"
+  },
+  {
+    "key": "EP_POST_RBAC_DERIVED_MODULES",
+    "moduleKey": "RBAC",
+    "method": "POST",
+    "path": "/rbac/derived-modules",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_POST_RBAC_ROLES",
+    "moduleKey": "RBAC",
+    "method": "POST",
+    "path": "/rbac/roles",
+    "file": "src\\rbac\\rbac.controller.ts"
+  },
+  {
+    "key": "EP_POST_REPORTS_ADDREPORT",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/reports",
+    "file": "src\\internal-audit\\reports\\reports.controller.ts"
+  },
+  {
+    "key": "EP_POST_REVIEW_PLANS_CREATE_PLAN",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/review-plans",
+    "file": "src\\review-meetings\\review-plan\\review-plan.controller.ts"
+  },
+  {
+    "key": "EP_POST_REVIEW_TEAM_CREATE_MEMBER",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/review-team",
+    "file": "src\\review-meetings\\review-team\\review-team.controller.ts"
+  },
+  {
+    "key": "EP_POST_REVIEW_TEAM_CREATE_MEMBERS_BULK",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "POST",
+    "path": "/review-team/bulk",
+    "file": "src\\review-meetings\\review-team\\review-team.controller.ts"
+  },
+  {
+    "key": "EP_POST_SUPPLIERS_CREATE_SUPPLIER",
+    "moduleKey": "SUPPLIER_MANAGEMENT",
+    "method": "POST",
+    "path": "/suppliers",
+    "file": "src\\supplier-management\\supplier\\supplier.controller.ts"
+  },
+  {
+    "key": "EP_POST_TRAINERS_ADDTRAINER",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "POST",
+    "path": "/trainers",
+    "file": "src\\competency-management\\trainer\\trainer.controller.ts"
+  },
+  {
+    "key": "EP_POST_TRAININGS_ADDTRAINING",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "POST",
+    "path": "/trainings",
+    "file": "src\\competency-management\\training\\training.controller.ts"
+  },
+  {
+    "key": "EP_POST_UPLOADDOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "POST",
+    "path": "/upload-documents",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_POST_USERS_CREATE_USER",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "POST",
+    "path": "/users",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_POST_YEARLY_AUDIT_PLAN_ADDYEARLYAUDITPLAN",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "POST",
+    "path": "/yearly-audit-plan",
+    "file": "src\\internal-audit\\yearly-auditing-plan\\yearly-auditing-plan.controller.ts"
+  },
+  {
+    "key": "EP_POST_YEARLY_TRAINING_PLANS_ADDYEARLYPLAN",
+    "moduleKey": "COMPETENCY_MANAGEMENT",
+    "method": "POST",
+    "path": "/yearly-training-plans",
+    "file": "src\\competency-management\\yearly-training-plan\\yearly-training-plan.controller.ts"
+  },
+  {
+    "key": "EP_PUT_CHECKLIST_UPDATECHECKLIST",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "PUT",
+    "path": "/checklist",
+    "file": "src\\internal-audit\\create-checklist\\create-checklist.controller.ts"
+  },
+  {
+    "key": "EP_PUT_CONDUCT_HACCP_UPDATE_CONDUCT_HACCP_HACCPID",
+    "moduleKey": "FOOD_SAFETY",
+    "method": "PUT",
+    "path": "/conduct-haccp/:haccpId",
+    "file": "src\\food-safety\\conduct-haccp\\conduct-haccp.controller.ts"
+  },
+  {
+    "key": "EP_PUT_MEETING_MINUTES_UPDATE_MINUTES",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "PUT",
+    "path": "/meeting-minutes/:id",
+    "file": "src\\review-meetings\\meeting-minutes\\meeting-minutes.controller.ts"
+  },
+  {
+    "key": "EP_PUT_PARTICIPANTS_UPDATE_PARTICIPANTS",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "PUT",
+    "path": "/meeting-participants/:id",
+    "file": "src\\review-meetings\\meeting-participants\\meeting-participants.controller.ts"
+  },
+  {
+    "key": "EP_PUT_REPLACEDOCUMENT_DOCUMENTID",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PUT",
+    "path": "/upload-documents/replace/:documentId",
+    "file": "src\\document-management\\upload-documents\\upload-documents.controller.ts"
+  },
+  {
+    "key": "EP_PUT_REVIEW_PLANS_UPDATE_PLAN",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "PUT",
+    "path": "/review-plans/:id",
+    "file": "src\\review-meetings\\review-plan\\review-plan.controller.ts"
+  },
+  {
+    "key": "EP_PUT_REVIEW_TEAM_UPDATE_MEMBER",
+    "moduleKey": "REVIEW_MEETINGS",
+    "method": "PUT",
+    "path": "/review-team/:id",
+    "file": "src\\review-meetings\\review-team\\review-team.controller.ts"
+  },
+  {
+    "key": "EP_PUT_SEND_FORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PUT",
+    "path": "/list-of-forms/send",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_PUT_UPDATE_FORM",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PUT",
+    "path": "/list-of-forms",
+    "file": "src\\document-management\\list-of-forms\\list-of-forms.controller.ts"
+  },
+  {
+    "key": "EP_PUT_UPDATEDOCUMENT",
+    "moduleKey": "DOCUMENT_MANAGEMENT",
+    "method": "PUT",
+    "path": "/documents",
+    "file": "src\\document-management\\document\\document.controller.ts"
+  },
+  {
+    "key": "EP_PUT_USERS_ID",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PUT",
+    "path": "/users/:id",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_PUT_USERS_UPDATE_USER",
+    "moduleKey": "ADMIN_MANAGEMENT",
+    "method": "PUT",
+    "path": "/users/:id",
+    "file": "src\\admin-management\\users\\user.controller.ts"
+  },
+  {
+    "key": "EP_PUT_YEARLY_AUDIT_PLAN_EDITYEARLYAUDITPLAN",
+    "moduleKey": "INTERNAL_AUDIT",
+    "method": "PUT",
+    "path": "/yearly-audit-plan/:planId",
+    "file": "src\\internal-audit\\yearly-auditing-plan\\yearly-auditing-plan.controller.ts"
+  }
+]
