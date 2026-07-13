@@ -36,10 +36,39 @@ function formatDate(date: Date | string | null | undefined): string {
   });
 }
 
+function stripHtml(input: string): string {
+  return input
+    .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/\s*p\s*>/gi, '\n')
+    .replace(/<\/\s*div\s*>/gi, '\n')
+    .replace(/<\/\s*li\s*>/gi, '\n')
+    .replace(/<\/\s*h[1-6]\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
 function asText(value: unknown): string {
-  if (Array.isArray(value)) return value.filter(Boolean).join(', ');
+  if (Array.isArray(value)) {
+    const parts = value
+      .filter((item) => item != null && item !== '')
+      .map((item) => asText(item))
+      .filter((item) => item && item !== '---');
+    return parts.length ? parts.join(', ') : '---';
+  }
   if (value == null || value === '') return '---';
-  return String(value);
+  const stripped = stripHtml(String(value));
+  return stripped || '---';
 }
 
 function truncate(text: string, font: PDFFont, size: number, maxWidth: number) {
@@ -61,20 +90,28 @@ function wrapText(
   size: number,
   maxWidth: number,
 ): string[] {
-  const words = asText(text).split(/\s+/).filter(Boolean);
-  if (words.length === 0) return ['---'];
+  const raw = asText(text);
+  if (raw === '---') return ['---'];
+
+  const paragraphs = raw.split(/\n+/).filter((p) => p.trim());
+  if (paragraphs.length === 0) return ['---'];
+
   const lines: string[] = [];
-  let current = words[0];
-  for (let i = 1; i < words.length; i += 1) {
-    const next = `${current} ${words[i]}`;
-    if (font.widthOfTextAtSize(next, size) <= maxWidth) current = next;
-    else {
-      lines.push(current);
-      current = words[i];
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    if (!words.length) continue;
+    let current = words[0];
+    for (let i = 1; i < words.length; i += 1) {
+      const next = `${current} ${words[i]}`;
+      if (font.widthOfTextAtSize(next, size) <= maxWidth) current = next;
+      else {
+        lines.push(current);
+        current = words[i];
+      }
     }
+    lines.push(current);
   }
-  lines.push(current);
-  return lines;
+  return lines.length ? lines : ['---'];
 }
 
 function toCloudinaryCandidates(url: string): string[] {
@@ -396,35 +433,52 @@ async function drawCoverPage(
     y -= 12;
   }
 
-  const detailsBottom = 58;
-  page.drawRectangle({
-    x: 56,
-    y: detailsBottom,
-    width: width - 112,
-    height: Math.max(80, y + 8 - detailsBottom),
-    color: rgb(0.985, 0.987, 0.99),
-    borderWidth: 0.7,
-    borderColor: rgb(0.88, 0.9, 0.93),
-  });
+  const labelX = 56;
+  const valueX = 200;
+  const valueWidth = width - valueX - 56;
+  const bottomLimit = 64;
+  const lineHeight = 13;
 
-  y -= 6;
   for (const [label, value] of options.rows) {
-    if (y < detailsBottom + 16) break;
-    page.drawText(String(label), {
-      x: 76,
+    const lines = wrapText(value, bold, 10, valueWidth);
+    const blockHeight = Math.max(lineHeight, lines.length * lineHeight) + 8;
+
+    if (y - blockHeight < bottomLimit) {
+      page = pdfDoc.addPage();
+      y = page.getSize().height - 70;
+    }
+
+    page.drawText(truncate(String(label), font, 10, valueX - labelX - 12), {
+      x: labelX,
       y,
       size: 10,
       font,
       color: MUTED,
     });
-    page.drawText(truncate(asText(value), bold, 11, width - 300), {
-      x: 250,
-      y,
-      size: 11,
-      font: bold,
-      color: INK,
-    });
-    y -= 18;
+
+    let valueY = y;
+    for (const line of lines) {
+      if (valueY < bottomLimit) {
+        page = pdfDoc.addPage();
+        valueY = page.getSize().height - 70;
+        page.drawText(truncate(String(label), font, 10, valueX - labelX - 12), {
+          x: labelX,
+          y: valueY,
+          size: 10,
+          font,
+          color: MUTED,
+        });
+      }
+      page.drawText(line, {
+        x: valueX,
+        y: valueY,
+        size: 10,
+        font: bold,
+        color: INK,
+      });
+      valueY -= lineHeight;
+    }
+    y = valueY - 6;
   }
 }
 
@@ -718,20 +772,32 @@ export async function buildBrandedDetailPdf(options: {
       y -= 20;
 
       for (const [label, value] of section.rows) {
-        if (y < 70) {
+        const lines = wrapText(value, font, 10, 340);
+        const needed = Math.max(20, lines.length * 13 + 10);
+        if (y - needed < 70) {
           page = pdfDoc.addPage();
           y = page.getSize().height - 70;
         }
-        page.drawText(`${label} :`, {
+        page.drawText(`${label}`, {
           x: 48,
           y,
           size: 10,
           font,
           color: MUTED,
         });
-        const lines = wrapText(value, font, 10, 340);
         let valueY = y;
-        for (const line of lines.slice(0, 5)) {
+        for (const line of lines) {
+          if (valueY < 70) {
+            page = pdfDoc.addPage();
+            valueY = page.getSize().height - 70;
+            page.drawText(`${label}`, {
+              x: 48,
+              y: valueY,
+              size: 10,
+              font,
+              color: MUTED,
+            });
+          }
           page.drawText(line, {
             x: 180,
             y: valueY,
