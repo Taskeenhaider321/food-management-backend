@@ -8,12 +8,15 @@ import {
   Param,
   UseInterceptors,
   UploadedFiles,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ConductAuditsService } from './conduct-audits.service';
 import { CreateConductAuditDto } from './dtos/create-conduct-audit.dto';
 import { UpdateConductAuditDto } from './dtos/update-conduct-audit.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Conduct Audits')
 @Controller('conduct-audits')
@@ -35,6 +38,22 @@ export class ConductAuditsController {
       files: files || [],
     };
     return this.conductAuditsService.addConductAudit(createDto);
+  }
+
+  /** Must be registered before parameterized GET routes. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download conduct audits directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadConductAuditsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.conductAuditsService.downloadConductAuditsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get('all/:departmentId')
@@ -59,6 +78,23 @@ export class ConductAuditsController {
   @ApiBearerAuth()
   async getConductAuditByAuditId(@Param('auditId') auditId: string) {
     return this.conductAuditsService.getConductAuditByAuditId(auditId);
+  }
+
+  /** Must be registered after static-prefixed GET routes. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single conduct audit PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadConductAuditPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.conductAuditsService.downloadConductAuditPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Put()

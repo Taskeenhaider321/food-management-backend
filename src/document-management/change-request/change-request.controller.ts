@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Put } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Patch,
+  Post,
+  Put,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { ChangeRequestService } from './change-request.service';
@@ -27,6 +37,39 @@ export class ChangeRequestController {
   @ApiBearerAuth()
   async findAll(@CurrentUser() actor: any) {
     return this.changeRequestService.findAll(actor);
+  }
+
+  /** Must be registered before `GET :id`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download change requests directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadChangeRequestsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.changeRequestService.downloadChangeRequestsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :id`. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single change request PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadChangeRequestPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.changeRequestService.downloadChangeRequestPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':id')

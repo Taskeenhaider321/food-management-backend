@@ -9,12 +9,38 @@ import { YearlyAuditingPlan } from './schemas/yearly-auditing-plan.schema';
 import { CreateYearlyPlanDto } from './dtos/create-yearly-plan.dto';
 import { UpdateYearlyPlanDto } from './dtos/update-yearly-plan.dto';
 import { ProcessOwner } from '../process-owner/schemas/process-owner.schema';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const RISK_MIN_AUDITS: Record<string, number> = {
   'High Risk': 3,
   'Medium Risk': 2,
   'Low Risk': 1,
 };
+
+const YEARLY_PLAN_POPULATE = [
+  {
+    path: 'Selected.Process',
+    populate: {
+      path: 'profileId',
+      populate: { path: 'userId' },
+    },
+  },
+  {
+    path: 'Selected.AssignedAuditor',
+    populate: {
+      path: 'profileId',
+      populate: { path: 'userId' },
+    },
+  },
+  { path: 'UserDepartment' },
+];
 
 @Injectable()
 export class YearlyAuditingPlanService {
@@ -23,6 +49,7 @@ export class YearlyAuditingPlanService {
     private yearlyPlanModel: Model<YearlyAuditingPlan>,
     @InjectModel(ProcessOwner.name)
     private processOwnerModel: Model<ProcessOwner>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
   ) {}
 
   private validateRiskSchedule(
@@ -167,6 +194,109 @@ export class YearlyAuditingPlanService {
       status: true,
       message: 'All yearlyAuditPlans have been deleted!',
       data: result,
+    };
+  }
+
+  private mapYearlyPlanPdfRow(plan: any) {
+    const selected = Array.isArray(plan?.Selected) ? plan.Selected : [];
+    const department =
+      plan?.UserDepartment?.departmentName ||
+      plan?.UserDepartment?.shortName ||
+      '---';
+    return {
+      Year: asText(plan?.Year),
+      Status: asText(plan?.Status),
+      department: asText(department),
+      processesCount: String(selected.length),
+      CreatedBy: asText(plan?.CreatedBy),
+      CreationDate: formatDate(plan?.CreationDate || plan?.created_at),
+    };
+  }
+
+  private selectedItemRows(plan: any): Array<[string, string]> {
+    const selected = Array.isArray(plan?.Selected) ? plan.Selected : [];
+    return selected.map((item: any, index: number) => {
+      const processName =
+        item?.Process?.processName ||
+        item?.Process?.processCode ||
+        '---';
+      const auditorName =
+        item?.AssignedAuditor?.profileId?.userId?.name ||
+        item?.AssignedAuditor?.profileId?.name ||
+        '---';
+      const months = asText(item?.monthNames);
+      const risk = asText(item?.Risk);
+      return [
+        `Item ${index + 1}`,
+        `Process: ${processName} | Risk: ${risk} | Months: ${months} | Auditor: ${auditorName}`,
+      ];
+    });
+  }
+
+  async downloadYearlyPlansPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const data = await this.yearlyPlanModel
+      .find()
+      .populate(YEARLY_PLAN_POPULATE)
+      .sort({ Year: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Audit Schedules Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'Year', label: 'YEAR', width: 1 },
+        { key: 'Status', label: 'STATUS', width: 1.3 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.8 },
+        { key: 'processesCount', label: 'PROCESSES', width: 1.2 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.5 },
+        { key: 'CreationDate', label: 'CREATED', width: 1.3 },
+      ],
+      rows: (data || []).map((r) => this.mapYearlyPlanPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('audit-schedules', 'directory'),
+    };
+  }
+
+  async downloadYearlyPlanPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const plan = await this.yearlyPlanModel
+      .findById(id)
+      .populate(YEARLY_PLAN_POPULATE)
+      .exec();
+    if (!plan) throw new NotFoundException('YearlyAuditPlan not found');
+
+    const row = this.mapYearlyPlanPdfRow(plan);
+    const selectedRows = this.selectedItemRows(plan);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.Year !== '---' ? `Year ${row.Year}` : 'Audit Schedule',
+      subtitle: row.department !== '---' ? row.department : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Year', row.Year],
+        ['Status', row.Status],
+        ['Department', row.department],
+        ['Processes Count', row.processesCount],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+      sections: selectedRows.length
+        ? [{ heading: 'Selected Processes', rows: selectedRows }]
+        : [],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.Year !== '---' ? `year-${row.Year}` : 'audit-schedule',
+        'plan',
+      ),
     };
   }
 }

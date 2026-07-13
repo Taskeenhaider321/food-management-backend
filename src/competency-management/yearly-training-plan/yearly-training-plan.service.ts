@@ -21,6 +21,13 @@ import {
   appendPlanStatusHistory,
   seedInitialPlanStatus,
 } from '../utils/plan-status-history.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 /** Dot-path populate is unreliable on nested subdoc arrays; use explicit nesting. */
 const YEARLY_PLAN_POPULATE: PopulateOptions[] = [
@@ -44,6 +51,7 @@ export class YearlyTrainingPlanService {
     @InjectModel(YearlyTrainingPlan.name)
     private yearlyPlanModel: Model<YearlyTrainingPlanDocument>,
     @InjectModel('Department') private departmentModel: Model<any>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
   ) {}
 
   /** ObjectId, raw id string, or populated { _id }. */
@@ -293,5 +301,100 @@ export class YearlyTrainingPlanService {
       throw new NotFoundException('No YearlyPlans Found to Delete!');
     }
     return { status: true, message: 'All YearlyPlans have been deleted!' };
+  }
+
+  private mapYearlyTrainingPlanPdfRow(plan: any) {
+    const months = Array.isArray(plan?.Month) ? plan.Month : [];
+    const department =
+      plan?.UserDepartment?.departmentName ||
+      plan?.UserDepartment?.shortName ||
+      '---';
+    return {
+      Year: asText(plan?.Year),
+      Status: asText(plan?.ScheduleStatus),
+      Department: asText(department),
+      monthsCount: String(months.length),
+      CreatedBy: asText(plan?.CreatedBy),
+    };
+  }
+
+  private monthTrainingRows(plan: any): Array<[string, string]> {
+    const months = Array.isArray(plan?.Month) ? plan.Month : [];
+    return months.map((month: any) => {
+      const trainings = Array.isArray(month?.Trainings) ? month.Trainings : [];
+      const names = trainings
+        .map(
+          (t: any) =>
+            t?.Training?.trainingName ||
+            t?.Training?.TrainingName ||
+            (t?.Training ? String(t.Training) : null),
+        )
+        .filter(Boolean);
+      return [
+        asText(month?.MonthName),
+        names.length ? names.join(', ') : '---',
+      ];
+    });
+  }
+
+  async downloadYearlyTrainingPlansPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Yearly Training Plans Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'Year', label: 'YEAR', width: 1 },
+        { key: 'Status', label: 'STATUS', width: 1.3 },
+        { key: 'Department', label: 'DEPARTMENT', width: 1.8 },
+        { key: 'monthsCount', label: 'MONTHS', width: 1.2 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.5 },
+      ],
+      rows: (data || []).map((r) => this.mapYearlyTrainingPlanPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('yearly-training-plans', 'directory'),
+    };
+  }
+
+  async downloadYearlyTrainingPlanPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const plan = await this.yearlyPlanModel
+      .findById(id)
+      .populate(YEARLY_PLAN_POPULATE)
+      .exec();
+    if (!plan) throw new NotFoundException('This YearlyPlan is Not found!');
+
+    const row = this.mapYearlyTrainingPlanPdfRow(plan);
+    const monthRows = this.monthTrainingRows(plan);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.Year !== '---' ? `Year ${row.Year}` : 'Yearly Training Plan',
+      subtitle: row.Department !== '---' ? row.Department : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Year', row.Year],
+        ['Status', row.Status],
+        ['Department', row.Department],
+        ['Months Count', row.monthsCount],
+        ['Created By', row.CreatedBy],
+      ],
+      sections: monthRows.length
+        ? [{ heading: 'Months & Trainings', rows: monthRows }]
+        : [],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.Year !== '---' ? `year-${row.Year}` : 'yearly-training-plan',
+        'plan',
+      ),
+    };
   }
 }

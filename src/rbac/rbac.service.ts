@@ -11,6 +11,10 @@ import {
   User,
   UserDocument,
 } from '../admin-management/users/schemas/user.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../admin-management/company/schemas/company.schema';
 import { DerivedModuleService } from './company-rbac.service';
 import { AssignRoleDto } from './dtos/assign-role.dto';
 import { CreateRoleDto } from './dtos/create-role.dto';
@@ -33,6 +37,14 @@ import {
 } from './schemas/master-permission.schema';
 import { Role, RoleDocument } from './schemas/role.schema';
 import { resourceDefaultDisplayName } from './utils/display-name.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../common/branded-pdf.util';
 
 @Injectable()
 export class RbacService {
@@ -45,6 +57,8 @@ export class RbacService {
     @InjectModel(DerivedModule.name)
     private readonly derivedModuleModel: Model<DerivedModuleDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>,
     @Inject(forwardRef(() => DerivedModuleService))
     private readonly derivedModuleService: DerivedModuleService,
   ) {}
@@ -456,5 +470,111 @@ export class RbacService {
     const uniqueValues = [...new Set(values)];
     uniqueValues.forEach((value) => this.ensureObjectId(value, fieldName));
     return uniqueValues.map((value) => new Types.ObjectId(value));
+  }
+
+  private moduleNamesFromRole(role: any): string[] {
+    const master = ((role?.moduleIds as any[]) || [])
+      .map((m) => m?.name || m?.defaultName || m?.key)
+      .filter(Boolean);
+    const derived = ((role?.derivedModuleIds as any[]) || [])
+      .map((m) => m?.name || m?.displayName || m?.masterModuleId?.name)
+      .filter(Boolean);
+    return [...master, ...derived];
+  }
+
+  private mapRolePdfRow(role: any) {
+    const modules = this.moduleNamesFromRole(role);
+    const createdBy =
+      role?.createdBy?.name ||
+      role?.createdBy?.userName ||
+      role?.createdBy?.email ||
+      '---';
+    return {
+      roleName: asText(role?.roleName),
+      description: asText(role?.description),
+      systemRole: asText(role?.systemRole),
+      isActive: role?.isActive === false ? 'No' : 'Yes',
+      modules: modules.length ? modules.join(', ') : '---',
+      moduleCount: String(modules.length),
+      createdBy: asText(createdBy),
+      created: formatDate(role?.created_at),
+    };
+  }
+
+  async downloadRolesPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const roles = await this.getRoles(actor, true);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'RBAC Roles Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'roleName', label: 'ROLE', width: 1.8 },
+        { key: 'systemRole', label: 'SYSTEM', width: 1.3 },
+        { key: 'isActive', label: 'ACTIVE', width: 0.9 },
+        { key: 'moduleCount', label: 'MODULES', width: 1 },
+        { key: 'modules', label: 'MODULE NAMES', width: 2.5 },
+        { key: 'createdBy', label: 'CREATED BY', width: 1.4 },
+      ],
+      rows: (roles || []).map((r) => this.mapRolePdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('rbac_roles', 'directory'),
+    };
+  }
+
+  async downloadRolePdf(id: string, actor: any) {
+    this.ensureObjectId(id, 'roleId');
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const role = await this.populateRole(id);
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+
+    const row = this.mapRolePdfRow(role);
+    const permissions = ((role as any).permissions || [])
+      .map((p: any) => p?.key || p?.name)
+      .filter(Boolean);
+    const permissionSummary =
+      permissions.length > 0
+        ? permissions.slice(0, 40).join(', ') +
+          (permissions.length > 40
+            ? ` (+${permissions.length - 40} more)`
+            : '')
+        : '---';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.roleName !== '---' ? row.roleName : 'Role',
+      subtitle: row.systemRole !== '---' ? row.systemRole : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Role Name', row.roleName],
+        ['Description', row.description],
+        ['System Role', row.systemRole],
+        ['Active', row.isActive],
+        ['Modules', row.modules],
+        ['Module Count', row.moduleCount],
+        ['Created By', row.createdBy],
+        ['Created', row.created],
+      ],
+      sections: [
+        {
+          heading: 'Permissions Summary',
+          rows: [
+            ['Permission Count', String(permissions.length)],
+            ['Permissions', permissionSummary],
+          ],
+        },
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.roleName || 'role', 'role'),
+    };
   }
 }

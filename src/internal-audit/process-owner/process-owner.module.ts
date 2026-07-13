@@ -17,6 +17,10 @@ import {
 import { EmailModule } from '../../email/email.module';
 import { ProfileModule } from '../../admin-management/profile/profile.module';
 import { UserModule } from '../../admin-management/users/user.module';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -26,6 +30,7 @@ import { UserModule } from '../../admin-management/users/user.module';
       { name: ProcessOwner.name, schema: ProcessOwnerSchema },
       { name: User.name, schema: UserSchema },
       { name: Profile.name, schema: ProfileSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     EmailModule,
   ],

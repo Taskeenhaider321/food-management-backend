@@ -12,6 +12,10 @@ import {
   DepartmentSchema,
 } from '../../admin-management/department/schemas/department.schema';
 import { Training, TrainingSchema } from '../training/schemas/training.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -19,6 +23,7 @@ import { Training, TrainingSchema } from '../training/schemas/training.schema';
       { name: YearlyTrainingPlan.name, schema: YearlyTrainingPlanSchema },
       { name: Department.name, schema: DepartmentSchema },
       { name: Training.name, schema: TrainingSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [YearlyTrainingPlanController],

@@ -51,6 +51,22 @@ export class DocumentController {
     return this.documentService.findAll(actor);
   }
 
+  /** Must be registered before `GET :id` and `GET :id/download-pdf`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download documents directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadDocumentsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.documentService.downloadDocumentsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
   @Get(':id/download-pdf')
   @ApiOperation({
     summary:

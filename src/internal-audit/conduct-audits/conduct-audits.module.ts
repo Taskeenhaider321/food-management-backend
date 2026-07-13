@@ -18,6 +18,10 @@ import {
   ChecklistQuestion,
   ChecklistQuestionSchema,
 } from '../create-checklist/schemas/checklist-question.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 
 @Module({
@@ -27,6 +31,7 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
       { name: ChecklistAnswer.name, schema: ChecklistAnswerSchema },
       { name: Checklist.name, schema: ChecklistSchema },
       { name: ChecklistQuestion.name, schema: ChecklistQuestionSchema },
+      { name: Company.name, schema: CompanySchema },
       { name: 'User', schema: {} },
     ]),
     CloudinaryModule,

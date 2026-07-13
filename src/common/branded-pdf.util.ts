@@ -80,10 +80,85 @@ function wrapText(
 function toCloudinaryCandidates(url: string): string[] {
   const urls = [url];
   if (/res\.cloudinary\.com/i.test(url) && /\/upload\//i.test(url)) {
-    urls.unshift(url.replace(/\/upload\//i, '/upload/f_png,q_auto/'));
+    // Prefer raster formats pdf-lib can embed reliably.
+    urls.unshift(url.replace(/\/upload\//i, '/upload/f_png,q_auto,fl_sanitize/'));
     urls.unshift(url.replace(/\/upload\//i, '/upload/f_jpg,q_auto/'));
+    urls.unshift(url.replace(/\/upload\//i, '/upload/f_png/'));
   }
   return [...new Set(urls)];
+}
+
+function looksLikeImage(buffer: Buffer): boolean {
+  if (!buffer?.length || buffer.length < 4) return false;
+  // PNG
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  ) {
+    return true;
+  }
+  // JPEG
+  if (buffer[0] === 0xff && buffer[1] === 0xd8) return true;
+  // GIF
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
+    return true;
+  }
+  // WEBP (RIFF....WEBP)
+  if (
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer.length > 11 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return true;
+  }
+  // SVG / XML
+  const head = buffer.subarray(0, 64).toString('utf8').toLowerCase();
+  if (head.includes('<svg') || head.includes('<?xml')) return true;
+  return false;
+}
+
+async function bufferFromLogoUrl(logoUrl: string): Promise<Buffer | null> {
+  const trimmed = logoUrl.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith('data:image/')) {
+    const match = trimmed.match(/^data:image\/[a-zA-Z0-9+.-]+;base64,(.+)$/);
+    if (!match?.[1]) return null;
+    return Buffer.from(match[1], 'base64');
+  }
+
+  for (const candidate of toCloudinaryCandidates(trimmed)) {
+    try {
+      const response = await axios.get(candidate, {
+        responseType: 'arraybuffer',
+        timeout: 20000,
+        maxRedirects: 5,
+        headers: {
+          Accept: 'image/png,image/jpeg,image/webp,image/*,*/*',
+          'User-Agent': 'FeatFoodSafetyPdf/1.0',
+        },
+        validateStatus: (status) => status >= 200 && status < 400,
+      });
+      const raw = Buffer.from(response.data);
+      if (!raw.length) continue;
+      if (!looksLikeImage(raw)) continue;
+      return raw;
+    } catch (error) {
+      console.warn(
+        `[branded-pdf] logo fetch failed for ${candidate}:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+  return null;
 }
 
 async function embedLogo(
@@ -91,31 +166,90 @@ async function embedLogo(
   logoUrl?: string,
 ): Promise<PDFImage | null> {
   if (!logoUrl?.trim()) return null;
-  for (const candidate of toCloudinaryCandidates(logoUrl.trim())) {
+
+  const raw = await bufferFromLogoUrl(logoUrl);
+  if (!raw) return null;
+
+  // Preferred path: normalize any raster/SVG via sharp → PNG
+  try {
+    const pngBytes = await sharp(raw)
+      .rotate()
+      .resize({
+        width: 800,
+        height: 800,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .ensureAlpha()
+      .png()
+      .toBuffer();
+    return await pdfDoc.embedPng(pngBytes);
+  } catch (error) {
+    console.warn(
+      '[branded-pdf] sharp logo normalize failed, trying direct embed:',
+      error instanceof Error ? error.message : error,
+    );
+  }
+
+  // Fallbacks without sharp
+  try {
+    return await pdfDoc.embedPng(raw);
+  } catch {
+    // continue
+  }
+  try {
+    return await pdfDoc.embedJpg(raw);
+  } catch (error) {
+    console.warn(
+      '[branded-pdf] direct logo embed failed:',
+      error instanceof Error ? error.message : error,
+    );
+  }
+
+  return null;
+}
+
+/** Circular portrait PNG suitable for profile covers. */
+async function embedCircularPortrait(
+  pdfDoc: PDFDocument,
+  imageUrl?: string,
+  size = 320,
+): Promise<PDFImage | null> {
+  if (!imageUrl?.trim()) return null;
+  const raw = await bufferFromLogoUrl(imageUrl);
+  if (!raw) return null;
+
+  try {
+    const mask = Buffer.from(
+      `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}" fill="#fff"/>
+      </svg>`,
+    );
+
+    const pngBytes = await sharp(raw)
+      .rotate()
+      .resize(size, size, { fit: 'cover', position: 'centre' })
+      .composite([{ input: mask, blend: 'dest-in' }])
+      .png()
+      .toBuffer();
+
+    return await pdfDoc.embedPng(pngBytes);
+  } catch (error) {
+    console.warn(
+      '[branded-pdf] circular portrait failed, falling back to square:',
+      error instanceof Error ? error.message : error,
+    );
     try {
-      const response = await axios.get(candidate, {
-        responseType: 'arraybuffer',
-        timeout: 20000,
-        headers: { Accept: 'image/png,image/jpeg,image/*,*/*' },
-      });
-      const raw = Buffer.from(response.data);
-      if (!raw.length) continue;
       const pngBytes = await sharp(raw)
         .rotate()
-        .resize({
-          width: 800,
-          height: 800,
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
+        .resize(size, size, { fit: 'cover', position: 'centre' })
         .png()
         .toBuffer();
       return await pdfDoc.embedPng(pngBytes);
     } catch {
-      // try next
+      return null;
     }
   }
-  return null;
 }
 
 async function drawCoverPage(
@@ -128,11 +262,16 @@ async function drawCoverPage(
     rows: Array<[string, string]>;
   },
   logo: PDFImage | null,
+  portrait: PDFImage | null = null,
 ) {
   const { width, height } = page.getSize();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const centerX = width / 2;
+  const companyName = company.companyName || 'Company';
+  const addressLines = company.address
+    ? wrapText(company.address, font, 9, 280).slice(0, 2)
+    : [];
 
   page.drawRectangle({
     x: 0,
@@ -142,65 +281,107 @@ async function drawCoverPage(
     color: ACCENT,
   });
 
-  let y = height - 90;
+  // Centered brand stack: logo above company name (not side-by-side)
+  let y = height - 46;
+
   if (logo) {
-    const maxW = 180;
-    const maxH = 140;
-    const scale = Math.min(maxW / logo.width, maxH / logo.height);
+    const maxW = 110;
+    const maxH = 70;
+    const scale = Math.min(maxW / logo.width, maxH / logo.height, 1);
     const logoW = logo.width * scale;
     const logoH = logo.height * scale;
+    const tilePad = 6;
+
+    page.drawRectangle({
+      x: centerX - logoW / 2 - tilePad,
+      y: y - logoH - tilePad,
+      width: logoW + tilePad * 2,
+      height: logoH + tilePad * 2,
+      color: rgb(1, 1, 1),
+      borderWidth: 0.8,
+      borderColor: rgb(0.82, 0.85, 0.9),
+    });
     page.drawImage(logo, {
       x: centerX - logoW / 2,
       y: y - logoH,
       width: logoW,
       height: logoH,
     });
-    y -= logoH + 24;
+    y -= logoH + tilePad + 16;
   }
 
-  const companyName = company.companyName || 'Company';
-  page.drawText(companyName, {
-    x: centerX - bold.widthOfTextAtSize(companyName, 22) / 2,
+  const nameSize = 18;
+  const displayName = truncate(companyName, bold, nameSize, width - 120);
+  page.drawText(displayName, {
+    x: centerX - bold.widthOfTextAtSize(displayName, nameSize) / 2,
     y,
-    size: 22,
+    size: nameSize,
     font: bold,
     color: INK,
   });
-  y -= 20;
+  y -= 16;
 
-  if (company.address) {
-    for (const line of wrapText(company.address, font, 11, width - 120).slice(
-      0,
-      3,
-    )) {
-      page.drawText(line, {
-        x: centerX - font.widthOfTextAtSize(line, 11) / 2,
-        y,
-        size: 11,
-        font,
-        color: MUTED,
-      });
-      y -= 14;
-    }
+  for (const line of addressLines) {
+    page.drawText(line, {
+      x: centerX - font.widthOfTextAtSize(line, 10) / 2,
+      y,
+      size: 10,
+      font,
+      color: MUTED,
+    });
+    y -= 13;
   }
 
-  y -= 24;
+  y -= 12;
   page.drawLine({
-    start: { x: 60, y },
-    end: { x: width - 60, y },
-    thickness: 1,
-    color: RULE,
+    start: { x: 72, y },
+    end: { x: width - 72, y },
+    thickness: 1.1,
+    color: ACCENT,
   });
-  y -= 30;
+  y -= 24;
+
+  if (portrait) {
+    const portraitSize = 100;
+    const ringPad = 5;
+    const ringSize = portraitSize + ringPad * 2;
+    const ringX = centerX;
+    const ringY = y - ringSize / 2;
+
+    page.drawCircle({
+      x: ringX,
+      y: ringY,
+      size: ringSize / 2,
+      borderWidth: 2.5,
+      borderColor: ACCENT,
+      color: rgb(1, 1, 1),
+    });
+    page.drawCircle({
+      x: ringX,
+      y: ringY,
+      size: portraitSize / 2 + 1.5,
+      borderWidth: 1,
+      borderColor: rgb(0.82, 0.85, 0.9),
+      color: rgb(1, 1, 1),
+    });
+
+    page.drawImage(portrait, {
+      x: centerX - portraitSize / 2,
+      y: y - ringPad - portraitSize,
+      width: portraitSize,
+      height: portraitSize,
+    });
+    y -= ringSize + 14;
+  }
 
   page.drawText(options.title, {
-    x: centerX - bold.widthOfTextAtSize(options.title, 16) / 2,
+    x: centerX - bold.widthOfTextAtSize(options.title, 17) / 2,
     y,
-    size: 16,
+    size: 17,
     font: bold,
     color: INK,
   });
-  y -= 18;
+  y -= 16;
 
   if (options.subtitle) {
     page.drawText(options.subtitle, {
@@ -210,36 +391,41 @@ async function drawCoverPage(
       font,
       color: MUTED,
     });
-    y -= 28;
-  } else {
-    y -= 16;
-  }
-
-  for (const [label, value] of options.rows) {
-    page.drawText(`${label} :`, {
-      x: 80,
-      y,
-      size: 12,
-      font,
-      color: INK,
-    });
-    page.drawText(truncate(asText(value), font, 12, width - 320), {
-      x: 280,
-      y,
-      size: 12,
-      font,
-      color: INK,
-    });
     y -= 24;
+  } else {
+    y -= 12;
   }
 
-  page.drawText(BRAND_FOOTER, {
-    x: centerX - font.widthOfTextAtSize(BRAND_FOOTER, 10) / 2,
-    y: 40,
-    size: 10,
-    font,
-    color: MUTED,
+  const detailsBottom = 58;
+  page.drawRectangle({
+    x: 56,
+    y: detailsBottom,
+    width: width - 112,
+    height: Math.max(80, y + 8 - detailsBottom),
+    color: rgb(0.985, 0.987, 0.99),
+    borderWidth: 0.7,
+    borderColor: rgb(0.88, 0.9, 0.93),
   });
+
+  y -= 6;
+  for (const [label, value] of options.rows) {
+    if (y < detailsBottom + 16) break;
+    page.drawText(String(label), {
+      x: 76,
+      y,
+      size: 10,
+      font,
+      color: MUTED,
+    });
+    page.drawText(truncate(asText(value), bold, 11, width - 300), {
+      x: 250,
+      y,
+      size: 11,
+      font: bold,
+      color: INK,
+    });
+    y -= 18;
+  }
 }
 
 function drawContentHeader(
@@ -251,43 +437,55 @@ function drawContentHeader(
   logo: PDFImage | null,
 ) {
   const { width, height } = page.getSize();
-  const top = height - 12;
+  const top = height - 10;
+  const companyName = company.companyName || 'Company';
 
+  page.drawRectangle({
+    x: 18,
+    y: height - 44,
+    width: width - 36,
+    height: 36,
+    color: rgb(0.965, 0.97, 0.98),
+    borderWidth: 0.6,
+    borderColor: rgb(0.86, 0.88, 0.92),
+  });
+
+  let textX = 28;
   if (logo) {
-    const maxW = 34;
-    const maxH = 26;
-    const scale = Math.min(maxW / logo.width, maxH / logo.height);
+    const maxW = 28;
+    const maxH = 22;
+    const scale = Math.min(maxW / logo.width, maxH / logo.height, 1);
     const logoW = logo.width * scale;
     const logoH = logo.height * scale;
     page.drawImage(logo, {
-      x: 20,
-      y: top - logoH,
+      x: 26,
+      y: height - 18 - logoH,
       width: logoW,
       height: logoH,
     });
+    textX = 26 + logoW + 10;
   }
 
-  const leftX = logo ? 62 : 20;
-  page.drawText(truncate(company.companyName || 'Company', bold, 10, 240), {
-    x: leftX,
-    y: top - 10,
+  page.drawText(truncate(companyName, bold, 10, 260), {
+    x: textX,
+    y: top - 8,
     size: 10,
     font: bold,
     color: INK,
   });
-  page.drawText(truncate(title, font, 9, 240), {
-    x: leftX,
-    y: top - 24,
-    size: 9,
+  page.drawText(truncate(title, font, 8.5, 260), {
+    x: textX,
+    y: top - 22,
+    size: 8.5,
     font,
     color: MUTED,
   });
 
   page.drawLine({
-    start: { x: 18, y: height - 46 },
-    end: { x: width - 18, y: height - 46 },
-    thickness: 0.8,
-    color: RULE,
+    start: { x: 18, y: height - 48 },
+    end: { x: width - 18, y: height - 48 },
+    thickness: 1,
+    color: ACCENT,
   });
 }
 
@@ -466,6 +664,8 @@ export async function buildBrandedDetailPdf(options: {
   title: string;
   subtitle?: string;
   exportedBy?: string;
+  /** Optional profile/person photo shown as a circular portrait on the cover. */
+  portraitUrl?: string;
   coverRows: Array<[string, string]>;
   sections?: Array<{ heading: string; rows: Array<[string, string]> }>;
 }): Promise<Uint8Array> {
@@ -473,6 +673,7 @@ export async function buildBrandedDetailPdf(options: {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const logo = await embedLogo(pdfDoc, options.company.companyLogo);
+  const portrait = await embedCircularPortrait(pdfDoc, options.portraitUrl);
 
   const cover = pdfDoc.addPage();
   await drawCoverPage(
@@ -489,6 +690,7 @@ export async function buildBrandedDetailPdf(options: {
       ],
     },
     logo,
+    portrait,
   );
 
   // Only add extra pages when callers provide additional sections.
@@ -561,22 +763,55 @@ export async function resolveActorCompany(
   actor: any,
   fallback: BrandedPdfCompany = { companyName: 'Feat Technology' },
 ): Promise<BrandedPdfCompany> {
+  const pickLogo = (source: any): string => {
+    if (!source || typeof source !== 'object') return '';
+    const raw =
+      source.companyLogo ||
+      source.CompanyLogo ||
+      source.logo ||
+      source.Logo ||
+      '';
+    return typeof raw === 'string' ? raw.trim() : '';
+  };
+
+  const pickName = (source: any): string =>
+    source?.companyName ||
+    source?.CompanyName ||
+    source?.name ||
+    '';
+
+  const pickAddress = (source: any): string =>
+    source?.address || source?.Address || '';
+
+  const populated =
+    actor?.companyId && typeof actor.companyId === 'object'
+      ? actor.companyId
+      : null;
+
   const id =
+    populated?._id?.toString() ||
     actor?.companyId?._id?.toString() ||
-    actor?.companyId?.toString() ||
-    undefined;
-  if (!id) return fallback;
-  try {
-    const company = await companyModel.findById(id).exec();
-    if (!company) return fallback;
-    return {
-      companyName: company.companyName || fallback.companyName,
-      address: company.address || '',
-      companyLogo: company.companyLogo || '',
-    };
-  } catch {
-    return fallback;
+    (typeof actor?.companyId === 'string' ? actor.companyId : undefined);
+
+  let companyDoc: any = null;
+  if (id) {
+    try {
+      companyDoc = await companyModel.findById(id).exec();
+    } catch {
+      companyDoc = null;
+    }
   }
+
+  const source = companyDoc || populated;
+  if (!source) return fallback;
+
+  const logo = pickLogo(source) || pickLogo(populated);
+
+  return {
+    companyName: pickName(source) || fallback.companyName,
+    address: pickAddress(source) || '',
+    companyLogo: logo,
+  };
 }
 
 export { formatDate, asText };

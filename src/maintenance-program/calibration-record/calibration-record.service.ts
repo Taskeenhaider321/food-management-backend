@@ -10,6 +10,14 @@ import {
   normalizeEquipmentCalibration,
   updateCalibrationEntryAfterRecord,
 } from '../utils/equipment-calibration.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 import { v2 as cloudinary } from 'cloudinary';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import axios from 'axios';
@@ -303,6 +311,145 @@ export class CalibrationRecordService {
       status: true,
       message: 'The following calibration!',
       data: records,
+    };
+  }
+
+  private actorDepartmentId(actor: any): string | undefined {
+    return (
+      actor?.departmentId?._id?.toString() ||
+      (typeof actor?.departmentId === 'string'
+        ? actor.departmentId
+        : undefined)
+    );
+  }
+
+  private mapCalibrationPdfRow(r: any) {
+    const equipment = r?.Equipment;
+    return {
+      code: asText(r?.callibrationCode || r?.CR),
+      equipment: asText(
+        equipment?.equipmentName || equipment?.equipmentCode,
+      ),
+      type: asText(r?.callibrationType),
+      dateType: asText(r?.dateType),
+      lastDate: formatDate(r?.lastCallibrationDate),
+      nextDate: formatDate(r?.nextCallibrationDate),
+      calibratedBy: asText(r?.CaliberateBy),
+    };
+  }
+
+  private calibrationListColumns() {
+    return [
+      { key: 'code', label: 'CODE', width: 1.2 },
+      { key: 'equipment', label: 'EQUIPMENT', width: 1.6 },
+      { key: 'type', label: 'TYPE', width: 1.1 },
+      { key: 'dateType', label: 'DATE TYPE', width: 1.2 },
+      { key: 'lastDate', label: 'LAST', width: 1.1 },
+      { key: 'nextDate', label: 'NEXT', width: 1.1 },
+      { key: 'calibratedBy', label: 'CALIBRATED BY', width: 1.4 },
+    ];
+  }
+
+  async downloadCalibrationRecordsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const departmentId = this.actorDepartmentId(actor);
+    const filter = departmentId ? { UserDepartment: departmentId } : {};
+    const data = await this.calibrationRecordModel
+      .find(filter)
+      .populate('Equipment')
+      .sort({ CaliberatDate: -1, created_at: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Calibration Records Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: this.calibrationListColumns(),
+      rows: (data || []).map((r) => this.mapCalibrationPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('calibration_records', 'directory'),
+    };
+  }
+
+  async downloadCalibrationRecordsByEquipmentPdf(
+    equipmentId: string,
+    actor: any,
+  ) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const departmentId = this.actorDepartmentId(actor);
+    const { data } = await this.findByEquipmentId(equipmentId, departmentId);
+    const equipment = data?.[0]?.Equipment as any;
+    const equipmentLabel =
+      equipment?.equipmentName ||
+      equipment?.equipmentCode ||
+      equipmentId;
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Calibration Records by Equipment',
+      subtitle: asText(equipmentLabel),
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: this.calibrationListColumns(),
+      rows: (data || []).map((r) => this.mapCalibrationPdfRow(r)),
+      coverExtraRows: [['Equipment', asText(equipmentLabel)]],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        String(equipmentLabel || 'equipment'),
+        'calibration',
+      ),
+    };
+  }
+
+  async downloadCalibrationRecordPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const record = await this.calibrationRecordModel
+      .findById(id)
+      .populate('Equipment')
+      .populate('UserDepartment')
+      .exec();
+    if (!record) {
+      throw new NotFoundException('Calibration record not found');
+    }
+
+    const row = this.mapCalibrationPdfRow(record);
+    const readings = (record as any).measuredReading;
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.code !== '---' ? row.code : 'Calibration Record',
+      subtitle: row.equipment !== '---' ? row.equipment : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Code', row.code],
+        ['Equipment', row.equipment],
+        ['Type', row.type],
+        ['Date Type', row.dateType],
+        ['Last Calibration', row.lastDate],
+        ['Next Calibration', row.nextDate],
+        ['Calibrated By', row.calibratedBy],
+        ['Comment', asText((record as any).comment)],
+      ],
+      sections: [
+        {
+          heading: 'Measured Readings',
+          rows: [
+            ['First Reading', asText(readings?.firstReading)],
+            ['Second Reading', asText(readings?.secondReading)],
+            ['Third Reading', asText(readings?.thirdReading)],
+          ],
+        },
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.code || 'calibration', 'record'),
     };
   }
 }

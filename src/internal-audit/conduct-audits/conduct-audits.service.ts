@@ -20,6 +20,14 @@ import {
 } from '../common/audit-frequency.util';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import axios from 'axios';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const CONDUCT_AUDIT_QUERY = [
   {
@@ -53,6 +61,7 @@ export class ConductAuditsService {
     private checklistAnswerModel: Model<ChecklistAnswer>,
     @InjectModel(Checklist.name) private checklistModel: Model<Checklist>,
     @InjectModel('User') private userModel: Model<any>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
@@ -471,6 +480,132 @@ export class ConductAuditsService {
       status: true,
       message: 'All ConductAudits have been deleted!',
       data: result,
+    };
+  }
+
+  private answerValue(answer: any): string {
+    const parts = [
+      answer?.YesNoAnswer,
+      answer?.GoodFairPoorAnswer,
+      answer?.SafeAtRiskAnswer,
+      answer?.PassFailAnswer,
+      answer?.CompliantNonCompliantAnswer,
+      answer?.ConformObservationAnswer,
+      answer?.GradingSystemAnswer != null
+        ? String(answer.GradingSystemAnswer)
+        : null,
+      answer?.Remarks ? `Remarks: ${answer.Remarks}` : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(' | ') : '---';
+  }
+
+  private mapConductAuditPdfRow(audit: any) {
+    const checklist = audit?.Checklist;
+    const department =
+      audit?.UserDepartment?.departmentName ||
+      audit?.UserDepartment?.shortName ||
+      checklist?.UserDepartment?.departmentName ||
+      '---';
+    const answers = Array.isArray(audit?.Answers) ? audit.Answers : [];
+    return {
+      checklistName: asText(checklist?.title || checklist?.ChecklistId),
+      checklistId: asText(checklist?.ChecklistId),
+      AuditBy: asText(audit?.AuditBy),
+      AuditDate: formatDate(audit?.AuditDate),
+      department: asText(department),
+      answersCount: String(answers.length),
+      isLocked: audit?.isLocked ? 'Yes' : 'No',
+    };
+  }
+
+  private answerSummaryRows(audit: any): Array<[string, string]> {
+    const answers = Array.isArray(audit?.Answers) ? audit.Answers : [];
+    return answers.map((answer: any, index: number) => {
+      const questionText =
+        answer?.question?.questionText ||
+        answer?.question?.QuestionText ||
+        `Question ${index + 1}`;
+      return [asText(questionText), this.answerValue(answer)];
+    });
+  }
+
+  async downloadConductAuditsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const departmentId =
+      actor?.departmentId?._id?.toString() ||
+      actor?.departmentId?.toString();
+
+    let data: any[];
+    if (departmentId) {
+      const result = await this.readConductAudits(departmentId);
+      data = result.data || [];
+    } else {
+      data = await this.conductAuditsModel
+        .find()
+        .populate(CONDUCT_AUDIT_QUERY)
+        .sort({ AuditDate: -1 })
+        .exec();
+    }
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Conduct Audits Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'checklistName', label: 'CHECKLIST', width: 2 },
+        { key: 'checklistId', label: 'ID', width: 1.3 },
+        { key: 'AuditBy', label: 'AUDIT BY', width: 1.5 },
+        { key: 'AuditDate', label: 'AUDIT DATE', width: 1.3 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.5 },
+        { key: 'answersCount', label: 'ANSWERS', width: 1 },
+        { key: 'isLocked', label: 'LOCKED', width: 0.9 },
+      ],
+      rows: (data || []).map((r) => this.mapConductAuditPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('conduct-audits', 'directory'),
+    };
+  }
+
+  async downloadConductAuditPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const audit = await this.conductAuditsModel
+      .findById(id)
+      .populate(CONDUCT_AUDIT_QUERY)
+      .exec();
+    if (!audit) throw new NotFoundException('Conduct audit not found');
+
+    const row = this.mapConductAuditPdfRow(audit);
+    const answerRows = this.answerSummaryRows(audit);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.checklistName !== '---' ? row.checklistName : 'Conduct Audit',
+      subtitle: row.AuditDate !== '---' ? row.AuditDate : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Checklist', row.checklistName],
+        ['Checklist ID', row.checklistId],
+        ['Audit By', row.AuditBy],
+        ['Audit Date', row.AuditDate],
+        ['Department', row.department],
+        ['Answers Count', row.answersCount],
+        ['Locked', row.isLocked],
+      ],
+      sections: answerRows.length
+        ? [{ heading: 'Answers Summary', rows: answerRows }]
+        : [],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.checklistId || row.checklistName || 'conduct-audit',
+        'audit',
+      ),
     };
   }
 }

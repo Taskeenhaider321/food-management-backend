@@ -7,6 +7,8 @@ import {
   Delete,
   Body,
   Param,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { ProcessOwnerService } from './process-owner.service';
 import { CreateProcessOwnerDto } from './dtos/create-process-owner.dto';
@@ -16,6 +18,7 @@ import {
   ResetProcessOwnerCredentialsDto,
 } from './dtos/account-credentials.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Process Owner')
 @Controller('process-owner')
@@ -41,6 +44,39 @@ export class ProcessOwnerController {
   @ApiBearerAuth()
   async readProcess(@Param('departmentId') departmentId: string) {
     return this.processOwnerService.readProcess(departmentId);
+  }
+
+  /** Must be registered before `GET :processId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download processes directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadProcessesPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.processOwnerService.downloadProcessesPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :processId`. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single process PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadProcessPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.processOwnerService.downloadProcessPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':processId')

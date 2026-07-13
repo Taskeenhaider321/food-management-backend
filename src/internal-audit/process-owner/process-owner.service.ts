@@ -24,6 +24,22 @@ import {
   Profile,
   ProfileDocument,
 } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
+
+const PROCESS_POPULATE = [
+  {
+    path: 'profileId',
+    populate: { path: 'userId', populate: ['companyId', 'departmentId'] },
+  },
+  { path: 'departmentId' },
+];
 
 @Injectable()
 export class ProcessOwnerService {
@@ -32,6 +48,7 @@ export class ProcessOwnerService {
     private processOwnerModel: Model<ProcessOwner>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private emailService: EmailService,
     private readonly profileService: ProfileService,
     private readonly userService: UserService,
@@ -319,6 +336,101 @@ Best regards`;
       status: true,
       message: 'All processOwner have been Deleted!',
       data: result,
+    };
+  }
+
+  private mapProcessPdfRow(process: any) {
+    const profile = process?.profileId;
+    const user = profile?.userId;
+    const department =
+      process?.departmentId?.departmentName ||
+      process?.departmentId?.shortName ||
+      user?.departmentId?.departmentName ||
+      '---';
+    return {
+      processCode: asText(process?.processCode),
+      processName: asText(process?.processName),
+      riskAssessment: asText(process?.riskAssessment),
+      department: asText(department),
+      owner: asText(user?.name || profile?.name),
+      isEnabled: process?.isEnabled === false ? 'No' : 'Yes',
+      created: formatDate(process?.created_at),
+      activities: asText(process?.activities),
+      criticalAreas: asText(process?.criticalAreas),
+      specialInstructions: asText(process?.specialInstructions),
+      reason: asText(process?.reason),
+      createdBy: asText(process?.createdBy),
+    };
+  }
+
+  async downloadProcessesPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const data = await this.processOwnerModel
+      .find()
+      .populate(PROCESS_POPULATE)
+      .sort({ created_at: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Processes Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'processCode', label: 'CODE', width: 1.2 },
+        { key: 'processName', label: 'PROCESS', width: 2 },
+        { key: 'riskAssessment', label: 'RISK', width: 1.3 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.5 },
+        { key: 'owner', label: 'OWNER', width: 1.5 },
+        { key: 'isEnabled', label: 'ENABLED', width: 1 },
+        { key: 'created', label: 'CREATED', width: 1.2 },
+      ],
+      rows: (data || []).map((r) => this.mapProcessPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('processes', 'directory'),
+    };
+  }
+
+  async downloadProcessPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const process = await this.processOwnerModel
+      .findById(id)
+      .populate(PROCESS_POPULATE)
+      .exec();
+    if (!process) throw new NotFoundException('Process not found');
+
+    const row = this.mapProcessPdfRow(process);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.processCode !== '---' ? row.processCode : 'Process',
+      subtitle: row.processName !== '---' ? row.processName : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Process Code', row.processCode],
+        ['Process Name', row.processName],
+        ['Risk Assessment', row.riskAssessment],
+        ['Department', row.department],
+        ['Owner', row.owner],
+        ['Enabled', row.isEnabled],
+        ['Created', row.created],
+        ['Created By', row.createdBy],
+        ['Reason', row.reason],
+        ['Activities', row.activities],
+        ['Critical Areas', row.criticalAreas],
+        ['Special Instructions', row.specialInstructions],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.processCode || row.processName || 'process',
+        'process',
+      ),
     };
   }
 }

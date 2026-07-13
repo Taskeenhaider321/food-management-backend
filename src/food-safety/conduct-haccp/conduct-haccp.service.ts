@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { ConductHaccp } from './schemas/conduct-haccp.schema';
 import { Hazard } from './schemas/hazard.schema';
 import { CreateConductHaccpDto } from './dtos/create-conduct-haccp.dto';
@@ -22,13 +22,143 @@ import {
   shouldTrackChanges,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class ConductHaccpService {
   constructor(
     @InjectModel('ConductHaccp') private conductHaccpModel: Model<ConductHaccp>,
     @InjectModel('Hazard') private hazardModel: Model<Hazard>,
+    @InjectModel('Company') private companyModel: Model<any>,
+    @InjectModel('Department') private departmentModel: Model<any>,
   ) {}
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private processName(process: any): string {
+    if (!process || typeof process !== 'object') return '---';
+    return asText(process.ProcessName || process.Name);
+  }
+
+  private mapConductHaccpPdfRow(record: any) {
+    const hazards = Array.isArray(record?.Hazards) ? record.Hazards : [];
+    return {
+      DocumentId: asText(record?.DocumentId),
+      processName: this.processName(record?.Process),
+      Status: asText(record?.Status),
+      hazardCount: String(hazards.length),
+      CreatedBy: asText(record?.CreatedBy),
+      CreationDate: formatDate(record?.CreationDate),
+      DocumentType: asText(record?.DocumentType),
+    };
+  }
+
+  async findAllForActor(actor: any) {
+    const deptIds = await this.companyDepartmentIds(actor);
+    const filter: Record<string, unknown> =
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const conductHaccps = await this.conductHaccpModel
+      .find(filter as any)
+      .populate('Department Process UserDepartment')
+      .populate({
+        path: 'Hazards',
+        populate: { path: 'Process', model: 'ProcessDetail' },
+      })
+      .populate({ path: 'Teams', model: 'HaccpTeam' })
+      .exec();
+    return { status: true, data: conductHaccps };
+  }
+
+  async downloadConductHaccpsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Risk Assessments Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'DocumentId', label: 'DOC ID', width: 1.4 },
+        { key: 'processName', label: 'PROCESS', width: 2.2 },
+        { key: 'Status', label: 'STATUS', width: 1.4 },
+        { key: 'hazardCount', label: 'HAZARDS', width: 1.2 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.8 },
+      ],
+      rows: (data || []).map((r) => this.mapConductHaccpPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('risk-assessments', 'directory'),
+    };
+  }
+
+  async downloadConductHaccpPdf(haccpId: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: record } = await this.getConductHaccp(haccpId);
+    const row = this.mapConductHaccpPdfRow(record);
+    const hazards = Array.isArray((record as any)?.Hazards)
+      ? (record as any).Hazards
+      : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.DocumentId !== '---' ? row.DocumentId : 'Risk Assessment',
+      subtitle: row.processName !== '---' ? row.processName : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.DocumentId],
+        ['Process', row.processName],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Hazard Count', row.hazardCount],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+      sections: hazards.map((h: any, i: number) => ({
+        heading: `Hazard ${i + 1}${h?.type ? `: ${h.type}` : ''}`,
+        rows: [
+          ['Type', asText(h?.type)],
+          ['Process Step', asText(h?.Process?.Name)],
+          ['Description', asText(h?.Description)],
+          ['Control Measures', asText(h?.ControlMeasures)],
+          ['Occurrence', asText(h?.Occurence)],
+          ['Severity', asText(h?.Severity)],
+          ['Significance Level', asText(h?.SignificanceLevel)],
+        ],
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.DocumentId || 'risk-assessment',
+        'risk-assessment',
+      ),
+    };
+  }
 
   async createConductHaccp(createConductHaccpDto: CreateConductHaccpDto) {
     const createdHazards = await this.hazardModel.create(

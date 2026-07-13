@@ -16,6 +16,14 @@ import {
 } from './dtos/create-change-request.dto';
 
 import { actorDisplayName } from '../common/document-id.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const DOCUMENT_POPULATE = {
   path: 'document',
@@ -30,6 +38,7 @@ export class ChangeRequestService {
     private readonly changeRequestModel: Model<ChangeRequestDocument>,
     @InjectModel('Document') private readonly documentModel: Model<any>,
     @InjectModel('ListOfForms') private readonly listOfFormsModel: Model<any>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
@@ -221,6 +230,82 @@ export class ChangeRequestService {
       status: true,
       message: 'Change request disapproved',
       data: request,
+    };
+  }
+
+  private mapChangeRequestPdfRow(request: any) {
+    return {
+      requestNumber: asText(request?.requestNumber),
+      documentName: asText(request?.documentName),
+      documentModel: asText(request?.documentModel),
+      changeReason: asText(request?.changeReason),
+      status: asText(request?.status),
+      createdBy: asText(request?.createdBy),
+      created_at: formatDate(request?.created_at),
+    };
+  }
+
+  async downloadChangeRequestsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAll(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Change Requests Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'requestNumber', label: 'REQUEST #', width: 1.2 },
+        { key: 'documentName', label: 'DOCUMENT', width: 2 },
+        { key: 'documentModel', label: 'MODEL', width: 1.2 },
+        { key: 'changeReason', label: 'REASON', width: 2 },
+        { key: 'status', label: 'STATUS', width: 1.5 },
+        { key: 'createdBy', label: 'CREATED BY', width: 1.3 },
+        { key: 'created_at', label: 'CREATED', width: 1.2 },
+      ],
+      rows: (data || []).map((r) => this.mapChangeRequestPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('change-requests', 'directory'),
+    };
+  }
+
+  async downloadChangeRequestPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const request = await this.changeRequestModel
+      .findById(id)
+      .populate(DOCUMENT_POPULATE)
+      .exec();
+    if (!request) throw new NotFoundException('Change request not found');
+
+    const row = this.mapChangeRequestPdfRow(request);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.requestNumber !== '---'
+          ? row.requestNumber
+          : 'Change Request',
+      subtitle: row.documentName !== '---' ? row.documentName : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Request Number', row.requestNumber],
+        ['Document Name', row.documentName],
+        ['Document Model', row.documentModel],
+        ['Change Reason', row.changeReason],
+        ['Status', row.status],
+        ['Created By', row.createdBy],
+        ['Created At', row.created_at],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.requestNumber || row.documentName || 'change-request',
+        'change-request',
+      ),
     };
   }
 }

@@ -11,6 +11,14 @@ import { CreateCorrectiveActionDto } from './dtos/create-corrective-action.dto';
 import { UpdateCorrectiveActionDto } from './dtos/update-corrective-action.dto';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import axios from 'axios';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class CorrectiveActionService {
@@ -21,6 +29,7 @@ export class CorrectiveActionService {
     @InjectModel('ConductAudits') private conductAuditsModel: Model<any>,
     @InjectModel('Checklist') private checklistModel: Model<any>,
     @InjectModel('User') private userModel: Model<any>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
@@ -352,6 +361,125 @@ export class CorrectiveActionService {
       status: true,
       message: 'All CorrectiveActions have been deleted!',
       data: result,
+    };
+  }
+
+  private mapCorrectiveActionPdfRow(action: any) {
+    const answers = Array.isArray(action?.Answers) ? action.Answers : [];
+    return {
+      CorrectionBy: asText(action?.CorrectionBy),
+      CorrectionDate: formatDate(
+        action?.CorrectionDate || action?.created_at,
+      ),
+      findingsCount: String(answers.length),
+    };
+  }
+
+  private answerSummaryRows(action: any): Array<[string, string]> {
+    const answers = Array.isArray(action?.Answers) ? action.Answers : [];
+    return answers.flatMap((item: any, index: number) => {
+      const q =
+        item?.question?.question?.questionText ||
+        item?.question?.questionText ||
+        `Finding ${index + 1}`;
+      return [
+        [`${index + 1}. Question`, asText(q)],
+        [`${index + 1}. Correction`, asText(item?.Correction)],
+        [`${index + 1}. Corrective Action`, asText(item?.CorrectiveAction)],
+        [`${index + 1}. Root Cause`, asText(item?.RootCause)],
+      ];
+    });
+  }
+
+  async downloadCorrectiveActionsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const data = await this.correctiveActionModel
+      .find()
+      .populate('UserDepartment')
+      .populate({
+        path: 'Report',
+        populate: {
+          path: 'ConductAudit',
+          populate: { path: 'Checklist' },
+        },
+      })
+      .populate({
+        path: 'Answers.question',
+        populate: { path: 'question' },
+      })
+      .sort({ CorrectionDate: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Corrective Actions Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'CorrectionBy', label: 'CORRECTION BY', width: 2.2 },
+        { key: 'CorrectionDate', label: 'CORRECTION DATE', width: 1.8 },
+        { key: 'findingsCount', label: 'FINDINGS', width: 1.5 },
+      ],
+      rows: (data || []).map((r) => this.mapCorrectiveActionPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('corrective-actions', 'directory'),
+    };
+  }
+
+  async downloadCorrectiveActionPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const action = await this.correctiveActionModel
+      .findById(id)
+      .populate('UserDepartment')
+      .populate({
+        path: 'Report',
+        populate: {
+          path: 'ConductAudit',
+          populate: { path: 'Checklist' },
+        },
+      })
+      .populate({
+        path: 'Answers.question',
+        populate: { path: 'question' },
+      })
+      .exec();
+    if (!action) throw new NotFoundException('CorrectiveAction not found!');
+
+    const row = this.mapCorrectiveActionPdfRow(action);
+    const answerRows = this.answerSummaryRows(action);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.CorrectionBy !== '---'
+          ? row.CorrectionBy
+          : 'Corrective Action',
+      subtitle:
+        row.CorrectionDate !== '---' ? row.CorrectionDate : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Correction By', row.CorrectionBy],
+        ['Correction Date', row.CorrectionDate],
+        ['Findings Count', row.findingsCount],
+      ],
+      sections: answerRows.length
+        ? [
+            {
+              heading: 'Correction / Corrective Action / Root Cause',
+              rows: answerRows,
+            },
+          ]
+        : [],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.CorrectionBy || 'corrective-action',
+        'action',
+      ),
     };
   }
 }

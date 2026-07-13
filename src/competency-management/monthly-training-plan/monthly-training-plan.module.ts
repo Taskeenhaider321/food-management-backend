@@ -27,6 +27,10 @@ import {
 } from '../../admin-management/profile/schemas/profile.schema';
 import { Trainer, TrainerSchema } from '../trainer/schemas/trainer.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -39,6 +43,7 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
       { name: Department.name, schema: DepartmentSchema },
       { name: Profile.name, schema: ProfileSchema },
       { name: Trainer.name, schema: TrainerSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     CloudinaryModule,
   ],

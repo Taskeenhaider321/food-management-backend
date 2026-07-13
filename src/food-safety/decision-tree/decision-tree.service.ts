@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { DecisionTree } from './schemas/decision-tree.schema';
 import { Decision } from './schemas/decision.schema';
 import { CreateDecisionTreeDto } from './dtos/create-decision-tree.dto';
@@ -22,13 +22,169 @@ import {
   shouldTrackChanges,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class DecisionTreeService {
   constructor(
     @InjectModel('DecisionTree') private decisionTreeModel: Model<DecisionTree>,
     @InjectModel('Decision') private decisionModel: Model<Decision>,
+    @InjectModel('Company') private companyModel: Model<any>,
+    @InjectModel('Department') private departmentModel: Model<any>,
   ) {}
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private yn(value: boolean | null | undefined): string {
+    if (value === true) return 'Yes';
+    if (value === false) return 'No';
+    return '---';
+  }
+
+  private linkedLabel(tree: any): string {
+    const conduct = tree?.ConductHaccp;
+    if (!conduct || typeof conduct !== 'object') return '---';
+    const processName =
+      conduct?.Process?.ProcessName || conduct?.Process?.Name;
+    const parts = [conduct?.DocumentId, processName].filter(Boolean);
+    return parts.length ? parts.join(' / ') : '---';
+  }
+
+  private mapDecisionTreePdfRow(tree: any) {
+    return {
+      DocumentId: asText(tree?.DocumentId),
+      linked: this.linkedLabel(tree),
+      Status: asText(tree?.Status),
+      CreatedBy: asText(tree?.CreatedBy),
+      CreationDate: formatDate(tree?.CreationDate),
+      DocumentType: asText(tree?.DocumentType),
+    };
+  }
+
+  async findAllForActor(actor: any) {
+    const deptIds = await this.companyDepartmentIds(actor);
+    const filter: Record<string, unknown> =
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const decisionTrees = await this.decisionTreeModel
+      .find(filter as any)
+      .populate('Department UserDepartment')
+      .populate({
+        path: 'ConductHaccp',
+        model: 'ConductHaccp',
+        populate: [
+          {
+            path: 'Teams',
+            model: 'HaccpTeam',
+            populate: { path: 'TeamMembers', model: 'User' },
+          },
+          { path: 'Process', model: 'Processes' },
+        ],
+      })
+      .populate({
+        path: 'Decisions',
+        model: 'Decision',
+        populate: {
+          path: 'Hazard',
+          model: 'Hazard',
+          populate: { path: 'Process', model: 'ProcessDetail' },
+        },
+      })
+      .exec();
+    return { status: true, data: decisionTrees };
+  }
+
+  async downloadDecisionTreesPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'CCP/OPRP Assessments Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'DocumentId', label: 'DOC ID', width: 1.4 },
+        { key: 'linked', label: 'LINKED PROCESS/CONDUCT', width: 3 },
+        { key: 'Status', label: 'STATUS', width: 1.4 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.8 },
+      ],
+      rows: (data || []).map((t) => this.mapDecisionTreePdfRow(t)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('ccp-oprp-assessments', 'directory'),
+    };
+  }
+
+  async downloadDecisionTreePdf(treeId: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: tree } = await this.getDecisionTree(treeId);
+    const row = this.mapDecisionTreePdfRow(tree);
+    const decisions = Array.isArray((tree as any)?.Decisions)
+      ? (tree as any).Decisions
+      : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.DocumentId !== '---' ? row.DocumentId : 'CCP/OPRP Assessment',
+      subtitle: row.linked !== '---' ? row.linked : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.DocumentId],
+        ['Linked Process/Conduct', row.linked],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+      sections: decisions.map((d: any, i: number) => ({
+        heading: `Decision ${i + 1}${
+          d?.Hazard?.type ? `: ${d.Hazard.type}` : ''
+        }`,
+        rows: [
+          ['Hazard Type', asText(d?.Hazard?.type)],
+          ['Hazard Description', asText(d?.Hazard?.Description)],
+          ['Process Step', asText(d?.Hazard?.Process?.Name)],
+          ['Q1', this.yn(d?.Q1)],
+          ['Q1A', this.yn(d?.Q1A)],
+          ['Q2', this.yn(d?.Q2)],
+          ['Q3', this.yn(d?.Q3)],
+          ['Q4', this.yn(d?.Q4)],
+          ['Classification', asText(d?.classification)],
+        ],
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.DocumentId || 'ccp-oprp',
+        'ccp-oprp',
+      ),
+    };
+  }
 
   async createDecisionTree(createDecisionTreeDto: CreateDecisionTreeDto) {
     const createdDecisions = await this.decisionModel.create(

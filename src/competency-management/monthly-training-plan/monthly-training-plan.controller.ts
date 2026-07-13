@@ -10,6 +10,8 @@ import {
   HttpStatus,
   UseInterceptors,
   UploadedFiles,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
@@ -68,6 +70,22 @@ export class MonthlyTrainingPlanController {
     return this.service.findForActor(user);
   }
 
+  /** Must be registered before parameterized GET routes. */
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download monthly training plans directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadMonthlyTrainingPlansPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.service.downloadMonthlyTrainingPlansPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
   @Get('analytics')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get competency schedule analytics for dashboards' })
@@ -95,6 +113,24 @@ export class MonthlyTrainingPlanController {
   @ApiParam({ name: 'id', description: 'Monthly plan ID' })
   async getRecordDetails(@Param('id') id: string) {
     return this.service.getRecordDetails(id);
+  }
+
+  /** Must be registered before other parameterized `:id` routes. */
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single monthly training plan PDF' })
+  @ApiParam({ name: 'id', description: 'Plan ID' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadMonthlyTrainingPlanPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.service.downloadMonthlyTrainingPlanPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Patch('evaluate')

@@ -31,10 +31,12 @@ import {
   Company,
   CompanyDocument,
 } from '../../admin-management/company/schemas/company.schema';
+import { buildEmployeesListPdf } from './employee-pdf.util';
 import {
-  buildEmployeeDetailPdf,
-  buildEmployeesListPdf,
-} from './employee-pdf.util';
+  asText,
+  buildBrandedDetailPdf,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class EmployeeService {
@@ -379,46 +381,72 @@ export class EmployeeService {
           )
           .filter(Boolean)
       : [];
+    const avatarUrl = profile?.avatar || profile?.Avatar || '';
+    const name = user?.name || '---';
+    const designation = (employee as any).designation || '---';
+    const department =
+      user?.departmentId?.departmentName ||
+      user?.departmentId?.shortName ||
+      '---';
 
-    const pdfBytes = await buildEmployeeDetailPdf({
+    const pdfBytes = await buildBrandedDetailPdf({
       company: {
         companyName: company.companyName,
         address: company.address,
         companyLogo: company.companyLogo,
       },
-      employee: {
-        name: user?.name || '---',
-        email: user?.email || '---',
-        userName: user?.userName,
-        designation: (employee as any).designation || '---',
-        department:
-          user?.departmentId?.departmentName ||
-          user?.departmentId?.shortName ||
-          '---',
-        phoneNo: profile?.phoneNo,
-        address: profile?.address,
-        qualification: Array.isArray(profile?.qualification)
-          ? profile.qualification.filter(Boolean).join(', ')
-          : profile?.qualification || '---',
-        experience: Array.isArray(profile?.experience)
-          ? profile.experience.filter(Boolean).join(', ')
-          : profile?.experience || '---',
-        skills: Array.isArray(profile?.skills)
-          ? profile.skills.filter(Boolean).join(', ')
-          : profile?.skills || '---',
-        trainings,
-      },
+      title: name !== '---' ? name : 'Employee',
+      subtitle: designation !== '---' ? designation : undefined,
       exportedBy: actor?.name || 'System',
+      portraitUrl: typeof avatarUrl === 'string' ? avatarUrl.trim() : '',
+      coverRows: [
+        ['Employee Name', asText(name)],
+        ['Email', asText(user?.email)],
+        ['Username', asText(user?.userName)],
+        ['Designation', asText(designation)],
+        ['Department', asText(department)],
+        ['Phone', asText(profile?.phoneNo)],
+      ],
+      sections: [
+        {
+          heading: 'Profile Details',
+          rows: [
+            ['Address', asText(profile?.address)],
+            [
+              'Qualification',
+              Array.isArray(profile?.qualification)
+                ? asText(profile.qualification.filter(Boolean).join(', '))
+                : asText(profile?.qualification),
+            ],
+            [
+              'Experience',
+              Array.isArray(profile?.experience)
+                ? asText(profile.experience.filter(Boolean).join(', '))
+                : asText(profile?.experience),
+            ],
+            [
+              'Skills',
+              Array.isArray(profile?.skills)
+                ? asText(profile.skills.filter(Boolean).join(', '))
+                : asText(profile?.skills),
+            ],
+          ],
+        },
+        {
+          heading: 'Assigned Trainings',
+          rows: trainings.length
+            ? trainings.map(
+                (t: string, i: number) =>
+                  [`Training ${i + 1}`, asText(t)] as [string, string],
+              )
+            : [['Trainings', 'None']],
+        },
+      ],
     });
-
-    const safeName = (user?.name || 'employee')
-      .replace(/[^\w-]+/g, '_')
-      .replace(/_+/g, '_')
-      .slice(0, 60);
 
     return {
       buffer: Buffer.from(pdfBytes),
-      fileName: `${safeName}_employee.pdf`,
+      fileName: safePdfFileName(name || 'employee', 'employee'),
     };
   }
 

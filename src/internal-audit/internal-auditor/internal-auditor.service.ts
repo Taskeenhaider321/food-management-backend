@@ -30,6 +30,22 @@ import {
   Profile,
   ProfileDocument,
 } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
+
+const AUDITOR_POPULATE = [
+  {
+    path: 'profileId',
+    populate: { path: 'userId', populate: ['companyId', 'departmentId'] },
+  },
+  { path: 'departmentId' },
+];
 
 @Injectable()
 export class InternalAuditorService {
@@ -38,6 +54,7 @@ export class InternalAuditorService {
     private internalAuditorModel: Model<InternalAuditorDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
     private emailService: EmailService,
     private readonly profileService: ProfileService,
@@ -562,5 +579,106 @@ Food Safety Quality Team`;
       color: rgb(0, 0, 0),
       size: 20,
     });
+  }
+
+  private mapAuditorPdfRow(auditor: any) {
+    const profile = auditor?.profileId;
+    const user = profile?.userId;
+    const department =
+      auditor?.departmentId?.departmentName ||
+      auditor?.departmentId?.shortName ||
+      user?.departmentId?.departmentName ||
+      '---';
+    return {
+      name: asText(user?.name),
+      email: asText(user?.email),
+      designation: asText(profile?.designation),
+      roleInTeam: asText(auditor?.roleInTeam),
+      department: asText(department),
+      isApprovedAuditor: auditor?.isApprovedAuditor ? 'Yes' : 'No',
+      isEnabled: auditor?.isEnabled === false ? 'No' : 'Yes',
+      skills: asText(auditor?.skills),
+      education: asText(auditor?.education),
+      experience: asText(auditor?.experience),
+      phoneNo: asText(profile?.phoneNo),
+      created: formatDate(auditor?.created_at),
+    };
+  }
+
+  async downloadAuditorsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const data = await this.internalAuditorModel
+      .find()
+      .populate(AUDITOR_POPULATE)
+      .sort({ created_at: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Internal Auditors Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'name', label: 'NAME', width: 1.6 },
+        { key: 'email', label: 'EMAIL', width: 2 },
+        { key: 'designation', label: 'DESIGNATION', width: 1.4 },
+        { key: 'roleInTeam', label: 'ROLE', width: 1.3 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.4 },
+        { key: 'isApprovedAuditor', label: 'APPROVED', width: 1 },
+        { key: 'isEnabled', label: 'ENABLED', width: 1 },
+      ],
+      rows: (data || []).map((r) => this.mapAuditorPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('internal-auditors', 'directory'),
+    };
+  }
+
+  async downloadAuditorPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const auditor = await this.internalAuditorModel
+      .findById(id)
+      .populate(AUDITOR_POPULATE)
+      .exec();
+    if (!auditor) throw new NotFoundException('Auditor not found');
+
+    const row = this.mapAuditorPdfRow(auditor);
+    const profile = auditor?.profileId as any;
+    const avatarUrl = profile?.avatar || profile?.Avatar || '';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.name !== '---' ? row.name : 'Internal Auditor',
+      subtitle: row.roleInTeam !== '---' ? row.roleInTeam : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      portraitUrl: typeof avatarUrl === 'string' ? avatarUrl.trim() : '',
+      coverRows: [
+        ['Name', row.name],
+        ['Email', row.email],
+        ['Designation', row.designation],
+        ['Role in Team', row.roleInTeam],
+        ['Department', row.department],
+        ['Phone', row.phoneNo],
+        ['Approved Auditor', row.isApprovedAuditor],
+        ['Enabled', row.isEnabled],
+        ['Created', row.created],
+      ],
+      sections: [
+        {
+          heading: 'Skills / Education / Experience',
+          rows: [
+            ['Skills', row.skills],
+            ['Education', row.education],
+            ['Experience', row.experience],
+          ],
+        },
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.name || 'internal-auditor', 'auditor'),
+    };
   }
 }

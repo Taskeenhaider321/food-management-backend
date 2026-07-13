@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Processes } from './schemas/processes.schema';
 import { ProcessDetail } from './schemas/process-detail.schema';
 import { CreateProcessesDto } from './dtos/create-processes.dto';
@@ -22,6 +22,14 @@ import {
   shouldTrackChanges,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 type ProcessDetailInput = {
   Name: string;
@@ -47,7 +55,138 @@ export class ProcessesService {
     @InjectModel('ProcessDetail')
     private processDetailModel: Model<ProcessDetail>,
     @InjectModel('Department') private departmentModel: Model<any>,
+    @InjectModel('Company') private companyModel: Model<any>,
   ) {}
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private departmentLabel(dept: any): string {
+    if (!dept || typeof dept !== 'object') return '---';
+    return asText(dept.departmentName || dept.shortName);
+  }
+
+  private stepNames(details: any[]): string {
+    if (!Array.isArray(details) || details.length === 0) return '---';
+    const names = details.map((d) => d?.Name).filter(Boolean);
+    return names.length ? names.join(', ') : String(details.length);
+  }
+
+  private mapProcessPdfRow(process: any) {
+    const details = Array.isArray(process?.ProcessDetails)
+      ? process.ProcessDetails
+      : [];
+    return {
+      DocumentId: asText(process?.DocumentId),
+      ProcessName: asText(process?.ProcessName),
+      department: this.departmentLabel(
+        process?.Department || process?.UserDepartment,
+      ),
+      DocumentType: asText(process?.DocumentType),
+      Status: asText(process?.Status),
+      steps: this.stepNames(details),
+      stepsCount: String(details.length),
+      CreatedBy: asText(process?.CreatedBy),
+      CreationDate: formatDate(process?.CreationDate),
+    };
+  }
+
+  async findAllForActor(actor: any) {
+    const deptIds = await this.companyDepartmentIds(actor);
+    const filter: Record<string, unknown> =
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const processes = await this.processesModel
+      .find(filter as any)
+      .populate('Department')
+      .populate('UserDepartment')
+      .populate({
+        path: 'ProcessDetails',
+        populate: nestedSubProcessPopulate(),
+      })
+      .exec();
+    return { status: true, data: processes };
+  }
+
+  async downloadProcessesPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Flow Diagrams Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'DocumentId', label: 'DOC ID', width: 1.2 },
+        { key: 'ProcessName', label: 'PROCESS', width: 1.8 },
+        { key: 'department', label: 'DEPT', width: 1.3 },
+        { key: 'DocumentType', label: 'TYPE', width: 1.1 },
+        { key: 'Status', label: 'STATUS', width: 1.2 },
+        { key: 'steps', label: 'STEPS', width: 1.8 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.3 },
+      ],
+      rows: (data || []).map((p) => this.mapProcessPdfRow(p)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('flow-diagrams', 'directory'),
+    };
+  }
+
+  async downloadProcessPdf(processId: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: process } = await this.getProcess(processId);
+    const row = this.mapProcessPdfRow(process);
+    const details = Array.isArray((process as any)?.ProcessDetails)
+      ? (process as any).ProcessDetails
+      : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.ProcessName !== '---' ? row.ProcessName : 'Flow Diagram',
+      subtitle: row.DocumentId !== '---' ? row.DocumentId : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.DocumentId],
+        ['Process Name', row.ProcessName],
+        ['Department', row.department],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Steps', row.steps],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+      sections: details.map((step: any, i: number) => ({
+        heading: `Step ${i + 1}${step?.Name ? `: ${step.Name}` : ''}`,
+        rows: [
+          ['Name', asText(step?.Name)],
+          ['Process Number', asText(step?.ProcessNum)],
+          ['Description', asText(step?.Description)],
+        ],
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.DocumentId || row.ProcessName || 'flow-diagram',
+        'flow-diagram',
+      ),
+    };
+  }
 
   private async saveProcessDetailTree(detail: ProcessDetailInput) {
     let subProcessIds: ProcessDetail['_id'][] = [];

@@ -8,11 +8,14 @@ import {
   Param,
   UseInterceptors,
   UploadedFiles,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { HaccpTeamService } from './haccp-team.service';
 import { CreateHaccpTeamDto } from './dtos/create-haccp-team.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('HACCP Team')
 @Controller('haccp-team')
@@ -51,6 +54,39 @@ export class HaccpTeamController {
   @ApiBearerAuth()
   async getApprovedHaccpTeams(@Param('departmentId') departmentId: string) {
     return this.haccpTeamService.getApprovedHaccpTeams(departmentId);
+  }
+
+  /** Must be registered before `GET :teamId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download HACCP teams directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadHaccpTeamsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.haccpTeamService.downloadHaccpTeamsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :teamId`. */
+  @Get(':teamId/download-pdf')
+  @ApiOperation({ summary: 'Download a single HACCP team PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadHaccpTeamPdf(
+    @Param('teamId') teamId: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.haccpTeamService.downloadHaccpTeamPdf(teamId, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':teamId')

@@ -8,6 +8,8 @@ import {
   Param,
   Delete,
   HttpStatus,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -50,6 +52,40 @@ export class YearlyTrainingPlanController {
   @ApiResponse({ status: HttpStatus.OK, description: 'Plans found' })
   async findForCompany(@CurrentUser() user: any) {
     return this.service.findForActor(user);
+  }
+
+  /** Must be registered before parameterized `:id` routes. */
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download yearly training plans directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadYearlyTrainingPlansPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.service.downloadYearlyTrainingPlansPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before parameterized `:id` routes. */
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single yearly training plan PDF' })
+  @ApiParam({ name: 'id', description: 'Plan ID' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadYearlyTrainingPlanPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.service.downloadYearlyTrainingPlanPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Patch(':id')

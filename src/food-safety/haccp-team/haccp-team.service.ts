@@ -24,6 +24,14 @@ import {
   reviewRecord,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class HaccpTeamService {
@@ -31,8 +39,152 @@ export class HaccpTeamService {
     @InjectModel(HaccpTeam.name) private haccpTeamModel: Model<HaccpTeam>,
     @InjectModel(TeamMember.name) private teamMemberModel: Model<TeamMember>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel('Company') private companyModel: Model<any>,
+    @InjectModel('Department') private departmentModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private departmentLabel(dept: any): string {
+    if (!dept || typeof dept !== 'object') return '---';
+    return asText(dept.departmentName || dept.shortName);
+  }
+
+  private memberNames(members: any[]): string {
+    if (!Array.isArray(members) || members.length === 0) return '---';
+    const names = members
+      .map(
+        (m) =>
+          m?.fullName ||
+          m?.profileId?.userId?.name ||
+          m?.profileId?.fullName,
+      )
+      .filter(Boolean);
+    return names.length ? names.join(', ') : String(members.length);
+  }
+
+  private mapHaccpTeamPdfRow(team: any) {
+    const members = Array.isArray(team?.TeamMembers) ? team.TeamMembers : [];
+    return {
+      DocumentId: asText(team?.DocumentId),
+      TeamName: asText(team?.TeamName),
+      department: this.departmentLabel(team?.Department || team?.UserDepartment),
+      DocumentType: asText(team?.DocumentType),
+      Status: asText(team?.Status),
+      members: this.memberNames(members),
+      membersCount: String(members.length),
+      CreatedBy: asText(team?.CreatedBy),
+      CreationDate: formatDate(team?.CreationDate),
+    };
+  }
+
+  async findAllForActor(actor: any) {
+    const deptIds = await this.companyDepartmentIds(actor);
+    const filter: Record<string, unknown> =
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const teams = await this.haccpTeamModel
+      .find(filter as any)
+      .populate('Department')
+      .populate('UserDepartment')
+      .populate({
+        path: 'TeamMembers',
+        populate: { path: 'profileId', populate: { path: 'userId' } },
+      })
+      .exec();
+    return { status: true, data: teams };
+  }
+
+  async downloadHaccpTeamsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'HACCP Teams Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'DocumentId', label: 'DOC ID', width: 1.2 },
+        { key: 'TeamName', label: 'TEAM', width: 1.8 },
+        { key: 'department', label: 'DEPT', width: 1.3 },
+        { key: 'DocumentType', label: 'TYPE', width: 1.1 },
+        { key: 'Status', label: 'STATUS', width: 1.2 },
+        { key: 'members', label: 'MEMBERS', width: 1.8 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.2 },
+        { key: 'CreationDate', label: 'CREATED', width: 1.1 },
+      ],
+      rows: (data || []).map((t) => this.mapHaccpTeamPdfRow(t)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('haccp-teams', 'directory'),
+    };
+  }
+
+  async downloadHaccpTeamPdf(teamId: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: team } = await this.getHaccpTeam(teamId);
+    const row = this.mapHaccpTeamPdfRow(team);
+    const members = Array.isArray((team as any)?.TeamMembers)
+      ? (team as any).TeamMembers
+      : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.TeamName !== '---' ? row.TeamName : 'HACCP Team',
+      subtitle: row.DocumentId !== '---' ? row.DocumentId : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.DocumentId],
+        ['Team Name', row.TeamName],
+        ['Department', row.department],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Members', row.members],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+      sections: members.map((m: any, i: number) => ({
+        heading: `Member ${i + 1}`,
+        rows: [
+          ['Full Name', asText(m?.fullName)],
+          ['Designation', asText(m?.designation)],
+          ['Role In Team', asText(m?.roleInTeam)],
+          [
+            'Training Attended',
+            asText(
+              Array.isArray(m?.trainingAttended)
+                ? m.trainingAttended.join(', ')
+                : m?.trainingAttended,
+            ),
+          ],
+        ],
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.DocumentId || row.TeamName || 'haccp-team',
+        'haccp-team',
+      ),
+    };
+  }
 
   private resolveUserDepartmentId(
     userDepartment: unknown,

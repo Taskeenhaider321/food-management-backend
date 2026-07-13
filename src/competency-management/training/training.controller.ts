@@ -8,6 +8,8 @@ import {
   Param,
   Delete,
   HttpStatus,
+  Header,
+  StreamableFile,
   UseInterceptors,
   UploadedFiles,
 } from '@nestjs/common';
@@ -55,6 +57,40 @@ export class TrainingController {
     @CurrentUser() actor: any,
   ) {
     return this.trainingService.create(createTrainingDto, files, actor);
+  }
+
+  /** Must be registered before `GET :departmentId`. */
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download trainings directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadTrainingsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.trainingService.downloadTrainingsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Two-segment route; safe alongside single-segment `:departmentId`. */
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single training PDF' })
+  @ApiParam({ name: 'id', description: 'Training ID' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadTrainingPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.trainingService.downloadTrainingPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':departmentId')

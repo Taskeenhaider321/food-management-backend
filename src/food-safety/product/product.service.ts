@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Product } from './schemas/product.schema';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { UpdateProductDto } from './dtos/update-product.dto';
@@ -21,6 +21,14 @@ import {
   shouldTrackChanges,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class ProductService {
@@ -28,7 +36,127 @@ export class ProductService {
     @InjectModel('Product') private productModel: Model<Product>,
     @InjectModel('Department') private departmentModel: Model<any>,
     @InjectModel('User') private userModel: Model<any>,
+    @InjectModel('Company') private companyModel: Model<any>,
   ) {}
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private departmentLabel(dept: any): string {
+    if (!dept || typeof dept !== 'object') return '---';
+    return asText(dept.departmentName || dept.shortName);
+  }
+
+  private mapProductPdfRow(product: any) {
+    return {
+      DocumentId: asText(product?.DocumentId),
+      Name: asText(product?.ProductDetails?.Name),
+      department: this.departmentLabel(
+        product?.Department || product?.UserDepartment,
+      ),
+      DocumentType: asText(product?.DocumentType),
+      Status: asText(product?.Status),
+      CreatedBy: asText(product?.CreatedBy),
+      CreationDate: formatDate(product?.CreationDate),
+    };
+  }
+
+  async findAllForActor(actor: any) {
+    const deptIds = await this.companyDepartmentIds(actor);
+    const filter: Record<string, unknown> =
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const products = await this.productModel
+      .find(filter as any)
+      .populate('Department')
+      .populate({ path: 'UserDepartment', model: 'Department' })
+      .exec();
+    return { status: true, data: products };
+  }
+
+  async downloadProductsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Products Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'DocumentId', label: 'DOC ID', width: 1.3 },
+        { key: 'Name', label: 'NAME', width: 2.2 },
+        { key: 'department', label: 'DEPT', width: 1.5 },
+        { key: 'DocumentType', label: 'TYPE', width: 1.3 },
+        { key: 'Status', label: 'STATUS', width: 1.3 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.5 },
+      ],
+      rows: (data || []).map((p) => this.mapProductPdfRow(p)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('products', 'directory'),
+    };
+  }
+
+  async downloadProductPdf(productId: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: product } = await this.getProduct(productId);
+    const row = this.mapProductPdfRow(product);
+    const details = (product as any)?.ProductDetails || {};
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.Name !== '---' ? row.Name : 'Product',
+      subtitle: row.DocumentId !== '---' ? row.DocumentId : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.DocumentId],
+        ['Name', row.Name],
+        ['Department', row.department],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+        ['Origin', asText(details.Origin)],
+        ['Raw Material', asText(details.RawMaterial)],
+        ['Packing Material', asText(details.PackingMaterial)],
+        ['Physical Properties', asText(details.PhysicalProperties)],
+        ['Chemical Properties', asText(details.ChemicalProperties)],
+        ['Product Description', asText(details.ProductDescription)],
+        ['Microbial Properties', asText(details.MicrobialProperties)],
+        ['Allergens', asText(details.Allergens)],
+        ['Intended Users', asText(details.IntendedUsers)],
+        ['Storage Conditions', asText(details.StorageConditions)],
+        ['Labelling Instructions', asText(details.LabellingInstructions)],
+        ['Transportation', asText(details.Transportation)],
+        ['Food Safety Risk', asText(details.FoodSafetyRisk)],
+        ['Shelf Life', asText(details.ShelfLife)],
+        ['Consumer', asText(details.Consumer)],
+        ['Target Market', asText(details.TargtMarket)],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.DocumentId || row.Name || 'product',
+        'product',
+      ),
+    };
+  }
 
   async createProduct(createProductDto: CreateProductDto) {
     const user = await this.userModel

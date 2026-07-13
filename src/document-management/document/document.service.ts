@@ -19,6 +19,13 @@ import {
   generateDocumentId,
 } from '../common/document-id.util';
 import { buildDocumentPdf, timelineMeta } from './document-pdf.util';
+import {
+  asText,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const DEPARTMENT_POPULATE = {
   path: 'departments',
@@ -440,6 +447,50 @@ export class DocumentService {
     return {
       buffer: Buffer.from(pdfBytes),
       fileName: `${safeName}_${document.documentId.replace(/\//g, '-')}.pdf`,
+    };
+  }
+
+  private mapDocumentPdfRow(document: any) {
+    const departments = (document?.departments || [])
+      .map((dept: any) => dept?.departmentName || dept?.shortName || '')
+      .filter(Boolean)
+      .join(', ');
+    return {
+      documentId: asText(document?.documentId),
+      name: asText(document?.name),
+      documentType: asText(document?.documentType),
+      status: asText(document?.status),
+      revisionNo: asText(document?.revisionNo ?? 0),
+      departments: asText(departments),
+      createdBy: asText(document?.createdBy),
+      created_at: formatDate(document?.created_at),
+    };
+  }
+
+  async downloadDocumentsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAll(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Documents Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'documentId', label: 'DOC ID', width: 1.6 },
+        { key: 'name', label: 'NAME', width: 2 },
+        { key: 'documentType', label: 'TYPE', width: 1.2 },
+        { key: 'status', label: 'STATUS', width: 1.2 },
+        { key: 'revisionNo', label: 'REV', width: 0.8 },
+        { key: 'departments', label: 'DEPARTMENTS', width: 1.6 },
+        { key: 'createdBy', label: 'CREATED BY', width: 1.3 },
+        { key: 'created_at', label: 'CREATED', width: 1.2 },
+      ],
+      rows: (data || []).map((d) => this.mapDocumentPdfRow(d)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('documents', 'directory'),
     };
   }
 }

@@ -45,6 +45,14 @@ import {
   ProfileDocument,
 } from '../../admin-management/profile/schemas/profile.schema';
 import { Trainer, TrainerDocument } from '../trainer/schemas/trainer.schema';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const MONTHLY_PLAN_POPULATE = [
   { path: 'Training' },
@@ -74,6 +82,7 @@ export class MonthlyTrainingPlanService {
     @InjectModel('Department') private departmentModel: Model<any>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(Trainer.name) private trainerModel: Model<TrainerDocument>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
@@ -1195,5 +1204,148 @@ export class MonthlyTrainingPlanService {
       throw new NotFoundException('No MonthlyPlans Found to Delete!');
     }
     return { status: true, message: 'All monthlyPlans have been deleted!' };
+  }
+
+  private employeeDisplayName(employee: any): string {
+    const profile = employee?.profileId;
+    const user = profile?.userId;
+    return (
+      user?.name ||
+      profile?.name ||
+      employee?.name ||
+      employee?._id?.toString() ||
+      '---'
+    );
+  }
+
+  private mapMonthlyTrainingPlanPdfRow(plan: any) {
+    const trainingName =
+      plan?.Training?.trainingName || plan?.Training?.TrainingName || '---';
+    return {
+      Year: asText(plan?.Year),
+      Month: asText(plan?.Month),
+      Training: asText(trainingName),
+      Venue: asText(plan?.Venue),
+      Status: asText(plan?.ScheduleStatus),
+      Result: asText(plan?.TrainingResultStatus),
+    };
+  }
+
+  private recordDetailRows(plan: any): Array<[string, string]> {
+    const trainers = [
+      plan?.Trainer,
+      ...(Array.isArray(plan?.Trainers) ? plan.Trainers : []),
+    ]
+      .filter(Boolean)
+      .map((t: any) => t?.name || t?.email || String(t?._id || t))
+      .filter(Boolean);
+    const uniqueTrainers = [...new Set(trainers)];
+
+    const employees = (plan?.Employee || [])
+      .map((e: any) => this.employeeDisplayName(e))
+      .filter((n: string) => n && n !== '---');
+
+    const evaluations = Array.isArray(plan?.SessionEvaluations)
+      ? plan.SessionEvaluations
+      : [];
+    const evaluationSummary = evaluations
+      .map((ev: any) => {
+        const name = this.employeeDisplayName(ev?.employeeId);
+        const status = asText(ev?.status);
+        const marks = ev?.marks != null ? ` marks:${ev.marks}` : '';
+        return `${name} (${status}${marks})`;
+      })
+      .join('; ');
+
+    return [
+      ['Year', asText(plan?.Year)],
+      ['Month', asText(plan?.Month)],
+      [
+        'Training',
+        asText(plan?.Training?.trainingName || plan?.Training?.TrainingName),
+      ],
+      ['Venue', asText(plan?.Venue)],
+      ['Department', asText(plan?.DepartmentText)],
+      [
+        'Department Ref',
+        asText(
+          plan?.UserDepartment?.departmentName ||
+            plan?.UserDepartment?.shortName,
+        ),
+      ],
+      ['Status', asText(plan?.ScheduleStatus)],
+      ['Result', asText(plan?.TrainingResultStatus)],
+      ['Internal/External', asText(plan?.InternalExternal)],
+      ['Date', asText(plan?.Date)],
+      ['Time', asText(plan?.Time)],
+      ['Duration', asText(plan?.Duration)],
+      ['Session Start', formatDate(plan?.SessionStartAt)],
+      ['Session End', formatDate(plan?.SessionEndAt)],
+      ['Trainers', uniqueTrainers.length ? uniqueTrainers.join(', ') : '---'],
+      ['Employees', employees.length ? employees.join(', ') : '---'],
+      ['Assigned', plan?.Assigned ? 'Yes' : 'No'],
+      ['Assigned By', asText(plan?.AssignedBy)],
+      ['Assigned Date', formatDate(plan?.AssignedDate)],
+      ['Created By', asText(plan?.CreatedBy)],
+      ['Creation Date', formatDate(plan?.CreationDate || plan?.created_at)],
+      ['Actual Date', formatDate(plan?.ActualDate)],
+      [
+        'Evaluations',
+        evaluationSummary || '---',
+      ],
+    ];
+  }
+
+  async downloadMonthlyTrainingPlansPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Monthly Training Plans Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'Year', label: 'YEAR', width: 1 },
+        { key: 'Month', label: 'MONTH', width: 1.2 },
+        { key: 'Training', label: 'TRAINING', width: 2 },
+        { key: 'Venue', label: 'VENUE', width: 1.5 },
+        { key: 'Status', label: 'STATUS', width: 1.3 },
+        { key: 'Result', label: 'RESULT', width: 1.4 },
+      ],
+      rows: (data || []).map((r) => this.mapMonthlyTrainingPlanPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('monthly-training-plans', 'directory'),
+    };
+  }
+
+  async downloadMonthlyTrainingPlanPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: plan } = await this.getRecordDetails(id);
+    const row = this.mapMonthlyTrainingPlanPdfRow(plan);
+    const detailRows = this.recordDetailRows(plan);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.Training !== '---' ? row.Training : 'Monthly Training Plan',
+      subtitle:
+        row.Month !== '---' || row.Year !== '---'
+          ? `${row.Month} ${row.Year}`.trim()
+          : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: detailRows,
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.Training !== '---'
+          ? `${row.Training}-${row.Month}-${row.Year}`
+          : 'monthly-training-plan',
+        'plan',
+      ),
+    };
   }
 }

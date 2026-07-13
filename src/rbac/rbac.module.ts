@@ -4,6 +4,10 @@ import {
   User,
   UserSchema,
 } from '../admin-management/users/schemas/user.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../admin-management/company/schemas/company.schema';
 import { DerivedModuleService } from './company-rbac.service';
 import { RbacController } from './rbac.controller';
 import { RbacService } from './rbac.service';
@@ -29,6 +33,7 @@ import { Role, RoleSchema } from './schemas/role.schema';
       { name: MasterPermission.name, schema: MasterPermissionSchema },
       { name: DerivedModule.name, schema: DerivedModuleSchema },
       { name: User.name, schema: UserSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [RbacController],

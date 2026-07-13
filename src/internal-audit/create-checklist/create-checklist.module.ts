@@ -13,6 +13,10 @@ import {
 } from './schemas/response-group.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 import { DefaultResponseGroupsSeed } from './seeds/default-response-groups.seed';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -20,6 +24,7 @@ import { DefaultResponseGroupsSeed } from './seeds/default-response-groups.seed'
       { name: Checklist.name, schema: ChecklistSchema },
       { name: ChecklistQuestion.name, schema: ChecklistQuestionSchema },
       { name: ResponseGroup.name, schema: ResponseGroupSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     CloudinaryModule,
   ],

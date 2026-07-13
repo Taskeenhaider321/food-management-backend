@@ -8,12 +8,15 @@ import {
   Param,
   UseInterceptors,
   UploadedFiles,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { CorrectiveActionService } from './corrective-action.service';
 import { CreateCorrectiveActionDto } from './dtos/create-corrective-action.dto';
 import { UpdateCorrectiveActionDto } from './dtos/update-corrective-action.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Corrective Action')
 @Controller('corrective-action')
@@ -55,6 +58,39 @@ export class CorrectiveActionController {
       updatedBy: body.updatedBy,
     };
     return this.correctiveActionService.updateCorrectiveAction(updateDto);
+  }
+
+  /** Must be registered before parameterized routes. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download corrective actions directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadCorrectiveActionsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.correctiveActionService.downloadCorrectiveActionsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before parameterized routes. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single corrective action PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadCorrectiveActionPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.correctiveActionService.downloadCorrectiveActionPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get('all/:departmentId')

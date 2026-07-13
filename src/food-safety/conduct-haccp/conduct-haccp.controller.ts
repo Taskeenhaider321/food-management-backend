@@ -7,13 +7,16 @@ import {
   Delete,
   Body,
   Param,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { ConductHaccpService } from './conduct-haccp.service';
 import { CreateConductHaccpDto } from './dtos/create-conduct-haccp.dto';
 import { UpdateConductHaccpDto } from './dtos/update-conduct-haccp.dto';
 import { ApproveConductHaccpDto } from './dtos/approve-conduct-haccp.dto';
 import { DisapproveConductHaccpDto } from './dtos/disapprove-conduct-haccp.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Conduct HACCP')
 @Controller('conduct-haccp')
@@ -38,6 +41,39 @@ export class ConductHaccpController {
   @ApiBearerAuth()
   async getApprovedConductHaccp(@Param('departmentId') departmentId: string) {
     return this.conductHaccpService.getApprovedConductHaccp(departmentId);
+  }
+
+  /** Must be registered before `GET :haccpId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download risk assessments directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadConductHaccpsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.conductHaccpService.downloadConductHaccpsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :haccpId`. */
+  @Get(':haccpId/download-pdf')
+  @ApiOperation({ summary: 'Download a single risk assessment PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadConductHaccpPdf(
+    @Param('haccpId') haccpId: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.conductHaccpService.downloadConductHaccpPdf(haccpId, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':haccpId')

@@ -16,6 +16,13 @@ import {
   actorDisplayName,
   generateDocumentId,
 } from '../common/document-id.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const DEPARTMENT_POPULATE = {
   path: 'departments',
@@ -29,6 +36,8 @@ export class ListOfFormsService {
     private readonly listOfFormsModel: Model<ListOfForms>,
     @InjectModel('Department')
     private readonly departmentModel: Model<any>,
+    @InjectModel('Company')
+    private readonly companyModel: Model<any>,
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
@@ -311,6 +320,101 @@ export class ListOfFormsService {
       status: true,
       message: `Form ${form.enabled ? 'enabled' : 'disabled'} successfully`,
       data: form,
+    };
+  }
+
+  private departmentNames(form: any): string {
+    return asText(
+      (form?.departments || [])
+        .map((d: any) => d?.departmentName || d?.shortName || '')
+        .filter(Boolean),
+    );
+  }
+
+  private mapFormPdfRow(form: any) {
+    const questions = Array.isArray(form?.questions) ? form.questions : [];
+    return {
+      documentId: asText(form?.documentId),
+      formName: asText(form?.formName),
+      documentType: asText(form?.documentType),
+      status: asText(form?.status),
+      revisionNo: asText(form?.revisionNo ?? 0),
+      departments: this.departmentNames(form),
+      questionCount: String(questions.length),
+    };
+  }
+
+  async downloadFormsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAll(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Forms Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'documentId', label: 'DOC ID', width: 1.8 },
+        { key: 'formName', label: 'FORM NAME', width: 2 },
+        { key: 'documentType', label: 'TYPE', width: 1.2 },
+        { key: 'status', label: 'STATUS', width: 1.2 },
+        { key: 'revisionNo', label: 'REV', width: 0.8 },
+        { key: 'departments', label: 'DEPARTMENTS', width: 1.8 },
+        { key: 'questionCount', label: 'QUESTIONS', width: 1 },
+      ],
+      rows: (data || []).map((f) => this.mapFormPdfRow(f)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('forms', 'directory'),
+    };
+  }
+
+  async downloadFormPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const form = await this.listOfFormsModel
+      .findById(id)
+      .populate(DEPARTMENT_POPULATE)
+      .exec();
+    if (!form) throw new NotFoundException('Form not found');
+
+    const row = this.mapFormPdfRow(form);
+    const questions = Array.isArray(form.questions) ? form.questions : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.formName !== '---' ? row.formName : 'Form',
+      subtitle: row.documentId !== '---' ? row.documentId : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.documentId],
+        ['Form Name', row.formName],
+        ['Document Type', row.documentType],
+        ['Status', row.status],
+        ['Revision No', row.revisionNo],
+        ['Departments', row.departments],
+        ['Question Count', row.questionCount],
+      ],
+      sections:
+        questions.length > 0
+          ? [
+              {
+                heading: 'Questions',
+                rows: questions.map((q: any, index: number) => [
+                  `Q${index + 1} (${asText(q?.questionType)})`,
+                  asText(q?.questionText),
+                ]),
+              },
+            ]
+          : undefined,
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.formName || row.documentId || 'form',
+        'form',
+      ),
     };
   }
 }

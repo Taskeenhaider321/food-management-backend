@@ -20,6 +20,14 @@ import {
   UpdateResponseGroupDto,
 } from './dtos/response-group.dto';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class CreateChecklistService {
@@ -29,6 +37,7 @@ export class CreateChecklistService {
     private checklistQuestionModel: Model<ChecklistQuestion>,
     @InjectModel(ResponseGroup.name)
     private responseGroupModel: Model<ResponseGroup>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
@@ -499,5 +508,111 @@ export class CreateChecklistService {
 
     await this.responseGroupModel.findByIdAndDelete(id);
     return { status: true, message: 'Response group deleted!' };
+  }
+
+  private mapChecklistPdfRow(checklist: any) {
+    const questions = Array.isArray(checklist?.ChecklistQuestions)
+      ? checklist.ChecklistQuestions
+      : [];
+    return {
+      ChecklistId: asText(checklist?.ChecklistId),
+      title: asText(checklist?.title),
+      DocumentType: asText(checklist?.DocumentType),
+      Status: asText(checklist?.Status),
+      RevisionNo: asText(checklist?.RevisionNo ?? 0),
+      CreatedBy: asText(checklist?.CreatedBy),
+      CreationDate: formatDate(checklist?.CreationDate || checklist?.created_at),
+      questionCount: String(questions.length),
+      questionTitles: asText(
+        questions
+          .map((q: any) => q?.questionText)
+          .filter(Boolean),
+      ),
+      description: asText(checklist?.description),
+    };
+  }
+
+  async downloadChecklistsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const data = await this.checklistModel
+      .find()
+      .populate('Department Departments UserDepartment')
+      .populate({
+        path: 'ChecklistQuestions',
+        model: 'ChecklistQuestion',
+      })
+      .sort({ CreationDate: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Checklists Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'ChecklistId', label: 'ID', width: 1.3 },
+        { key: 'title', label: 'TITLE', width: 2 },
+        { key: 'DocumentType', label: 'TYPE', width: 1.2 },
+        { key: 'Status', label: 'STATUS', width: 1.3 },
+        { key: 'RevisionNo', label: 'REV', width: 0.8 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.4 },
+        { key: 'CreationDate', label: 'CREATED', width: 1.2 },
+      ],
+      rows: (data || []).map((r) => this.mapChecklistPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('checklists', 'directory'),
+    };
+  }
+
+  async downloadChecklistPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const checklist = await this.checklistModel
+      .findById(id)
+      .populate('Department Departments UserDepartment')
+      .populate({
+        path: 'ChecklistQuestions',
+        model: 'ChecklistQuestion',
+      })
+      .exec();
+    if (!checklist) throw new NotFoundException('Checklist not found');
+
+    const row = this.mapChecklistPdfRow(checklist);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.ChecklistId !== '---' ? row.ChecklistId : 'Checklist',
+      subtitle: row.title !== '---' ? row.title : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Checklist ID', row.ChecklistId],
+        ['Title', row.title],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Revision No', row.RevisionNo],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+        ['Description', row.description],
+        ['Question Count', row.questionCount],
+      ],
+      sections: row.questionTitles !== '---'
+        ? [
+            {
+              heading: 'Questions',
+              rows: [['Titles', row.questionTitles]],
+            },
+          ]
+        : [],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.ChecklistId || row.title || 'checklist',
+        'checklist',
+      ),
+    };
   }
 }

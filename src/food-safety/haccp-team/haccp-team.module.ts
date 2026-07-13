@@ -9,6 +9,14 @@ import {
   User,
   UserSchema,
 } from '../../admin-management/users/schemas/user.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../../admin-management/department/schemas/department.schema';
 
 @Module({
   imports: [
@@ -16,6 +24,8 @@ import {
       { name: HaccpTeam.name, schema: HaccpTeamSchema },
       { name: TeamMember.name, schema: TeamMemberSchema },
       { name: User.name, schema: UserSchema },
+      { name: Company.name, schema: CompanySchema },
+      { name: Department.name, schema: DepartmentSchema },
     ]),
     CloudinaryModule,
   ],
