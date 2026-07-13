@@ -3,7 +3,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
 
 export class CreateTrainingDto {
-  @ApiProperty({ description: 'Department ID', example: '507f1f77bcf86cd799439012' })
+  @ApiProperty({
+    description: 'Department ID',
+    example: '507f1f77bcf86cd799439012',
+  })
   @IsString()
   departmentId: string;
 
@@ -20,7 +23,8 @@ export class CreateTrainingDto {
   EvaluationCriteria: string;
 
   @ApiPropertyOptional({
-    description: 'HTTPS URL from POST /upload/cloudinary (preferred for any file type)',
+    description:
+      'HTTPS URL from POST /upload/cloudinary (preferred for any file type)',
     example: 'https://res.cloudinary.com/.../raw/upload/v1/...',
   })
   @IsOptional()

@@ -40,7 +40,9 @@ export class CreatePreventiveMaintenanceDto {
   @IsString()
   imageUrls?: string;
 
-  @ApiPropertyOptional({ description: 'JSON array of certificate/document URLs' })
+  @ApiPropertyOptional({
+    description: 'JSON array of certificate/document URLs',
+  })
   @IsOptional()
   @IsString()
   certificateUrls?: string;

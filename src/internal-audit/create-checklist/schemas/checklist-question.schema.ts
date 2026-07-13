@@ -33,4 +33,5 @@ export class ChecklistQuestion extends Document {
   order: number;
 }
 
-export const ChecklistQuestionSchema = SchemaFactory.createForClass(ChecklistQuestion);
+export const ChecklistQuestionSchema =
+  SchemaFactory.createForClass(ChecklistQuestion);

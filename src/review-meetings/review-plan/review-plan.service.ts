@@ -12,6 +12,14 @@ import {
 } from '../meeting-minutes/schemas/meeting-minutes.schema';
 import { CreateReviewPlanDto } from './dtos/create-review-plan.dto';
 import { UpdateReviewPlanDto } from './dtos/update-review-plan.dto';
+import {
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
+
 function actorDisplayName(actor: any): string | undefined {
   return actor?.name || actor?.userName || actor?._id?.toString() || undefined;
 }
@@ -28,10 +36,12 @@ export class ReviewPlanService {
     private readonly reviewPlanModel: Model<ReviewPlanDocument>,
     @InjectModel(MeetingMinutes.name)
     private readonly meetingMinutesModel: Model<MeetingMinutesDocument>,
+    @InjectModel('Company') private companyModel: Model<any>,
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
   }
 
@@ -57,7 +67,8 @@ export class ReviewPlanService {
       await this.assertMrmNumberAvailable(mrmNumber);
     }
 
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     const plan = new this.reviewPlanModel({
       ...dto,
       mrmNumber: mrmNumber || undefined,
@@ -162,6 +173,96 @@ export class ReviewPlanService {
       status: true,
       message: 'Review plan deleted successfully',
       data: plan,
+    };
+  }
+
+  private mapPlanPdfRow(plan: ReviewPlanDocument) {
+    return {
+      mrmNumber: plan.mrmNumber || '---',
+      venue: plan.venue || '---',
+      meetingDate: formatDate(plan.meetingDate),
+      meetingTime: plan.meetingTime || '---',
+      objective: plan.objective || '---',
+      status: plan.status || '---',
+      remarks: plan.remarks || '---',
+    };
+  }
+
+  async downloadReviewPlansPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.getAllPlans(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Review Plans Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'mrmNumber', label: 'MRM NO', width: 1.3 },
+        { key: 'venue', label: 'VENUE', width: 1.8 },
+        { key: 'meetingDate', label: 'DATE', width: 1.2 },
+        { key: 'meetingTime', label: 'TIME', width: 1 },
+        { key: 'objective', label: 'OBJECTIVE', width: 2.2 },
+        { key: 'status', label: 'STATUS', width: 1.3 },
+        { key: 'remarks', label: 'REMARKS', width: 1.5 },
+      ],
+      rows: data.map((p) => this.mapPlanPdfRow(p)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('review_plans', 'directory'),
+    };
+  }
+
+  async downloadReviewPlanByIdPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: plan } = await this.getPlanById(id);
+    const row = this.mapPlanPdfRow(plan);
+
+    const agendaRows: Array<[string, string]> = Array.isArray(plan.agendas)
+      ? plan.agendas.map((agenda: any, index: number) => [
+          `Agenda ${index + 1}`,
+          [agenda.title, agenda.description].filter(Boolean).join(' — ') ||
+            '---',
+        ])
+      : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: plan.mrmNumber || 'Review Plan',
+      subtitle: plan.venue,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['MRM Number', row.mrmNumber],
+        ['Venue', row.venue],
+        ['Meeting Date', row.meetingDate],
+        ['Meeting Time', row.meetingTime],
+        ['Objective', row.objective],
+        ['Status', row.status],
+        ['Remarks', row.remarks],
+      ],
+      sections: [
+        {
+          heading: 'Details',
+          rows: [
+            ['MRM Number', row.mrmNumber],
+            ['Venue', row.venue],
+            ['Meeting Date', row.meetingDate],
+            ['Meeting Time', row.meetingTime],
+            ['Objective', row.objective],
+            ['Status', row.status],
+            ['Remarks', row.remarks],
+          ],
+        },
+        ...(agendaRows.length
+          ? [{ heading: 'Agendas', rows: agendaRows }]
+          : []),
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(plan.mrmNumber || 'review_plan', 'review_plan'),
     };
   }
 }

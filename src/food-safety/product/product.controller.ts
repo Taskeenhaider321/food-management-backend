@@ -61,7 +61,9 @@ export class ProductController {
 
   @Patch('reject')
   @ApiBearerAuth()
-  async rejectProduct(@Body() body: { id: string; actor: string; reason: string }) {
+  async rejectProduct(
+    @Body() body: { id: string; actor: string; reason: string },
+  ) {
     return this.productService.rejectProduct(body.id, body.actor, body.reason);
   }
 

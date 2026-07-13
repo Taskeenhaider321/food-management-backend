@@ -1,5 +1,9 @@
 // TEST/hr/personal-requisition/personal-requisition.service.ts
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import {
@@ -38,13 +42,14 @@ export class PersonalRequisitionService {
     }
 
     const deptCompanyId = String(department.companyId);
-    const companyIdFromToken = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyIdFromToken =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const companyIdStr = companyIdFromToken ?? deptCompanyId;
 
     const depLabel =
       department.departmentName ||
-      (department as any).DepartmentName ||
+      department.DepartmentName ||
       department.shortName ||
       '\u2014';
 

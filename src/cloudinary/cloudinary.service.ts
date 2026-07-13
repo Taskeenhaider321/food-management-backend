@@ -62,24 +62,14 @@ export class CloudinaryService {
         'URL is not a deletable Cloudinary asset for this account',
       );
     }
-    await new Promise<void>((resolve, reject) => {
-      cloudinary.uploader.destroy(
-        parsed.publicId,
-        { resource_type: parsed.resourceType, invalidate: true },
-        (error, result) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          const r = result as { result?: string } | undefined;
-          if (r?.result && r.result !== 'ok' && r.result !== 'not found') {
-            reject(new Error(`Cloudinary destroy: ${r.result}`));
-            return;
-          }
-          resolve();
-        },
-      );
+    const result = await cloudinary.uploader.destroy(parsed.publicId, {
+      resource_type: parsed.resourceType,
+      invalidate: true,
     });
+    const r = result as { result?: string } | undefined;
+    if (r?.result && r.result !== 'ok' && r.result !== 'not found') {
+      throw new Error(`Cloudinary destroy: ${r.result}`);
+    }
   }
 
   async uploadFile(file: Express.Multer.File): Promise<string> {
@@ -92,7 +82,7 @@ export class CloudinaryService {
           } else {
             resolve(result?.secure_url || '');
           }
-        }
+        },
       );
       uploadStream.end(file.buffer);
     });
@@ -108,7 +98,7 @@ export class CloudinaryService {
           } else {
             resolve(result?.secure_url || '');
           }
-        }
+        },
       );
       uploadStream.end(buffer);
     });

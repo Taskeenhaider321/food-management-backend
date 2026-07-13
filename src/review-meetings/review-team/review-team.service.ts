@@ -7,6 +7,13 @@ import {
 } from './schemas/review-team-member.schema';
 import { CreateReviewTeamMemberDto } from './dtos/create-review-team-member.dto';
 import { UpdateReviewTeamMemberDto } from './dtos/update-review-team-member.dto';
+import {
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
+
 function actorDisplayName(actor: any): string | undefined {
   return actor?.name || actor?.userName || actor?._id?.toString() || undefined;
 }
@@ -16,15 +23,18 @@ export class ReviewTeamService {
   constructor(
     @InjectModel(ReviewTeamMember.name)
     private readonly reviewTeamMemberModel: Model<ReviewTeamMemberDocument>,
+    @InjectModel('Company') private companyModel: Model<any>,
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
   }
 
   async createMember(dto: CreateReviewTeamMemberDto, actor: any) {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     const member = new this.reviewTeamMemberModel({
       ...dto,
       companyId: companyId ? new Types.ObjectId(companyId) : undefined,
@@ -39,7 +49,8 @@ export class ReviewTeamService {
   }
 
   async createMembersBulk(dtos: CreateReviewTeamMemberDto[], actor: any) {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     const createdBy = actorDisplayName(actor);
     const saved: ReviewTeamMemberDocument[] = [];
 
@@ -101,6 +112,71 @@ export class ReviewTeamService {
       status: true,
       message: 'Team member deleted successfully',
       data: member,
+    };
+  }
+
+  private mapMemberPdfRow(m: ReviewTeamMemberDocument) {
+    return {
+      memberCode: m.memberCode || '---',
+      fullName: m.fullName || '---',
+      designation: m.designation || '---',
+      email: m.email || '---',
+      phoneNo: m.phoneNo || '---',
+      roleInTeam: m.roleInTeam || '---',
+    };
+  }
+
+  async downloadReviewTeamPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.getAllMembers(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Review Team Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'memberCode', label: 'CODE', width: 1.2 },
+        { key: 'fullName', label: 'NAME', width: 2.2 },
+        { key: 'designation', label: 'DESIGNATION', width: 1.8 },
+        { key: 'email', label: 'EMAIL', width: 2.2 },
+        { key: 'phoneNo', label: 'PHONE', width: 1.5 },
+        { key: 'roleInTeam', label: 'ROLE', width: 1.5 },
+      ],
+      rows: data.map((m) => this.mapMemberPdfRow(m)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('review_team', 'directory'),
+    };
+  }
+
+  async downloadReviewTeamByIdPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: member } = await this.getMemberById(id);
+    const row = this.mapMemberPdfRow(member);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: member.fullName || 'Team Member',
+      subtitle: member.memberCode,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Member Code', row.memberCode],
+        ['Full Name', row.fullName],
+        ['Designation', row.designation],
+        ['Email', row.email],
+        ['Phone', row.phoneNo],
+        ['Role in Team', row.roleInTeam],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        member.fullName || member.memberCode || 'review_team_member',
+        'member',
+      ),
     };
   }
 }

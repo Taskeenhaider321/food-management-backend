@@ -12,11 +12,13 @@ import {
   UpdateDocumentDto,
 } from './dtos/create-document.dto';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
+import { Company } from '../../admin-management/company/schemas/company.schema';
 
 import {
   actorDisplayName,
   generateDocumentId,
 } from '../common/document-id.util';
+import { buildDocumentPdf, timelineMeta } from './document-pdf.util';
 
 const DEPARTMENT_POPULATE = {
   path: 'departments',
@@ -50,11 +52,14 @@ export class DocumentService {
     private readonly documentModel: Model<DocumentDocument>,
     @InjectModel('Department')
     private readonly departmentModel: Model<any>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<Company>,
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
   }
 
@@ -78,7 +83,9 @@ export class DocumentService {
     let fileName: string | undefined;
     if (dto.creationMethod === 'upload') {
       if (!file) {
-        throw new BadRequestException('A file is required to upload a document');
+        throw new BadRequestException(
+          'A file is required to upload a document',
+        );
       }
       fileUrl = await this.cloudinaryService.uploadFile(file);
       fileName = file.originalname;
@@ -108,7 +115,12 @@ export class DocumentService {
       status: 'In Review',
       createdBy: userName,
       timeline: [
-        { action: 'Created', status: 'In Review', user: userName, at: new Date() },
+        {
+          action: 'Created',
+          status: 'In Review',
+          user: userName,
+          at: new Date(),
+        },
       ],
     });
 
@@ -134,7 +146,10 @@ export class DocumentService {
     const document = await this.documentModel
       .findById(id)
       .populate(DEPARTMENT_POPULATE)
-      .populate({ path: 'versions.departments', select: 'departmentName shortName' })
+      .populate({
+        path: 'versions.departments',
+        select: 'departmentName shortName',
+      })
       .exec();
     if (!document) throw new NotFoundException('Document not found');
     return { status: true, data: document };
@@ -259,15 +274,17 @@ export class DocumentService {
     } as any);
 
     await document.save();
-    return { status: true, message: 'Document reviewed successfully', data: document };
+    return {
+      status: true,
+      message: 'Document reviewed successfully',
+      data: document,
+    };
   }
 
   async approve(id: string, actor: any) {
     const document = await this.getOrFail(id);
     if (document.status !== 'Reviewed') {
-      throw new BadRequestException(
-        'Only reviewed documents can be approved',
-      );
+      throw new BadRequestException('Only reviewed documents can be approved');
     }
 
     const userName = actorDisplayName(actor);
@@ -280,7 +297,11 @@ export class DocumentService {
     } as any);
 
     await document.save();
-    return { status: true, message: 'Document approved successfully', data: document };
+    return {
+      status: true,
+      message: 'Document approved successfully',
+      data: document,
+    };
   }
 
   async reject(id: string, dto: ActionReasonDto, actor: any) {
@@ -351,6 +372,74 @@ export class DocumentService {
       status: true,
       message: `Document ${document.enabled ? 'enabled' : 'disabled'} successfully`,
       data: document,
+    };
+  }
+
+  async downloadPdf(id: string, actor: any) {
+    const document = await this.documentModel
+      .findById(id)
+      .populate(DEPARTMENT_POPULATE)
+      .exec();
+    if (!document) throw new NotFoundException('Document not found');
+
+    const actorCompanyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const documentCompanyId = document.companyId?.toString();
+    if (
+      actorCompanyId &&
+      documentCompanyId &&
+      actorCompanyId !== documentCompanyId
+    ) {
+      throw new NotFoundException('Document not found');
+    }
+
+    const companyId = documentCompanyId || actorCompanyId;
+    if (!companyId) {
+      throw new BadRequestException(
+        'Company context is required to export PDF',
+      );
+    }
+
+    const company = await this.companyModel.findById(companyId).exec();
+    if (!company) throw new NotFoundException('Company not found');
+
+    const approval = timelineMeta(document.timeline || []);
+    const departments = (document.departments || [])
+      .map((dept: any) => dept?.departmentName || dept?.shortName || '')
+      .filter(Boolean)
+      .join(', ');
+
+    const pdfBytes = await buildDocumentPdf({
+      company: {
+        companyName: company.companyName,
+        address: company.address,
+        companyLogo: company.companyLogo,
+      },
+      meta: {
+        documentName: document.name,
+        documentId: document.documentId,
+        documentType: document.documentType,
+        revisionNo: document.revisionNo || 0,
+        status: document.status,
+        createdBy: document.createdBy || '—',
+        createdAt: (document as any).created_at || new Date(),
+        departments,
+        ...approval,
+      },
+      creationMethod: document.creationMethod,
+      editorContent: document.editorContent,
+      fileUrl: document.fileUrl,
+      fileName: document.fileName,
+    });
+
+    const safeName = (document.name || document.documentId || 'document')
+      .replace(/[^\w-]+/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 80);
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: `${safeName}_${document.documentId.replace(/\//g, '-')}.pdf`,
     };
   }
 }

@@ -1,7 +1,25 @@
 // TEST/hr/monthly-training-plan/monthly-training-plan.controller.ts
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpStatus,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { MonthlyTrainingPlanService } from './monthly-training-plan.service';
 import {
@@ -23,9 +41,18 @@ export class MonthlyTrainingPlanController {
 
   @Post()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create or update monthly training plan (upsert by year, month, training)' })
-  @ApiResponse({ status: HttpStatus.CREATED, description: 'Plan created or updated successfully' })
-  async create(@Body() createDto: CreateMonthlyTrainingPlanDto, @CurrentUser() user: any) {
+  @ApiOperation({
+    summary:
+      'Create or update monthly training plan (upsert by year, month, training)',
+  })
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'Plan created or updated successfully',
+  })
+  async create(
+    @Body() createDto: CreateMonthlyTrainingPlanDto,
+    @CurrentUser() user: any,
+  ) {
     return this.service.create(createDto, user);
   }
 
@@ -52,14 +79,19 @@ export class MonthlyTrainingPlanController {
   @Get('assigned')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get trainings assigned to the signed-in trainer' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Assigned trainings found' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Assigned trainings found',
+  })
   async assigned(@CurrentUser() user: any) {
     return this.service.findAssignedToTrainer(user);
   }
 
   @Get('record-details/:id')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get training record details with per-employee evaluations' })
+  @ApiOperation({
+    summary: 'Get training record details with per-employee evaluations',
+  })
   @ApiParam({ name: 'id', description: 'Monthly plan ID' })
   async getRecordDetails(@Param('id') id: string) {
     return this.service.getRecordDetails(id);
@@ -77,7 +109,9 @@ export class MonthlyTrainingPlanController {
 
   @Patch('conduct-employee')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Mark employee training as conducted with documents' })
+  @ApiOperation({
+    summary: 'Mark employee training as conducted with documents',
+  })
   async conductEmployee(
     @Body() dto: ConductEmployeeDto,
     @CurrentUser() user: any,
@@ -88,7 +122,10 @@ export class MonthlyTrainingPlanController {
   @Patch('assign')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Assign employees to monthly plan' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Employees assigned successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Employees assigned successfully',
+  })
   async assignEmployee(
     @Body() assignDto: AssignEmployeeDto,
     @CurrentUser() user: any,
@@ -99,7 +136,10 @@ export class MonthlyTrainingPlanController {
   @Patch('training-status')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update training status' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Status updated successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Status updated successfully',
+  })
   async updateTrainingStatus(@Body() updateDto: UpdateTrainingStatusDto[]) {
     return this.service.updateTrainingStatus(updateDto);
   }
@@ -108,9 +148,15 @@ export class MonthlyTrainingPlanController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Upload images to monthly plan' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ status: HttpStatus.OK, description: 'Images uploaded successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Images uploaded successfully',
+  })
   @UseInterceptors(FilesInterceptor('Images'))
-  async uploadImages(@Body() body: UploadImagesDto, @UploadedFiles() files: Express.Multer.File[]) {
+  async uploadImages(
+    @Body() body: UploadImagesDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
     return this.service.uploadImages(body.planId, files);
   }
 
@@ -118,7 +164,10 @@ export class MonthlyTrainingPlanController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update monthly training plan by id' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Plan updated successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Plan updated successfully',
+  })
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateMonthlyTrainingPlanDto,
@@ -130,7 +179,10 @@ export class MonthlyTrainingPlanController {
   @Delete('all')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete all monthly plans' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'All plans deleted successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'All plans deleted successfully',
+  })
   async removeAll() {
     return this.service.deleteAll();
   }
@@ -139,7 +191,10 @@ export class MonthlyTrainingPlanController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete monthly plan by id' })
   @ApiParam({ name: 'id', description: 'Plan ID' })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Plan deleted successfully' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Plan deleted successfully',
+  })
   async remove(@Param('id') id: string) {
     return this.service.delete(id);
   }

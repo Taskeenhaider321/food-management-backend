@@ -59,14 +59,16 @@ export class ModuleAccessGuard implements CanActivate {
     );
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user as any;
+    const user = request.user;
 
     if (user?.roleType === 'super-admin') {
       return true;
     }
 
     if (!requiredModules || requiredModules.length === 0) {
-      throw new ForbiddenException('Endpoint requires explicit module access metadata');
+      throw new ForbiddenException(
+        'Endpoint requires explicit module access metadata',
+      );
     }
 
     if (allowsTrainerSelfService(user, requiredModules)) {

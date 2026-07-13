@@ -19,7 +19,8 @@ export class DeputyProcessOwner {
   email?: string;
 }
 
-export const DeputyProcessOwnerSchema = SchemaFactory.createForClass(DeputyProcessOwner);
+export const DeputyProcessOwnerSchema =
+  SchemaFactory.createForClass(DeputyProcessOwner);
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class ProcessOwner {

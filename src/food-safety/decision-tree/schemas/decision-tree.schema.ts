@@ -5,10 +5,7 @@ import {
   TimelineEntry,
   TimelineEntrySchema,
 } from '../../common/timeline.schema';
-import {
-  VersionEntry,
-  VersionEntrySchema,
-} from '../../common/version.schema';
+import { VersionEntry, VersionEntrySchema } from '../../common/version.schema';
 import { DecisionTreeHooks } from '../hooks/decision-tree.hooks';
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
@@ -16,7 +13,11 @@ export class DecisionTree extends Document {
   @Prop({ unique: true })
   DocumentId: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department' })
@@ -57,8 +58,7 @@ export class DecisionTree extends Document {
   @Prop() DisapprovalDate?: Date;
 }
 
-export const DecisionTreeSchema =
-  SchemaFactory.createForClass(DecisionTree);
+export const DecisionTreeSchema = SchemaFactory.createForClass(DecisionTree);
 
 /* 🔗 attach hook */
 DecisionTreeSchema.pre('save', DecisionTreeHooks.generateDocumentId);

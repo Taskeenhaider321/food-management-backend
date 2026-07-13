@@ -82,14 +82,23 @@ export class ConductHaccpController {
 
   @Patch('reject')
   @ApiBearerAuth()
-  async rejectConductHaccp(@Body() body: { id: string; actor: string; reason: string }) {
-    return this.conductHaccpService.rejectConductHaccp(body.id, body.actor, body.reason);
+  async rejectConductHaccp(
+    @Body() body: { id: string; actor: string; reason: string },
+  ) {
+    return this.conductHaccpService.rejectConductHaccp(
+      body.id,
+      body.actor,
+      body.reason,
+    );
   }
 
   @Patch('toggle-enabled')
   @ApiBearerAuth()
   async toggleConductHaccpEnabled(@Body() body: { id: string; actor: string }) {
-    return this.conductHaccpService.toggleConductHaccpEnabled(body.id, body.actor);
+    return this.conductHaccpService.toggleConductHaccpEnabled(
+      body.id,
+      body.actor,
+    );
   }
 
   @Patch('approve')

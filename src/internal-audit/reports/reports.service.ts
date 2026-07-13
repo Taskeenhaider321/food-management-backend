@@ -27,10 +27,13 @@ export class ReportsService {
   constructor(
     @InjectModel(Reports.name) private reportsModel: Model<Reports>,
     @InjectModel(Checklist.name) private checklistModel: Model<Checklist>,
-    @InjectModel(ConductAudits.name) private conductAuditsModel: Model<ConductAudits>,
+    @InjectModel(ConductAudits.name)
+    private conductAuditsModel: Model<ConductAudits>,
   ) {}
 
-  private async departmentChecklistIds(departmentId: string): Promise<string[]> {
+  private async departmentChecklistIds(
+    departmentId: string,
+  ): Promise<string[]> {
     const checklistIds = await this.checklistModel
       .find({
         $or: [
@@ -43,7 +46,9 @@ export class ReportsService {
     return checklistIds.map((id) => String(id));
   }
 
-  private async departmentConductAuditIds(departmentId: string): Promise<string[]> {
+  private async departmentConductAuditIds(
+    departmentId: string,
+  ): Promise<string[]> {
     const checklistIdStrings = await this.departmentChecklistIds(departmentId);
     const auditFilter =
       checklistIdStrings.length > 0
@@ -84,7 +89,9 @@ export class ReportsService {
     });
 
     await report.save();
-    const populated = await applyReportPopulate(this.reportsModel.findById(report._id));
+    const populated = await applyReportPopulate(
+      this.reportsModel.findById(report._id),
+    );
     return {
       status: true,
       message: 'The Report is added!',
@@ -94,20 +101,32 @@ export class ReportsService {
 
   async readReports(departmentId: string) {
     const reports = await applyReportPopulate(
-      this.reportsModel.find(await this.departmentReportFilter(departmentId) as any),
+      this.reportsModel.find(
+        (await this.departmentReportFilter(departmentId)) as any,
+      ),
     ).sort({ ReportDate: -1 });
-    return { status: true, message: 'The following are Reports!', data: reports };
+    return {
+      status: true,
+      message: 'The following are Reports!',
+      data: reports,
+    };
   }
 
   async readReportByAuditId(auditId: string, _departmentId: string) {
     const reports = await applyReportPopulate(
       this.reportsModel.find({ ConductAudit: auditId as any }),
     ).sort({ ReportDate: -1 });
-    return { status: true, message: 'The following are Reports!', data: reports };
+    return {
+      status: true,
+      message: 'The following are Reports!',
+      data: reports,
+    };
   }
 
   async readReportById(reportId: string) {
-    const report = await applyReportPopulate(this.reportsModel.findById(reportId));
+    const report = await applyReportPopulate(
+      this.reportsModel.findById(reportId),
+    );
     if (!report) throw new NotFoundException('Report not found!');
 
     const totalCollections = await this.reportsModel.countDocuments();
@@ -125,9 +144,18 @@ export class ReportsService {
     return { status: true, message: 'Report has been deleted!', data: deleted };
   }
 
-  async deleteAllReports(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllReports(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.reportsModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No Reports Found to Delete!');
-    return { status: true, message: 'All Reports have been deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No Reports Found to Delete!');
+    return {
+      status: true,
+      message: 'All Reports have been deleted!',
+      data: result,
+    };
   }
 }

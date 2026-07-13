@@ -93,11 +93,15 @@ export function mergeCalibrationConfig(
       }
       return {
         ...entry,
-        lastCalibrationDate: entry.lastCalibrationDate || match.lastCalibrationDate,
+        lastCalibrationDate:
+          entry.lastCalibrationDate || match.lastCalibrationDate,
         nextCalibrationDueDate:
           entry.nextCalibrationDueDate ||
           match.nextCalibrationDueDate ||
-          calculateNextMaintenanceDueDate(entry.type, creationDate).toISOString(),
+          calculateNextMaintenanceDueDate(
+            entry.type,
+            creationDate,
+          ).toISOString(),
       };
     });
 

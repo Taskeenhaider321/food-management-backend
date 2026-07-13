@@ -6,8 +6,14 @@ import {
   InternalAuditor,
   InternalAuditorSchema,
 } from './schemas/internal-auditor.schema';
-import { User, UserSchema } from '../../admin-management/users/schemas/user.schema';
-import { Profile, ProfileSchema } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  User,
+  UserSchema,
+} from '../../admin-management/users/schemas/user.schema';
+import {
+  Profile,
+  ProfileSchema,
+} from '../../admin-management/profile/schemas/profile.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 import { EmailModule } from '../../email/email.module';
 import { ProfileModule } from '../../admin-management/profile/profile.module';

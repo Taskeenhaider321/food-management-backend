@@ -5,7 +5,10 @@ import { HaccpTeamService } from './haccp-team.service';
 import { HaccpTeam, HaccpTeamSchema } from './schemas/haccp-team.schema';
 import { TeamMember, TeamMemberSchema } from './schemas/team-member.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
-import { User, UserSchema } from '../../admin-management/users/schemas/user.schema';
+import {
+  User,
+  UserSchema,
+} from '../../admin-management/users/schemas/user.schema';
 
 @Module({
   imports: [

@@ -46,7 +46,9 @@ export class InternalAuditorRolePayloadDto {
 }
 
 export class CreateAuditorDto {
-  @ApiProperty({ description: 'Existing user performing the registration (for PDF branding)' })
+  @ApiProperty({
+    description: 'Existing user performing the registration (for PDF branding)',
+  })
   @IsMongoId()
   actorUserId: string;
 

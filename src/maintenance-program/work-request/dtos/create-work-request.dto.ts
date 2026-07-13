@@ -7,7 +7,10 @@ export class CreateWorkRequestDto {
   @IsString()
   MachineId?: string;
 
-  @ApiProperty({ description: 'Equipment ID (measuring device)', required: false })
+  @ApiProperty({
+    description: 'Equipment ID (measuring device)',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   EquipmentId?: string;

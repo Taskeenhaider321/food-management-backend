@@ -12,8 +12,10 @@ export class ChecklistHooks {
     if (!department) throw new Error('Department not found');
 
     const company: any = department.companyId;
-    if (!company?.shortName) throw new Error('Company short name not configured');
-    if (!department.shortName) throw new Error('Department short name not configured');
+    if (!company?.shortName)
+      throw new Error('Company short name not configured');
+    if (!department.shortName)
+      throw new Error('Department short name not configured');
 
     const documentTypeNumber: Record<string, number> = {
       Manuals: 1,
@@ -30,7 +32,11 @@ export class ChecklistHooks {
     // Scan existing IDs with this prefix for the highest increment.
     const existing = await (this.constructor as any)
       .find(
-        { ChecklistId: { $regex: `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}` } },
+        {
+          ChecklistId: {
+            $regex: `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+          },
+        },
         { ChecklistId: 1 },
       )
       .lean();
@@ -39,7 +45,8 @@ export class ChecklistHooks {
     for (const item of existing) {
       const parts = String(item.ChecklistId).split('/');
       const numericPart = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(numericPart) && numericPart > maxNumber) maxNumber = numericPart;
+      if (!isNaN(numericPart) && numericPart > maxNumber)
+        maxNumber = numericPart;
     }
 
     this.ChecklistId = `${prefix}${(maxNumber + 1).toString().padStart(3, '0')}`;

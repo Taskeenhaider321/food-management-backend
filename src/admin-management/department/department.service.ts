@@ -8,6 +8,12 @@ import { Model, Types } from 'mongoose';
 import { Department, DepartmentDocument } from './schemas/department.schema';
 import { DepartmentItemDto } from './dtos/create-department.dto';
 import { UpdateDepartmentDto } from './dtos/update-department.dto';
+import {
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class DepartmentService {
@@ -206,7 +212,7 @@ export class DepartmentService {
   async update(
     id: string,
     updateDepartmentDto: UpdateDepartmentDto,
-    actor?: any,
+    _actor?: any,
   ): Promise<DepartmentDocument> {
     const existing = await this.departmentModel.findById(id).exec();
     if (!existing) {
@@ -229,5 +235,79 @@ export class DepartmentService {
       throw new NotFoundException('Department not found');
     }
     await this.userModel.deleteMany({ Department: id }).exec();
+  }
+
+  async downloadDepartmentsPdf(actor: any) {
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    if (!companyId) {
+      throw new BadRequestException(
+        'Company context is required to export departments PDF',
+      );
+    }
+
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const departments = await this.findByCompany(companyId);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Departments Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'departmentCode', label: 'CODE', width: 1.2 },
+        { key: 'departmentName', label: 'NAME', width: 3 },
+        { key: 'shortName', label: 'SHORT', width: 1.5 },
+        { key: 'status', label: 'STATUS', width: 1.2 },
+      ],
+      rows: departments.map((d) => ({
+        departmentCode: d.departmentCode,
+        departmentName: d.departmentName,
+        shortName: d.shortName,
+        status: d.status || '---',
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('departments', 'directory'),
+    };
+  }
+
+  async downloadDepartmentByIdPdf(id: string, actor: any) {
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    if (!companyId) {
+      throw new BadRequestException(
+        'Company context is required to export department PDF',
+      );
+    }
+
+    const department = await this.findOne(id, companyId);
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const populatedCompany = department.companyId as any;
+    const companyName =
+      populatedCompany?.companyName || company.companyName || '---';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: department.departmentName || 'Department',
+      subtitle: department.departmentCode,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Department Code', department.departmentCode || '---'],
+        ['Department Name', department.departmentName || '---'],
+        ['Short Name', department.shortName || '---'],
+        ['Status', department.status || '---'],
+        ['Company', companyName],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        department.departmentName || department.departmentCode || 'department',
+        'department',
+      ),
+    };
   }
 }

@@ -9,7 +9,12 @@ const FREQUENCY_MS: Record<AuditFrequency, number | null> = {
 };
 
 export function normalizeAuditFrequency(value?: string | null): AuditFrequency {
-  if (value === 'Hourly' || value === 'Daily' || value === 'Weekly' || value === 'Monthly') {
+  if (
+    value === 'Hourly' ||
+    value === 'Daily' ||
+    value === 'Weekly' ||
+    value === 'Monthly'
+  ) {
     return value;
   }
   return 'None';
@@ -19,7 +24,10 @@ export function frequencyIntervalMs(frequency: AuditFrequency): number | null {
   return FREQUENCY_MS[frequency];
 }
 
-export function nextCycleStart(auditDate: Date, frequency: AuditFrequency): Date | null {
+export function nextCycleStart(
+  auditDate: Date,
+  frequency: AuditFrequency,
+): Date | null {
   const interval = frequencyIntervalMs(frequency);
   if (!interval) return null;
   return new Date(new Date(auditDate).getTime() + interval);

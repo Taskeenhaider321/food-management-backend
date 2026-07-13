@@ -12,7 +12,9 @@ export class ProcessDetail extends Document {
   @Prop({ required: true })
   Description: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ProcessDetail' }] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ProcessDetail' }],
+  })
   subProcesses: MongooseSchema.Types.ObjectId[];
 }
 

@@ -1,16 +1,13 @@
-import { Model } from 'mongoose';
 import { EquipmentDocument } from '../schemas/equipment.schema';
 
 export class EquipmentHooks {
   static async generateEquipmentCode(this: EquipmentDocument) {
     // Generate equipmentCode like MD001, MD002...
     if (!this.equipmentCode) {
-      const equipmentModel = this.model('Equipment') as Model<EquipmentDocument>;
-
-      const latestEquipment = await equipmentModel
+      const latestEquipment = (await this.model('Equipment')
         .findOne({ equipmentCode: { $ne: null } }, { equipmentCode: 1 })
         .sort({ created_at: -1 })
-        .exec();
+        .exec()) as { equipmentCode?: string } | null;
 
       let nextNumber = 1;
 

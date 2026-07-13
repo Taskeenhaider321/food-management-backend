@@ -31,7 +31,7 @@ export async function generateDocumentId(
     throw new NotFoundException('Department not found');
   }
 
-  const company: any = (department as any).companyId;
+  const company: any = department.companyId;
   if (!company || typeof company !== 'object' || !company.shortName) {
     throw new BadRequestException(
       'Department is not linked to a company with a short name',
@@ -43,7 +43,7 @@ export async function generateDocumentId(
     throw new BadRequestException('Invalid document type');
   }
 
-  const prefix = `${company.shortName}/${(department as any).shortName}/${typeCode}/`;
+  const prefix = `${company.shortName}/${department.shortName}/${typeCode}/`;
 
   const existing = await scopeModel
     .find({ documentId: new RegExp(`^${escapeRegExp(prefix)}`) })

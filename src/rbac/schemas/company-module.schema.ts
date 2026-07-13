@@ -25,7 +25,10 @@ export class DerivedModule {
   @Prop({ type: Object })
   resourceCustomNames?: Record<string, string>;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'MasterPermission' }], default: [] })
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: 'MasterPermission' }],
+    default: [],
+  })
   selectedPermissionIds: Types.ObjectId[];
 
   @Prop({ default: true })

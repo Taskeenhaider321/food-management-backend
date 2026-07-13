@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsMongoId, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsMongoId,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateRoleDto {
   @ApiProperty({ example: 'Quality Manager' })
@@ -11,14 +17,18 @@ export class CreateRoleDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Scope the role to a company (for company-admin/company-user roles)' })
+  @ApiPropertyOptional({
+    description:
+      'Scope the role to a company (for company-admin/company-user roles)',
+  })
   @IsOptional()
   @IsMongoId()
   companyId?: string;
 
   @ApiPropertyOptional({
     type: [String],
-    description: 'MasterModule IDs — grants ALL permissions for these seeded modules',
+    description:
+      'MasterModule IDs — grants ALL permissions for these seeded modules',
   })
   @IsOptional()
   @IsArray()
@@ -27,7 +37,8 @@ export class CreateRoleDto {
 
   @ApiPropertyOptional({
     type: [String],
-    description: 'DerivedModule IDs — grants only the cherry-picked permission subset',
+    description:
+      'DerivedModule IDs — grants only the cherry-picked permission subset',
   })
   @IsOptional()
   @IsArray()

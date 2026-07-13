@@ -15,8 +15,8 @@ export class EmailService {
       secure: false,
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
+        pass: process.env.EMAIL_PASS,
+      },
     });
   }
 
@@ -26,7 +26,12 @@ export class EmailService {
     return ejs.render(template, data);
   }
 
-  async sendRegistrationEmail(email: string, name: string, username: string, password: string): Promise<void> {
+  async sendRegistrationEmail(
+    email: string,
+    name: string,
+    username: string,
+    password: string,
+  ): Promise<void> {
     const html = this.renderTemplate('registrationConfirmation', {
       name,
       username,
@@ -44,11 +49,21 @@ export class EmailService {
     console.log(`Registration email sent to ${email}`);
   }
 
-  async sendTrainerRegistrationEmail(email: string, name: string, username: string, password: string): Promise<void> {
+  async sendTrainerRegistrationEmail(
+    email: string,
+    name: string,
+    username: string,
+    password: string,
+  ): Promise<void> {
     return this.sendRegistrationEmail(email, name, username, password);
   }
 
-  async sendNotificationEmail(email: string, userName: string, message: string, actionUrl?: string): Promise<void> {
+  async sendNotificationEmail(
+    email: string,
+    userName: string,
+    message: string,
+    actionUrl?: string,
+  ): Promise<void> {
     const html = this.renderTemplate('notificationEmail', {
       userName,
       message,
@@ -66,7 +81,13 @@ export class EmailService {
     console.log(`Notification email sent to ${email}`);
   }
 
-  async sendMRMEmail(email: string, meetingDate: string, meetingTime: string, location: string, agenda: string): Promise<void> {
+  async sendMRMEmail(
+    email: string,
+    meetingDate: string,
+    meetingTime: string,
+    location: string,
+    agenda: string,
+  ): Promise<void> {
     const html = this.renderTemplate('mrmEmailTemplate', {
       meetingDate,
       meetingTime,
@@ -90,7 +111,7 @@ export class EmailService {
       from: process.env.EMAIL_USER,
       to,
       subject,
-      text
+      text,
     };
 
     await this.transporter.sendMail(mailOptions);

@@ -9,7 +9,13 @@ import {
   Delete,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { YearlyTrainingPlanService } from './yearly-training-plan.service';
 import { CreateYearlyTrainingPlanDto } from './dtos/create-yearly-training-plan.dto';
@@ -27,7 +33,10 @@ export class YearlyTrainingPlanController {
     status: HttpStatus.CREATED,
     description: 'Plan created/updated successfully',
   })
-  async create(@Body() createDto: CreateYearlyTrainingPlanDto, @CurrentUser() user: any) {
+  async create(
+    @Body() createDto: CreateYearlyTrainingPlanDto,
+    @CurrentUser() user: any,
+  ) {
     return this.service.create(createDto, user);
   }
 

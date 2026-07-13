@@ -10,7 +10,9 @@ export function getFrequencyType(frequency: unknown): MaintenanceFrequencyType {
     return frequency as MaintenanceFrequencyType;
   }
   if (frequency && typeof frequency === 'object' && 'type' in frequency) {
-    return String((frequency as { type?: string }).type) as MaintenanceFrequencyType;
+    return String(
+      (frequency as { type?: string }).type,
+    ) as MaintenanceFrequencyType;
   }
   return 'Monthly';
 }

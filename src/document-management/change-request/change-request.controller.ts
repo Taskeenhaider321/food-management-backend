@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { ChangeRequestService } from './change-request.service';
@@ -22,12 +14,11 @@ export class ChangeRequestController {
   constructor(private readonly changeRequestService: ChangeRequestService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a change request for a controlled document' })
+  @ApiOperation({
+    summary: 'Create a change request for a controlled document',
+  })
   @ApiBearerAuth()
-  async create(
-    @Body() dto: CreateChangeRequestDto,
-    @CurrentUser() actor: any,
-  ) {
+  async create(@Body() dto: CreateChangeRequestDto, @CurrentUser() actor: any) {
     return this.changeRequestService.create(dto, actor);
   }
 
@@ -46,7 +37,9 @@ export class ChangeRequestController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update / resubmit a pending or disapproved request' })
+  @ApiOperation({
+    summary: 'Update / resubmit a pending or disapproved request',
+  })
   @ApiBearerAuth()
   async update(
     @Param('id') id: string,
@@ -64,7 +57,9 @@ export class ChangeRequestController {
   }
 
   @Patch(':id/disapprove')
-  @ApiOperation({ summary: 'Disapprove a pending change request (reason required)' })
+  @ApiOperation({
+    summary: 'Disapprove a pending change request (reason required)',
+  })
   @ApiBearerAuth()
   async disapprove(
     @Param('id') id: string,

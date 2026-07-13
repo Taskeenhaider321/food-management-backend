@@ -15,13 +15,19 @@ export class AgendaDetail {
   @Prop()
   Responsibilities: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'MeetingParticipant' }] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'MeetingParticipant' }],
+  })
   Participants: MongooseSchema.Types.ObjectId[];
 }
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class MRM extends Document {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Notification', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Notification',
+    required: true,
+  })
   Notification: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department' })

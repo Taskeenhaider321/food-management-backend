@@ -2,15 +2,22 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Put,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { DocumentService } from './document.service';
 import {
@@ -44,15 +51,40 @@ export class DocumentController {
     return this.documentService.findAll(actor);
   }
 
+  @Get(':id/download-pdf')
+  @ApiOperation({
+    summary:
+      'Download a professionally branded PDF (company logo, cover page, metadata)',
+  })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } = await this.documentService.downloadPdf(
+      id,
+      actor,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get a document by id (with timeline and versions)' })
+  @ApiOperation({
+    summary: 'Get a document by id (with timeline and versions)',
+  })
   @ApiBearerAuth()
   async findById(@Param('id') id: string) {
     return this.documentService.findById(id);
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update a document (resubmits rejected/disapproved)' })
+  @ApiOperation({
+    summary: 'Update a document (resubmits rejected/disapproved)',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBearerAuth()
   @UseInterceptors(FileInterceptor('file'))
@@ -91,7 +123,9 @@ export class DocumentController {
   }
 
   @Patch(':id/disapprove')
-  @ApiOperation({ summary: 'Disapprove an approved document (reason required)' })
+  @ApiOperation({
+    summary: 'Disapprove an approved document (reason required)',
+  })
   @ApiBearerAuth()
   async disapprove(
     @Param('id') id: string,

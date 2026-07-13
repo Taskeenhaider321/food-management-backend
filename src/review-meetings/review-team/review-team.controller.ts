@@ -3,9 +3,11 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Post,
   Put,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -46,6 +48,37 @@ export class ReviewTeamController {
   @ApiBearerAuth()
   async getAllMembers(@CurrentUser() actor: any) {
     return this.reviewTeamService.getAllMembers(actor);
+  }
+
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download review team directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadReviewTeamPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.reviewTeamService.downloadReviewTeamPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single review team member PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadReviewTeamByIdPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.reviewTeamService.downloadReviewTeamByIdPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':id')

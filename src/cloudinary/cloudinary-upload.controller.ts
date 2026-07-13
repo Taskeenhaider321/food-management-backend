@@ -60,8 +60,14 @@ export class CloudinaryUploadController {
       },
     },
   })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: 'Missing or invalid JWT' })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'No file provided' })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Missing or invalid JWT',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'No file provided',
+  })
   @UseInterceptors(FileInterceptor('file'))
   async uploadToCloudinary(@UploadedFile() file?: Express.Multer.File) {
     if (!file?.buffer?.length) {
@@ -79,7 +85,10 @@ export class CloudinaryUploadController {
     description:
       'URL must belong to the configured CLOUDINARY_CLOUD_NAME. Used when replacing or removing uploads.',
   })
-  @ApiResponse({ status: HttpStatus.OK, description: 'Delete attempted (ok or already gone)' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Delete attempted (ok or already gone)',
+  })
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid URL' })
   async deleteCloudinary(@Body() body: { url?: string }) {
     const url = body?.url?.trim();

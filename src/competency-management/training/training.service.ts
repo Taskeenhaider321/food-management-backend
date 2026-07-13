@@ -45,7 +45,8 @@ export class TrainingService {
     }
 
     const deptCompanyId = String(department.companyId);
-    const actorCo = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const actorCo =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const companyIdStr = actorCo ?? deptCompanyId;
     const company = await this.companyModel.findById(companyIdStr).exec();
@@ -64,7 +65,11 @@ export class TrainingService {
         f.mimetype === 'application/pdf' ||
         f.originalname?.toLowerCase?.().endsWith?.('.pdf');
       if (isPdf) {
-        materialUrl = await this.processTrainingMaterial(f, company, uploadedBy);
+        materialUrl = await this.processTrainingMaterial(
+          f,
+          company,
+          uploadedBy,
+        );
       } else {
         materialUrl = await this.cloudinaryService.uploadFile(f);
       }
@@ -89,7 +94,7 @@ export class TrainingService {
   }
 
   async findAllForActor(
-    actor: any,
+    _actor: any,
   ): Promise<{ status: boolean; message: string; data: TrainingDocument[] }> {
     const trainings = await this.trainingModel
       .find({})
@@ -249,13 +254,12 @@ export class TrainingService {
 
   async findByDepartment(
     departmentId: string,
-    actor?: any,
+    _actor?: any,
   ): Promise<{ status: boolean; message: string; data: TrainingDocument[] }> {
     const department = await this.departmentModel.findById(departmentId).lean();
     if (!department) {
       throw new NotFoundException('Department not found');
     }
-
 
     const trainings = await this.trainingModel
       .find({

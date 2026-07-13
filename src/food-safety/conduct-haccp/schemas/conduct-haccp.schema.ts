@@ -5,10 +5,7 @@ import {
   TimelineEntry,
   TimelineEntrySchema,
 } from '../../common/timeline.schema';
-import {
-  VersionEntry,
-  VersionEntrySchema,
-} from '../../common/version.schema';
+import { VersionEntry, VersionEntrySchema } from '../../common/version.schema';
 import { ConductHaccpHooks } from '../hooks/conduct-haccp.hooks';
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
@@ -16,19 +13,34 @@ export class ConductHaccp extends Document {
   @Prop({ unique: true })
   DocumentId: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
   DocumentType: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Processes', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Processes',
+    required: true,
+  })
   Process: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'HaccpTeam' }], required: true })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'HaccpTeam' }],
+    required: true,
+  })
   Teams: MongooseSchema.Types.ObjectId[];
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Hazard' }] })
@@ -60,8 +72,7 @@ export class ConductHaccp extends Document {
   @Prop() DisapprovalDate?: Date;
 }
 
-export const ConductHaccpSchema =
-  SchemaFactory.createForClass(ConductHaccp);
+export const ConductHaccpSchema = SchemaFactory.createForClass(ConductHaccp);
 
 /* 🔗 attach hook */
 ConductHaccpSchema.pre('save', ConductHaccpHooks.generateDocumentId);

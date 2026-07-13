@@ -37,4 +37,5 @@ export class YearlyAuditingPlan extends Document {
   CreationDate: Date;
 }
 
-export const YearlyAuditingPlanSchema = SchemaFactory.createForClass(YearlyAuditingPlan);
+export const YearlyAuditingPlanSchema =
+  SchemaFactory.createForClass(YearlyAuditingPlan);

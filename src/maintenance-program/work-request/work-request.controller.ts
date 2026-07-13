@@ -8,9 +8,16 @@ import {
   Body,
   UseInterceptors,
   UploadedFiles,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { WorkRequestService } from './work-request.service';
 import {
   CreateWorkRequestDto,
@@ -21,6 +28,7 @@ import {
   ResubmitWorkRequestDto,
 } from './dtos/create-work-request.dto';
 import { UpdateWorkRequestDto } from './dtos/update-work-request.dto';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Work Request')
 @Controller('work-requests')
@@ -45,7 +53,11 @@ export class WorkRequestController {
       mwrDocuments?: Express.Multer.File[];
     },
   ) {
-    return this.workRequestService.create(dto, files?.mwrImages || [], files?.mwrDocuments || []);
+    return this.workRequestService.create(
+      dto,
+      files?.mwrImages || [],
+      files?.mwrDocuments || [],
+    );
   }
 
   @Patch(':id/reject')
@@ -92,7 +104,10 @@ export class WorkRequestController {
   @Patch(':id/change-priority')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Change work request priority' })
-  async changePriority(@Param('id') id: string, @Body() dto: ChangePriorityDto) {
+  async changePriority(
+    @Param('id') id: string,
+    @Body() dto: ChangePriorityDto,
+  ) {
     return this.workRequestService.changePriority(id, dto);
   }
 
@@ -144,11 +159,19 @@ export class WorkRequestController {
     return this.workRequestService.findAll(departmentId);
   }
 
-  @Get(':id')
+  @Get('download-pdf')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get work request by ID' })
-  async findById(@Param('id') id: string) {
-    return this.workRequestService.findById(id);
+  @ApiOperation({ summary: 'Download work requests directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadWorkRequestsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.workRequestService.downloadWorkRequestsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get('by-machine/:machineId/:departmentId')
@@ -159,6 +182,29 @@ export class WorkRequestController {
     @Param('departmentId') departmentId: string,
   ) {
     return this.workRequestService.findByMachineId(machineId, departmentId);
+  }
+
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single work request PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadWorkRequestByIdPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.workRequestService.downloadWorkRequestByIdPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get work request by ID' })
+  async findById(@Param('id') id: string) {
+    return this.workRequestService.findById(id);
   }
 
   @Delete('all')

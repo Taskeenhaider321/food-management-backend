@@ -16,13 +16,20 @@ import {
 import { EmailService } from '../../email/email.service';
 import { ProfileService } from '../../admin-management/profile/profile.service';
 import { UserService } from '../../admin-management/users/user.service';
-import { User, UserDocument } from '../../admin-management/users/schemas/user.schema';
-import { Profile, ProfileDocument } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  User,
+  UserDocument,
+} from '../../admin-management/users/schemas/user.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from '../../admin-management/profile/schemas/profile.schema';
 
 @Injectable()
 export class ProcessOwnerService {
   constructor(
-    @InjectModel(ProcessOwner.name) private processOwnerModel: Model<ProcessOwner>,
+    @InjectModel(ProcessOwner.name)
+    private processOwnerModel: Model<ProcessOwner>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     private emailService: EmailService,
@@ -31,18 +38,23 @@ export class ProcessOwnerService {
   ) {}
 
   async addProcess(createDto: CreateProcessOwnerDto) {
-    const { user, profile, processOwner, createdBy, hasDeputy, deputyOwner } = createDto;
+    const { user, profile, processOwner, createdBy, hasDeputy, deputyOwner } =
+      createDto;
 
     if (!user.companyId) {
       throw new BadRequestException('user.companyId is required');
     }
 
-    const emailTaken = await this.userModel.findOne({ email: user.email.toLowerCase() });
+    const emailTaken = await this.userModel.findOne({
+      email: user.email.toLowerCase(),
+    });
     if (emailTaken) {
       throw new ConflictException('Email already in use');
     }
 
-    const existingName = await this.userModel.findOne({ userName: user.userName });
+    const existingName = await this.userModel.findOne({
+      userName: user.userName,
+    });
     if (existingName) {
       throw new BadRequestException('Username already exists!');
     }
@@ -61,11 +73,17 @@ export class ProcessOwnerService {
         session,
       );
 
-      const p = await this.profileService.createForUser(u._id, profile, session);
+      const p = await this.profileService.createForUser(
+        u._id,
+        profile,
+        session,
+      );
 
       const proc = new this.processOwnerModel({
         profileId: p._id,
-        departmentId: user.departmentId ? new Types.ObjectId(user.departmentId) : undefined,
+        departmentId: user.departmentId
+          ? new Types.ObjectId(user.departmentId)
+          : undefined,
         processName: processOwner.processName,
         riskAssessment: processOwner.riskAssessment,
         activities: processOwner.activities ?? [],
@@ -103,13 +121,21 @@ Please login and change your password.
 Best regards`;
 
       try {
-        await this.emailService.sendEmail(udoc.email, 'Registration Confirmation', emailBody);
+        await this.emailService.sendEmail(
+          udoc.email,
+          'Registration Confirmation',
+          emailBody,
+        );
       } catch (error) {
         console.error('Email sending failed:', error);
       }
     }
 
-    return { status: true, message: 'The Process Owner is added!', data: populated };
+    return {
+      status: true,
+      message: 'The Process Owner is added!',
+      data: populated,
+    };
   }
 
   async updateProcess(updateDto: UpdateProcessOwnerDto) {
@@ -123,7 +149,8 @@ Best regards`;
       const profile = await this.profileModel.findById(process.profileId);
       if (profile) {
         const profileUpdate: any = {};
-        if (owner.designation !== undefined) profileUpdate.designation = owner.designation;
+        if (owner.designation !== undefined)
+          profileUpdate.designation = owner.designation;
         if (owner.phoneNo !== undefined) profileUpdate.phoneNo = owner.phoneNo;
         if (Object.keys(profileUpdate).length > 0) {
           await this.profileModel.findByIdAndUpdate(profile._id, profileUpdate);
@@ -153,7 +180,11 @@ Best regards`;
       })
       .populate('departmentId');
 
-    return { status: true, message: 'Process updated successfully!', data: updated };
+    return {
+      status: true,
+      message: 'Process updated successfully!',
+      data: updated,
+    };
   }
 
   async getProcessById(processId: string) {
@@ -184,13 +215,18 @@ Best regards`;
   }
 
   async addAccountCredentials(dto: AddProcessOwnerCredentialsDto) {
-    const process = await this.processOwnerModel.findById(dto.processId).populate('profileId');
+    const process = await this.processOwnerModel
+      .findById(dto.processId)
+      .populate('profileId');
     if (!process) throw new NotFoundException('Process not found');
 
     const profile = process.profileId as any;
-    if (!profile) throw new NotFoundException('Process owner profile not found');
+    if (!profile)
+      throw new NotFoundException('Process owner profile not found');
 
-    const existingUser = await this.userModel.findOne({ userName: dto.userName });
+    const existingUser = await this.userModel.findOne({
+      userName: dto.userName,
+    });
     if (existingUser) throw new ConflictException('Username already taken');
 
     await this.userModel.findByIdAndUpdate(profile.userId, {
@@ -202,11 +238,14 @@ Best regards`;
   }
 
   async resetAccountCredentials(dto: ResetProcessOwnerCredentialsDto) {
-    const process = await this.processOwnerModel.findById(dto.processId).populate('profileId');
+    const process = await this.processOwnerModel
+      .findById(dto.processId)
+      .populate('profileId');
     if (!process) throw new NotFoundException('Process not found');
 
     const profile = process.profileId as any;
-    if (!profile) throw new NotFoundException('Process owner profile not found');
+    if (!profile)
+      throw new NotFoundException('Process owner profile not found');
 
     const existingUser = await this.userModel.findOne({
       userName: dto.newUserName,
@@ -214,7 +253,11 @@ Best regards`;
     });
     if (existingUser) throw new ConflictException('Username already taken');
 
-    await this.userService.resetCredentials(profile.userId, dto.newUserName, dto.newPassword);
+    await this.userService.resetCredentials(
+      profile.userId,
+      dto.newUserName,
+      dto.newPassword,
+    );
 
     return { status: true, message: 'Account credentials reset successfully!' };
   }
@@ -228,28 +271,54 @@ Best regards`;
         populate: { path: 'userId' },
       })
       .exec();
-    return { status: true, message: 'The Following are ProcessOwner!', data: processOwners };
+    return {
+      status: true,
+      message: 'The Following are ProcessOwner!',
+      data: processOwners,
+    };
   }
 
   async deleteProcess(processId: string) {
     const processOwner = await this.processOwnerModel.findById(processId);
-    if (!processOwner) throw new NotFoundException('This ProcessOwner is Not found!');
+    if (!processOwner)
+      throw new NotFoundException('This ProcessOwner is Not found!');
 
     await this.profileService.withTransaction(async (session) => {
-      await this.processOwnerModel.deleteOne({ _id: processOwner._id }).session(session);
-      const profile = await this.profileModel.findById(processOwner.profileId).session(session);
+      await this.processOwnerModel
+        .deleteOne({ _id: processOwner._id })
+        .session(session);
+      const profile = await this.profileModel
+        .findById(processOwner.profileId)
+        .session(session);
       if (profile) {
-        await this.userModel.deleteOne({ _id: profile.userId }).session(session);
-        await this.profileModel.deleteOne({ _id: profile._id }).session(session);
+        await this.userModel
+          .deleteOne({ _id: profile.userId })
+          .session(session);
+        await this.profileModel
+          .deleteOne({ _id: profile._id })
+          .session(session);
       }
     });
 
-    return { status: true, message: 'The Following ProcessOwner has been Deleted!', data: processOwner };
+    return {
+      status: true,
+      message: 'The Following ProcessOwner has been Deleted!',
+      data: processOwner,
+    };
   }
 
-  async deleteAllProcesses(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllProcesses(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.processOwnerModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No processOwner Found to Delete!');
-    return { status: true, message: 'All processOwner have been Deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No processOwner Found to Delete!');
+    return {
+      status: true,
+      message: 'All processOwner have been Deleted!',
+      data: result,
+    };
   }
 }

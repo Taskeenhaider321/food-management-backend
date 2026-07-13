@@ -6,7 +6,10 @@ export class Hazard extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ProcessDetails' })
   Process?: MongooseSchema.Types.ObjectId;
 
-  @Prop({ required: true, enum: ['Biological', 'Chemical', 'Physical', 'Halal', 'Allergen'] })
+  @Prop({
+    required: true,
+    enum: ['Biological', 'Chemical', 'Physical', 'Halal', 'Allergen'],
+  })
   type: string;
 
   @Prop()

@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsArray, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsEnum, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUploadDocumentsDto {
@@ -22,7 +22,10 @@ export class CreateUploadDocumentsDto {
   @IsString()
   DocumentName: string;
 
-  @ApiProperty({ description: 'Document type', enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
+  @ApiProperty({
+    description: 'Document type',
+    enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'],
+  })
   @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
   DocumentType: string;
 }
@@ -85,7 +88,7 @@ export class ApproveUploadedDocumentDto {
   companyId: string;
 }
 
-export class  DisapproveUploadedDocumentDto {
+export class DisapproveUploadedDocumentDto {
   @ApiProperty({ description: 'Document ID' })
   @IsString()
   documentId: string;

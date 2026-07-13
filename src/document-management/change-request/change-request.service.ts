@@ -19,7 +19,8 @@ import { actorDisplayName } from '../common/document-id.util';
 
 const DOCUMENT_POPULATE = {
   path: 'document',
-  select: 'documentId name formName documentType status creationMethod fileUrl fileName editorContent description questions',
+  select:
+    'documentId name formName documentType status creationMethod fileUrl fileName editorContent description questions',
 };
 
 @Injectable()
@@ -32,7 +33,8 @@ export class ChangeRequestService {
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
   }
 
@@ -69,7 +71,8 @@ export class ChangeRequestService {
   async create(dto: CreateChangeRequestDto, actor: any) {
     const target = await this.resolveTarget(dto.document, dto.documentModel);
     const userName = actorDisplayName(actor);
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const changeRequest = new this.changeRequestModel({
       requestNumber: await this.nextRequestNumber(),

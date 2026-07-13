@@ -32,7 +32,11 @@ const DEFAULT_GROUPS = [
     name: 'Compliant/Non-Compliant',
     options: [
       { label: 'Compliant', backgroundColor: '#4caf50', textColor: '#ffffff' },
-      { label: 'Non-Compliant', backgroundColor: '#f44336', textColor: '#ffffff' },
+      {
+        label: 'Non-Compliant',
+        backgroundColor: '#f44336',
+        textColor: '#ffffff',
+      },
       { label: 'N/A', backgroundColor: '#e0e0e0', textColor: '#616161' },
     ],
   },
@@ -49,10 +53,26 @@ const DEFAULT_GROUPS = [
     name: 'Conformity Assessment',
     options: [
       { label: 'Conform', backgroundColor: '#4caf50', textColor: '#ffffff' },
-      { label: 'Minor Non-Conformity', backgroundColor: '#ff9800', textColor: '#ffffff' },
-      { label: 'Major Non-Conformity', backgroundColor: '#f44336', textColor: '#ffffff' },
-      { label: 'Critical Non-Conformity', backgroundColor: '#9c27b0', textColor: '#ffffff' },
-      { label: 'Observation', backgroundColor: '#2196f3', textColor: '#ffffff' },
+      {
+        label: 'Minor Non-Conformity',
+        backgroundColor: '#ff9800',
+        textColor: '#ffffff',
+      },
+      {
+        label: 'Major Non-Conformity',
+        backgroundColor: '#f44336',
+        textColor: '#ffffff',
+      },
+      {
+        label: 'Critical Non-Conformity',
+        backgroundColor: '#9c27b0',
+        textColor: '#ffffff',
+      },
+      {
+        label: 'Observation',
+        backgroundColor: '#2196f3',
+        textColor: '#ffffff',
+      },
       { label: 'N/A', backgroundColor: '#e0e0e0', textColor: '#616161' },
     ],
   },
@@ -61,11 +81,14 @@ const DEFAULT_GROUPS = [
 @Injectable()
 export class DefaultResponseGroupsSeed implements OnModuleInit {
   constructor(
-    @InjectModel(ResponseGroup.name) private responseGroupModel: Model<ResponseGroup>,
+    @InjectModel(ResponseGroup.name)
+    private responseGroupModel: Model<ResponseGroup>,
   ) {}
 
   async onModuleInit() {
-    const count = await this.responseGroupModel.countDocuments({ isDefault: true });
+    const count = await this.responseGroupModel.countDocuments({
+      isDefault: true,
+    });
     if (count > 0) return;
 
     for (const group of DEFAULT_GROUPS) {

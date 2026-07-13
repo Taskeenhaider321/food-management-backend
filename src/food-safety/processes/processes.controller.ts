@@ -73,8 +73,14 @@ export class ProcessesController {
 
   @Patch('reject')
   @ApiBearerAuth()
-  async rejectProcess(@Body() body: { id: string; actor: string; reason: string }) {
-    return this.processesService.rejectProcess(body.id, body.actor, body.reason);
+  async rejectProcess(
+    @Body() body: { id: string; actor: string; reason: string },
+  ) {
+    return this.processesService.rejectProcess(
+      body.id,
+      body.actor,
+      body.reason,
+    );
   }
 
   @Patch('toggle-enabled')

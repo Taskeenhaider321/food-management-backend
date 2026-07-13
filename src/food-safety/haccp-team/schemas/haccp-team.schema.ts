@@ -5,10 +5,7 @@ import {
   TimelineEntry,
   TimelineEntrySchema,
 } from '../../common/timeline.schema';
-import {
-  VersionEntry,
-  VersionEntrySchema,
-} from '../../common/version.schema';
+import { VersionEntry, VersionEntrySchema } from '../../common/version.schema';
 import { HaccpTeamHooks } from '../hooks/haccp-team.hooks';
 
 export type HaccpTeamDocument = HaccpTeam & Document;
@@ -21,10 +18,18 @@ export class HaccpTeam extends Document {
   @Prop({ required: true })
   TeamName: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
   @Prop({ enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'], required: true })
@@ -70,8 +75,7 @@ export class HaccpTeam extends Document {
   DisapprovalDate?: Date;
 }
 
-export const HaccpTeamSchema =
-  SchemaFactory.createForClass(HaccpTeam);
+export const HaccpTeamSchema = SchemaFactory.createForClass(HaccpTeam);
 
 // ✅ Attach hook cleanly
 HaccpTeamSchema.pre('save', HaccpTeamHooks.generateDocumentId);

@@ -1,5 +1,5 @@
 import { Model } from 'mongoose';
-import { ProcessOwner, ProcessOwnerDocument } from '../schemas/process-owner.schema';
+import { ProcessOwnerDocument } from '../schemas/process-owner.schema';
 
 export class ProcessOwnerHooks {
   static async generateProcessCode(this: ProcessOwnerDocument) {
@@ -7,7 +7,10 @@ export class ProcessOwnerHooks {
 
     const ProcessOwnerModel = this.constructor as Model<ProcessOwnerDocument>;
 
-    const latestProcess = await ProcessOwnerModel.findOne({}, { processCode: 1 })
+    const latestProcess = await ProcessOwnerModel.findOne(
+      {},
+      { processCode: 1 },
+    )
       .sort({ processCode: -1 })
       .exec();
 

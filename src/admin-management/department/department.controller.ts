@@ -9,6 +9,8 @@ import {
   HttpStatus,
   Req,
   Query,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -115,6 +117,38 @@ export class DepartmentController {
     // assertActorMayAccessCompany(req.user, companyId);
     const departments = await this.departmentService.findByCompany(companyId);
     return { status: true, data: departments };
+  }
+
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download departments directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadDepartmentsPdf(
+    @Req() req: DepartmentRequest,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.departmentService.downloadDepartmentsPdf(req.user);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single department PDF' })
+  @ApiParam({ name: 'id', description: 'Department ID' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadDepartmentByIdPdf(
+    @Param('id') id: string,
+    @Req() req: DepartmentRequest,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.departmentService.downloadDepartmentByIdPdf(id, req.user);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':id')

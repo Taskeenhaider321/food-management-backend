@@ -1,20 +1,19 @@
-import { Model } from 'mongoose';
 import { SupplierDocument } from '../schemas/supplier.schema';
 
 export class SupplierHooks {
   static async generateSupplierCode(this: SupplierDocument) {
     if (!this.supplierCode) {
-      const supplierModel = this.model('Supplier') as Model<SupplierDocument>;
-
-      const latestSupplier = await supplierModel
+      const latestSupplier = (await this.model('Supplier')
         .findOne({}, { supplierCode: 1 })
         .sort({ created_at: -1 })
-        .exec();
+        .exec()) as { supplierCode?: string } | null;
 
       let nextNumber = 1;
 
       if (latestSupplier?.supplierCode) {
-        const numericPart = Number(latestSupplier.supplierCode.replace('S', ''));
+        const numericPart = Number(
+          latestSupplier.supplierCode.replace('S', ''),
+        );
         if (!isNaN(numericPart)) {
           nextNumber = numericPart + 1;
         }

@@ -40,7 +40,9 @@ export class UpdateYearlyTrainingPlanDto {
   @IsEnum(['Tentative', 'Pending', 'Scheduled', 'Postponed', 'Cancelled'])
   ScheduleStatus?: string;
 
-  @ApiPropertyOptional({ description: 'Optional note stored in status history' })
+  @ApiPropertyOptional({
+    description: 'Optional note stored in status history',
+  })
   @IsOptional()
   @IsString()
   statusNote?: string;

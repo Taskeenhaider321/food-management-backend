@@ -21,7 +21,9 @@ export class Notification extends Document {
   @Prop()
   Time: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'MeetingParticipant' }] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'MeetingParticipant' }],
+  })
   Participants: MongooseSchema.Types.ObjectId[];
 
   @Prop()

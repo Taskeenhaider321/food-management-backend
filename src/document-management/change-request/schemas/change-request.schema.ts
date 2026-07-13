@@ -9,7 +9,10 @@ import {
 
 export type ChangeRequestDocument = ChangeRequest & MongooseDocument;
 
-export const CHANGE_REQUEST_TARGET_MODELS = ['Document', 'ListOfForms'] as const;
+export const CHANGE_REQUEST_TARGET_MODELS = [
+  'Document',
+  'ListOfForms',
+] as const;
 
 @Schema({
   collection: 'dm_change_requests',
@@ -57,7 +60,6 @@ export class ChangeRequest {
   timeline: TimelineEntry[];
 }
 
-export const ChangeRequestSchema =
-  SchemaFactory.createForClass(ChangeRequest);
+export const ChangeRequestSchema = SchemaFactory.createForClass(ChangeRequest);
 
 ChangeRequestSchema.index({ companyId: 1, status: 1 });

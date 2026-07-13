@@ -2,9 +2,18 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UploadDocumentsController } from './upload-documents.controller';
 import { UploadDocumentsService } from './upload-documents.service';
-import { UploadDocuments, UploadDocumentsSchema } from './schemas/upload-documents.schema';
-import { User, UserSchema } from '../../admin-management/users/schemas/user.schema';
-import { Company, CompanySchema } from '../../admin-management/company/schemas/company.schema';
+import {
+  UploadDocuments,
+  UploadDocumentsSchema,
+} from './schemas/upload-documents.schema';
+import {
+  User,
+  UserSchema,
+} from '../../admin-management/users/schemas/user.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 
 @Module({

@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Put, Patch, Delete, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+} from '@nestjs/common';
 import { ProcessOwnerService } from './process-owner.service';
 import { CreateProcessOwnerDto } from './dtos/create-process-owner.dto';
 import { UpdateProcessOwnerDto } from './dtos/update-process-owner.dto';

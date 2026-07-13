@@ -5,10 +5,7 @@ import {
   TimelineEntry,
   TimelineEntrySchema,
 } from '../../common/timeline.schema';
-import {
-  VersionEntry,
-  VersionEntrySchema,
-} from '../../common/version.schema';
+import { VersionEntry, VersionEntrySchema } from '../../common/version.schema';
 import { ProductHooks } from '../hooks/product.hooks';
 
 @Schema({ _id: false })
@@ -40,10 +37,18 @@ export class Product extends Document {
   @Prop({ type: Object })
   User?: Record<string, any>;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })

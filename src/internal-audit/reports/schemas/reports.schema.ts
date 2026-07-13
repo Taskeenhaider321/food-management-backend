@@ -12,7 +12,11 @@ export class SelectedAnswer {
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class Reports extends Document {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ConductAudits', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'ConductAudits',
+    required: true,
+  })
   ConductAudit: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department' })

@@ -89,7 +89,10 @@ export class UpdateProcessOwnerDto {
   @Type(() => DeputyProcessOwnerDto)
   deputyOwner?: DeputyProcessOwnerDto;
 
-  @ApiPropertyOptional({ type: ProcessOwnerPersonUpdateDto, description: 'Process owner personal info updates' })
+  @ApiPropertyOptional({
+    type: ProcessOwnerPersonUpdateDto,
+    description: 'Process owner personal info updates',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => ProcessOwnerPersonUpdateDto)

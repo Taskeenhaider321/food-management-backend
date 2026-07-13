@@ -31,8 +31,24 @@ export class CreatePersonalRequisitionDto {
   @IsString()
   Supervisor: string;
 
-  @ApiProperty({ enum: ['Permanent', 'Contractual', 'Specific Record', 'Part Time', 'Temporary', 'Internship'] })
-  @IsEnum(['Permanent', 'Contractual', 'Specific Record', 'Part Time', 'Temporary', 'Internship'])
+  @ApiProperty({
+    enum: [
+      'Permanent',
+      'Contractual',
+      'Specific Record',
+      'Part Time',
+      'Temporary',
+      'Internship',
+    ],
+  })
+  @IsEnum([
+    'Permanent',
+    'Contractual',
+    'Specific Record',
+    'Part Time',
+    'Temporary',
+    'Internship',
+  ])
   EmploymentType: string;
 
   @ApiProperty()
@@ -79,8 +95,24 @@ export class CreatePersonalRequisitionDto {
   @IsEnum(['High', 'Medium', 'Average', 'Not Applicable'])
   CommunicationSkill: string;
 
-  @ApiProperty({ enum: ['New Business Need', 'New Structure Need', 'New Target Requirement', 'Department Extension', 'Work Overload Sharing', 'Employee Resignation'] })
-  @IsEnum(['New Business Need', 'New Structure Need', 'New Target Requirement', 'Department Extension', 'Work Overload Sharing', 'Employee Resignation'])
+  @ApiProperty({
+    enum: [
+      'New Business Need',
+      'New Structure Need',
+      'New Target Requirement',
+      'Department Extension',
+      'Work Overload Sharing',
+      'Employee Resignation',
+    ],
+  })
+  @IsEnum([
+    'New Business Need',
+    'New Structure Need',
+    'New Target Requirement',
+    'Department Extension',
+    'Work Overload Sharing',
+    'Employee Resignation',
+  ])
   Justification: string;
 
   @ApiProperty({ required: false })

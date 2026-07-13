@@ -3,8 +3,14 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { YearlyTrainingPlanController } from './yearly-training-plan.controller';
 import { YearlyTrainingPlanService } from './yearly-training-plan.service';
-import { YearlyTrainingPlan, YearlyTrainingPlanSchema } from './schemas/yearly-training-plan.schema';
-import { Department, DepartmentSchema } from '../../admin-management/department/schemas/department.schema';
+import {
+  YearlyTrainingPlan,
+  YearlyTrainingPlanSchema,
+} from './schemas/yearly-training-plan.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../../admin-management/department/schemas/department.schema';
 import { Training, TrainingSchema } from '../training/schemas/training.schema';
 
 @Module({

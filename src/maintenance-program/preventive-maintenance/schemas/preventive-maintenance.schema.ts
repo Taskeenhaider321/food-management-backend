@@ -2,8 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { preventiveMaintenancePreSave } from '../hooks/preventive-maintenance.hooks';
 
-export type PreventiveMaintenanceDocument =
-  PreventiveMaintenance & Document;
+export type PreventiveMaintenanceDocument = PreventiveMaintenance & Document;
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class PreventiveMaintenance {
@@ -56,10 +55,8 @@ export class PreventiveMaintenance {
   SubmitDate: Date;
 }
 
-export const PreventiveMaintenanceSchema =
-  SchemaFactory.createForClass(PreventiveMaintenance);
-
-PreventiveMaintenanceSchema.pre(
-  'save',
-  preventiveMaintenancePreSave,
+export const PreventiveMaintenanceSchema = SchemaFactory.createForClass(
+  PreventiveMaintenance,
 );
+
+PreventiveMaintenanceSchema.pre('save', preventiveMaintenancePreSave);

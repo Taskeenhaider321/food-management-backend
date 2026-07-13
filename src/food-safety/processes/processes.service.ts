@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Processes } from './schemas/processes.schema';
@@ -40,7 +44,8 @@ function nestedSubProcessPopulate(depth = 8): any {
 export class ProcessesService {
   constructor(
     @InjectModel('Processes') private processesModel: Model<Processes>,
-    @InjectModel('ProcessDetail') private processDetailModel: Model<ProcessDetail>,
+    @InjectModel('ProcessDetail')
+    private processDetailModel: Model<ProcessDetail>,
     @InjectModel('Department') private departmentModel: Model<any>,
   ) {}
 
@@ -64,28 +69,31 @@ export class ProcessesService {
   }
 
   async createProcess(createProcessesDto: CreateProcessesDto) {
-  const processDetailsIds = await Promise.all(
-    createProcessesDto.ProcessDetails.map((processObj) =>
-      this.saveProcessDetailTree(processObj),
-    ),
-  );
+    const processDetailsIds = await Promise.all(
+      createProcessesDto.ProcessDetails.map((processObj) =>
+        this.saveProcessDetailTree(processObj),
+      ),
+    );
 
-  const mainProcessDoc = new this.processesModel({
-    Department: createProcessesDto.Department,
-    ProcessName: createProcessesDto.ProcessName,
-    DocumentType: createProcessesDto.DocumentType,
-    CreatedBy: createProcessesDto.createdBy,
-    UserDepartment: createProcessesDto.departmentId,
-    ProcessDetails: processDetailsIds,
-    CreationDate: new Date(),
-  });
-  initCreatedTimeline(mainProcessDoc, createProcessesDto.createdBy);
+    const mainProcessDoc = new this.processesModel({
+      Department: createProcessesDto.Department,
+      ProcessName: createProcessesDto.ProcessName,
+      DocumentType: createProcessesDto.DocumentType,
+      CreatedBy: createProcessesDto.createdBy,
+      UserDepartment: createProcessesDto.departmentId,
+      ProcessDetails: processDetailsIds,
+      CreationDate: new Date(),
+    });
+    initCreatedTimeline(mainProcessDoc, createProcessesDto.createdBy);
 
-  await mainProcessDoc.save();
-  console.log('Created Main Process : ' + mainProcessDoc);
-  return { status: true, message: 'Process document created successfully', data: mainProcessDoc };
-}
-
+    await mainProcessDoc.save();
+    console.log('Created Main Process : ' + mainProcessDoc);
+    return {
+      status: true,
+      message: 'Process document created successfully',
+      data: mainProcessDoc,
+    };
+  }
 
   async getAllProcesses(departmentId: string) {
     const processes = await this.processesModel
@@ -137,10 +145,14 @@ export class ProcessesService {
       .exec();
 
     if (!process) {
-      throw new NotFoundException(`Process document with ID: ${processId} not found`);
+      throw new NotFoundException(
+        `Process document with ID: ${processId} not found`,
+      );
     }
 
-    console.log(`Process document with ID: ${processId} retrieved successfully`);
+    console.log(
+      `Process document with ID: ${processId} retrieved successfully`,
+    );
     return { status: true, data: process };
   }
 
@@ -151,10 +163,14 @@ export class ProcessesService {
       .exec();
 
     if (!process) {
-      throw new NotFoundException(`Process document with ID: ${processId} not found`);
+      throw new NotFoundException(
+        `Process document with ID: ${processId} not found`,
+      );
     }
 
-    console.log(`Process document with ID: ${processId} retrieved successfully`);
+    console.log(
+      `Process document with ID: ${processId} retrieved successfully`,
+    );
     return { status: true, data: process };
   }
 
@@ -164,7 +180,9 @@ export class ProcessesService {
       throw new NotFoundException(`Process document with ID: ${id} not found`);
     }
     if (!canEditRecord(existing)) {
-      throw new BadRequestException('Only records in review, rejected, or disapproved can be deleted');
+      throw new BadRequestException(
+        'Only records in review, rejected, or disapproved can be deleted',
+      );
     }
 
     const deletedProcess = await this.processesModel.findByIdAndDelete(id);
@@ -173,70 +191,114 @@ export class ProcessesService {
     }
 
     console.log(`Process document with ID: ${id} deleted successfully`);
-    return { status: true, message: 'Process document deleted successfully', data: deletedProcess };
+    return {
+      status: true,
+      message: 'Process document deleted successfully',
+      data: deletedProcess,
+    };
   }
 
-  async deleteAllProcesses(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllProcesses(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.processesModel.deleteMany({});
     if (result.deletedCount === 0) {
       throw new NotFoundException('No Process documents found to delete!');
     }
 
-    console.log(new Date().toLocaleString() + ' ' + 'DELETE All Process documents Successfully!');
-    return { status: true, message: 'All Process documents have been deleted!', data: result };
-  }
-
-  async updateProcess(processId: string, updateProcessesDto: UpdateProcessesDto) {
-  const existingProcess = await this.processesModel.findById(processId);
-  if (!existingProcess) {
-    throw new NotFoundException(`Process document with ID: ${processId} not found`);
-  }
-  if (!canEditRecord(existingProcess)) {
-    throw new BadRequestException('Reviewed or approved processes cannot be modified');
-  }
-
-  const trackChanges = shouldTrackChanges(existingProcess);
-
-  const processDetailsIds = await Promise.all(
-    (updateProcessesDto.ProcessDetails || []).map((processObj) => {
-      const { _id, ...rest } = processObj as ProcessDetailInput & { _id?: string };
-      return this.saveProcessDetailTree(rest);
-    }),
-  );
-
-  if (trackChanges) {
-    resubmitRecord(
-      existingProcess,
-      updateProcessesDto.updatedBy || 'System',
-      ['Process Details'],
-      { ProcessName: existingProcess.ProcessName },
+    console.log(
+      new Date().toLocaleString() +
+        ' ' +
+        'DELETE All Process documents Successfully!',
     );
+    return {
+      status: true,
+      message: 'All Process documents have been deleted!',
+      data: result,
+    };
   }
 
-  existingProcess.ProcessDetails = processDetailsIds as any;
-  if (updateProcessesDto.ProcessName) existingProcess.ProcessName = updateProcessesDto.ProcessName;
-  if (updateProcessesDto.DocumentType) existingProcess.DocumentType = updateProcessesDto.DocumentType;
-  existingProcess.UpdatedBy = updateProcessesDto.updatedBy;
-  existingProcess.UpdationDate = new Date();
+  async updateProcess(
+    processId: string,
+    updateProcessesDto: UpdateProcessesDto,
+  ) {
+    const existingProcess = await this.processesModel.findById(processId);
+    if (!existingProcess) {
+      throw new NotFoundException(
+        `Process document with ID: ${processId} not found`,
+      );
+    }
+    if (!canEditRecord(existingProcess)) {
+      throw new BadRequestException(
+        'Reviewed or approved processes cannot be modified',
+      );
+    }
 
-  const updatedProcess = await existingProcess.save();
-  return { status: true, message: trackChanges ? 'Process updated and resubmitted' : 'Process document updated successfully', data: updatedProcess };
-}
+    const trackChanges = shouldTrackChanges(existingProcess);
+
+    const processDetailsIds = await Promise.all(
+      (updateProcessesDto.ProcessDetails || []).map((processObj) => {
+        const { _id, ...rest } = processObj as ProcessDetailInput & {
+          _id?: string;
+        };
+        return this.saveProcessDetailTree(rest);
+      }),
+    );
+
+    if (trackChanges) {
+      resubmitRecord(
+        existingProcess,
+        updateProcessesDto.updatedBy || 'System',
+        ['Process Details'],
+        { ProcessName: existingProcess.ProcessName },
+      );
+    }
+
+    existingProcess.ProcessDetails = processDetailsIds as any;
+    if (updateProcessesDto.ProcessName)
+      existingProcess.ProcessName = updateProcessesDto.ProcessName;
+    if (updateProcessesDto.DocumentType)
+      existingProcess.DocumentType = updateProcessesDto.DocumentType;
+    existingProcess.UpdatedBy = updateProcessesDto.updatedBy;
+    existingProcess.UpdationDate = new Date();
+
+    const updatedProcess = await existingProcess.save();
+    return {
+      status: true,
+      message: trackChanges
+        ? 'Process updated and resubmitted'
+        : 'Process document updated successfully',
+      data: updatedProcess,
+    };
+  }
 
   async reviewProcess(id: string, actor: string) {
     const process = await this.processesModel.findById(id);
     if (!process) throw new NotFoundException('Process not found');
     reviewRecord(process, actor);
     await process.save();
-    return { status: true, message: 'Process reviewed successfully', data: process };
+    return {
+      status: true,
+      message: 'Process reviewed successfully',
+      data: process,
+    };
   }
 
   async approveProcess(approveProcessesDto: ApproveProcessesDto) {
     const process = await this.processesModel.findById(approveProcessesDto.id);
-    if (!process) throw new NotFoundException(`Process with ID: ${approveProcessesDto.id} not found.`);
+    if (!process)
+      throw new NotFoundException(
+        `Process with ID: ${approveProcessesDto.id} not found.`,
+      );
     approveRecord(process, approveProcessesDto.approvedBy);
     await process.save();
-    return { status: true, message: 'The Process has been marked as approved.', data: process };
+    return {
+      status: true,
+      message: 'The Process has been marked as approved.',
+      data: process,
+    };
   }
 
   async rejectProcess(id: string, actor: string, reason: string) {
@@ -248,11 +310,24 @@ export class ProcessesService {
   }
 
   async disapproveProcess(disapproveProcessesDto: DisapproveProcessesDto) {
-    const process = await this.processesModel.findById(disapproveProcessesDto.id);
-    if (!process) throw new NotFoundException(`Process with ID: ${disapproveProcessesDto.id} not found.`);
-    disapproveRecord(process, disapproveProcessesDto.disapprovedBy, disapproveProcessesDto.Reason);
+    const process = await this.processesModel.findById(
+      disapproveProcessesDto.id,
+    );
+    if (!process)
+      throw new NotFoundException(
+        `Process with ID: ${disapproveProcessesDto.id} not found.`,
+      );
+    disapproveRecord(
+      process,
+      disapproveProcessesDto.disapprovedBy,
+      disapproveProcessesDto.Reason,
+    );
     await process.save();
-    return { status: true, message: 'The Process has been marked as disapproved.', data: process };
+    return {
+      status: true,
+      message: 'The Process has been marked as disapproved.',
+      data: process,
+    };
   }
 
   async toggleProcessEnabled(id: string, actor: string) {

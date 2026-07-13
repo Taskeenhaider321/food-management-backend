@@ -1,18 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { MonthlyAuditingPlan } from './schemas/monthly-auditing-plan.schema';
 import { CreateMonthlyPlanDto } from './dtos/create-monthly-plan.dto';
 import { YearlyAuditingPlan } from '../yearly-auditing-plan/schemas/yearly-auditing-plan.schema';
 import { ProcessOwner } from '../process-owner/schemas/process-owner.schema';
-import { User, UserDocument } from '../../admin-management/users/schemas/user.schema';
+import {
+  User,
+  UserDocument,
+} from '../../admin-management/users/schemas/user.schema';
 
 @Injectable()
 export class MonthlyAuditingPlanService {
   constructor(
-    @InjectModel(MonthlyAuditingPlan.name) private monthlyPlanModel: Model<MonthlyAuditingPlan>,
-    @InjectModel(YearlyAuditingPlan.name) private yearlyPlanModel: Model<YearlyAuditingPlan>,
-    @InjectModel(ProcessOwner.name) private processOwnerModel: Model<ProcessOwner>,
+    @InjectModel(MonthlyAuditingPlan.name)
+    private monthlyPlanModel: Model<MonthlyAuditingPlan>,
+    @InjectModel(YearlyAuditingPlan.name)
+    private yearlyPlanModel: Model<YearlyAuditingPlan>,
+    @InjectModel(ProcessOwner.name)
+    private processOwnerModel: Model<ProcessOwner>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
@@ -22,7 +32,9 @@ export class MonthlyAuditingPlanService {
       UserDepartment: createDto.departmentId as any,
     });
     if (!yearlyPlan) {
-      throw new NotFoundException(`YearlyAuditPlan for the year ${createDto.Year} does not exist.`);
+      throw new NotFoundException(
+        `YearlyAuditPlan for the year ${createDto.Year} does not exist.`,
+      );
     }
 
     const monthExists = yearlyPlan.Selected.filter((s) =>
@@ -35,9 +47,12 @@ export class MonthlyAuditingPlanService {
     }
 
     for (const processOwnerId of createDto.Process) {
-      const processOwner = await this.processOwnerModel.findById(processOwnerId);
+      const processOwner =
+        await this.processOwnerModel.findById(processOwnerId);
       if (!processOwner) {
-        throw new NotFoundException(`Process Owner with ID "${processOwnerId}" not found.`);
+        throw new NotFoundException(
+          `Process Owner with ID "${processOwnerId}" not found.`,
+        );
       }
       if (processOwner.departmentId?.toString() === createDto.Department) {
         throw new BadRequestException(
@@ -49,7 +64,9 @@ export class MonthlyAuditingPlanService {
     for (const auditorId of createDto.Auditor) {
       const auditor = await this.userModel.findById(auditorId);
       if (!auditor) {
-        throw new NotFoundException(`Auditor with ID "${auditorId}" not found.`);
+        throw new NotFoundException(
+          `Auditor with ID "${auditorId}" not found.`,
+        );
       }
       if (auditor.departmentId?.toString() === createDto.Department) {
         throw new BadRequestException(
@@ -65,7 +82,11 @@ export class MonthlyAuditingPlanService {
     });
 
     await plan.save();
-    return { Status: true, message: 'The MonthlyAuditPlan is added!', data: plan };
+    return {
+      Status: true,
+      message: 'The MonthlyAuditPlan is added!',
+      data: plan,
+    };
   }
 
   async readMonthlyAuditPlan(departmentId: string) {
@@ -83,7 +104,11 @@ export class MonthlyAuditingPlanService {
       .populate('YearlyAuditingPlan')
       .populate('Department')
       .populate('UserDepartment');
-    return { status: true, message: 'The Following are MonthlyAuditingPlans!', data: plans };
+    return {
+      status: true,
+      message: 'The Following are MonthlyAuditingPlans!',
+      data: plans,
+    };
   }
 
   async readMonthlyAuditPlanById(planId: string) {
@@ -113,6 +138,10 @@ export class MonthlyAuditingPlanService {
   async deleteMonthlyPlan(id: string) {
     const deleted = await this.monthlyPlanModel.findByIdAndDelete(id);
     if (!deleted) throw new NotFoundException('This MonthlyPlan is Not found!');
-    return { status: true, message: 'The Following MonthlyPlan has been Deleted!', data: deleted };
+    return {
+      status: true,
+      message: 'The Following MonthlyPlan has been Deleted!',
+      data: deleted,
+    };
   }
 }

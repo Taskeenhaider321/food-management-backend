@@ -32,7 +32,8 @@ export class ListOfFormsService {
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
   }
 
@@ -72,7 +73,12 @@ export class ListOfFormsService {
       status: 'In Review',
       createdBy: userName,
       timeline: [
-        { action: 'Created', status: 'In Review', user: userName, at: new Date() },
+        {
+          action: 'Created',
+          status: 'In Review',
+          user: userName,
+          at: new Date(),
+        },
       ],
     });
 

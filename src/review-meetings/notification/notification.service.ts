@@ -1,18 +1,24 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Notification } from './schemas/notification.schema';
 import { Agenda } from './schemas/agenda.schema';
 import { MeetingParticipant } from '../meeting-participants/schemas/meeting-participant.schema';
-import { CreateNotificationDto } from './dtos/create-notification.dto';  
+import { CreateNotificationDto } from './dtos/create-notification.dto';
 import { EmailService } from '../../email/email.service';
 
 @Injectable()
 export class NotificationService {
   constructor(
-    @InjectModel(Notification.name) private notificationModel: Model<Notification>,
+    @InjectModel(Notification.name)
+    private notificationModel: Model<Notification>,
     @InjectModel(Agenda.name) private agendaModel: Model<Agenda>,
-    @InjectModel(MeetingParticipant.name) private participantsModel: Model<MeetingParticipant>,
+    @InjectModel(MeetingParticipant.name)
+    private participantsModel: Model<MeetingParticipant>,
     private emailService: EmailService,
   ) {}
 
@@ -72,8 +78,7 @@ export class NotificationService {
         const label = this.participantLabel(pDoc ?? null);
         emailAgendaSection += `\n** ${label} **\n${rows
           .map(
-            (a) =>
-              `- ${a.Name}${a.Description ? ` — ${a.Description}` : ''}`,
+            (a) => `- ${a.Name}${a.Description ? ` — ${a.Description}` : ''}`,
           )
           .join('\n')}\n`;
       }
@@ -83,10 +88,7 @@ export class NotificationService {
         agendaIdList.push(a._id);
       }
       emailAgendaSection = (createDto.Agendas || [])
-        .map(
-          (agenda) =>
-            `- ${agenda.Name}: ${agenda.Description || ''}`,
-        )
+        .map((agenda) => `- ${agenda.Name}: ${agenda.Description || ''}`)
         .join('\n');
     }
 
@@ -116,20 +118,30 @@ ${emailAgendaSection || '(none)'}`;
 
     for (const email of participantEmails) {
       try {
-        await this.emailService.sendEmail(email, 'New Meeting Notification', emailBody);
+        await this.emailService.sendEmail(
+          email,
+          'New Meeting Notification',
+          emailBody,
+        );
       } catch (error) {
         console.error(`Failed to send email to ${email}:`, error);
       }
     }
 
-    return { status: true, message: 'Notification created and emails sent successfully', data: notification };
+    return {
+      status: true,
+      message: 'Notification created and emails sent successfully',
+      data: notification,
+    };
   }
 
-  private participantLabel(p: (MeetingParticipant & { profileId?: any }) | null): string {
+  private participantLabel(
+    p: (MeetingParticipant & { profileId?: any }) | null,
+  ): string {
     if (!p) return 'Member';
     const u = p.profileId?.userId;
     if (u && typeof u === 'object') {
-      return (u as any).name || (u as any).Name || 'Member';
+      return u.name || u.Name || 'Member';
     }
     return (p as any).Name || 'Member';
   }
@@ -146,19 +158,38 @@ ${emailAgendaSection || '(none)'}`;
 
   async getNotification(id: string) {
     const notification = await this.notificationModel.findById(id);
-    if (!notification) throw new NotFoundException(`Notification document with ID: ${id} not found`);
+    if (!notification)
+      throw new NotFoundException(
+        `Notification document with ID: ${id} not found`,
+      );
     return { status: true, data: notification };
   }
 
   async deleteNotification(id: string) {
     const deleted = await this.notificationModel.findByIdAndDelete(id);
-    if (!deleted) throw new NotFoundException(`Notification document with ID: ${id} not found`);
-    return { status: true, message: 'Notification document deleted successfully', data: deleted };
+    if (!deleted)
+      throw new NotFoundException(
+        `Notification document with ID: ${id} not found`,
+      );
+    return {
+      status: true,
+      message: 'Notification document deleted successfully',
+      data: deleted,
+    };
   }
 
-  async deleteAllNotifications(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllNotifications(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.notificationModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No Notification documents found to delete!');
-    return { status: true, message: 'All Notification documents have been deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No Notification documents found to delete!');
+    return {
+      status: true,
+      message: 'All Notification documents have been deleted!',
+      data: result,
+    };
   }
 }

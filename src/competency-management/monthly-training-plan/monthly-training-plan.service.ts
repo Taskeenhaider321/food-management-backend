@@ -143,7 +143,9 @@ export class MonthlyTrainingPlanService {
       .populate({ path: 'profileId', populate: { path: 'userId' } })
       .exec();
 
-    return new Map(employees.map((employee) => [String(employee._id), employee]));
+    return new Map(
+      employees.map((employee) => [String(employee._id), employee]),
+    );
   }
 
   /** Attach full employee + profile documents from the training record. */
@@ -166,7 +168,7 @@ export class MonthlyTrainingPlanService {
       for (const evaluation of plan.SessionEvaluations || []) {
         const employee = byId.get(this.refIdString(evaluation.employeeId));
         if (employee) {
-          evaluation.employeeId = employee as any;
+          evaluation.employeeId = employee;
         }
       }
     }
@@ -308,9 +310,9 @@ export class MonthlyTrainingPlanService {
 
     const departmentText =
       departmentTextFromDto?.trim() ||
-      (department as any).departmentName ||
-      (department as any).DepartmentName ||
-      (department as any).shortName ||
+      department.departmentName ||
+      department.DepartmentName ||
+      department.shortName ||
       '—';
 
     const trainerUsers = await this.userModel
@@ -355,8 +357,8 @@ export class MonthlyTrainingPlanService {
     let sessionStart: Date;
     let sessionEnd: Date;
     if (hasIso) {
-      sessionStart = new Date(SessionStartAt!);
-      sessionEnd = new Date(SessionEndAt!);
+      sessionStart = new Date(SessionStartAt);
+      sessionEnd = new Date(SessionEndAt);
     } else {
       const r = legacyToSessionRange(Year, Month, dayNum!, Time!, Duration!);
       sessionStart = r.start;
@@ -435,16 +437,16 @@ export class MonthlyTrainingPlanService {
     return { Status: true, message: 'The MonthlyPlan is added!', data: saved };
   }
 
-  async findByDepartment(
-    departmentId: string,
-  ): Promise<{
+  async findByDepartment(departmentId: string): Promise<{
     status: boolean;
     message: string;
     data: MonthlyTrainingPlanDocument[];
   }> {
     const plans = await this.monthlyPlanModel
       .find({ UserDepartment: departmentId })
-      .populate('Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment')
+      .populate(
+        'Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment',
+      )
       .exec();
     return {
       status: true,
@@ -457,14 +459,16 @@ export class MonthlyTrainingPlanService {
    * List monthly plans for the authenticated user's company (all departments).
    * Super-admin and super-staff: all plans.
    */
-  async findForActor(actor: any): Promise<{
+  async findForActor(_actor: any): Promise<{
     status: boolean;
     message: string;
     data: MonthlyTrainingPlanDocument[];
   }> {
     const plans = await this.monthlyPlanModel
       .find({})
-      .populate('Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment')
+      .populate(
+        'Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment',
+      )
       .exec();
     return {
       status: true,
@@ -509,7 +513,9 @@ export class MonthlyTrainingPlanService {
     }
 
     if (dto.Training !== undefined) {
-      const trainingExist = await this.trainingModel.findById(dto.Training).exec();
+      const trainingExist = await this.trainingModel
+        .findById(dto.Training)
+        .exec();
       if (!trainingExist) {
         throw new NotFoundException('Training not found');
       }
@@ -521,7 +527,8 @@ export class MonthlyTrainingPlanService {
     if (dto.createdBy !== undefined) plan.CreatedBy = dto.createdBy;
     if (dto.Date !== undefined) plan.Date = dto.Date;
     if (dto.Time !== undefined) plan.Time = dto.Time;
-    if (dto.DepartmentText !== undefined) plan.DepartmentText = dto.DepartmentText;
+    if (dto.DepartmentText !== undefined)
+      plan.DepartmentText = dto.DepartmentText;
     if (dto.Venue !== undefined) plan.Venue = dto.Venue;
     if (dto.Duration !== undefined) plan.Duration = dto.Duration;
     if (dto.InternalExternal !== undefined) {
@@ -575,15 +582,15 @@ export class MonthlyTrainingPlanService {
       sessionStart = new Date(dto.SessionStartAt);
       sessionEnd = new Date(dto.SessionEndAt);
     } else if (!timingTouched && plan.SessionStartAt && plan.SessionEndAt) {
-      sessionStart = new Date(plan.SessionStartAt as Date);
-      sessionEnd = new Date(plan.SessionEndAt as Date);
+      sessionStart = new Date(plan.SessionStartAt);
+      sessionEnd = new Date(plan.SessionEndAt);
     } else {
       const r = legacyToSessionRange(
         String(plan.Year),
         plan.Month,
-        plan.Date!,
-        plan.Time!,
-        plan.Duration!,
+        plan.Date,
+        plan.Time,
+        plan.Duration,
       );
       sessionStart = r.start;
       sessionEnd = r.end;
@@ -607,7 +614,9 @@ export class MonthlyTrainingPlanService {
     await plan.save();
     const data = await this.monthlyPlanModel
       .findById(id)
-      .populate('Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment')
+      .populate(
+        'Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment',
+      )
       .exec();
 
     return {
@@ -668,7 +677,10 @@ export class MonthlyTrainingPlanService {
     ) as any;
     monthlyPlan.Assigned = foundEmployeeIds.length > 0;
 
-    if (foundEmployeeIds.length > 0 && (added.length > 0 || !monthlyPlan.AssignedBy)) {
+    if (
+      foundEmployeeIds.length > 0 &&
+      (added.length > 0 || !monthlyPlan.AssignedBy)
+    ) {
       monthlyPlan.AssignedBy = actorDisplayName(actor);
       monthlyPlan.AssignedDate = new Date();
     }
@@ -777,7 +789,10 @@ export class MonthlyTrainingPlanService {
     const result = await this.findForActor(actor);
     const now = new Date();
     const plans = result.data;
-    const buckets = new Map<string, { month: string; total: number; conducted: number }>();
+    const buckets = new Map<
+      string,
+      { month: string; total: number; conducted: number }
+    >();
 
     let conducted = 0;
     let upcoming = 0;
@@ -823,8 +838,8 @@ export class MonthlyTrainingPlanService {
   }
 
   private async assertTrainerOnPlan(
-    actor: any,
-    plan: MonthlyTrainingPlanDocument,
+    _actor: any,
+    _plan: MonthlyTrainingPlanDocument,
   ): Promise<void> {
     return;
   }
@@ -949,13 +964,19 @@ export class MonthlyTrainingPlanService {
   async evaluateEmployee(
     dto: EvaluateEmployeeDto,
     actor: any,
-  ): Promise<{ status: boolean; message: string; data: MonthlyTrainingPlanDocument }> {
+  ): Promise<{
+    status: boolean;
+    message: string;
+    data: MonthlyTrainingPlanDocument;
+  }> {
     const plan = await this.monthlyPlanModel.findById(dto.monthlyPlanId).exec();
     if (!plan) {
       throw new NotFoundException('Monthly training plan not found');
     }
     if (plan.ScheduleStatus === 'Cancelled') {
-      throw new BadRequestException('Cannot evaluate a cancelled training session');
+      throw new BadRequestException(
+        'Cannot evaluate a cancelled training session',
+      );
     }
 
     await this.assertTrainerOnPlan(actor, plan);
@@ -980,7 +1001,7 @@ export class MonthlyTrainingPlanService {
       evaluatedBy: actorDisplayName(actor),
     });
 
-    await this.syncEmployeeTrainingEntry(dto.employeeId, plan.Training as Types.ObjectId, {
+    await this.syncEmployeeTrainingEntry(dto.employeeId, plan.Training, {
       marks: dto.marks,
       isPresent: dto.isPresent,
       isPass: dto.isPass,
@@ -1005,13 +1026,19 @@ export class MonthlyTrainingPlanService {
   async conductEmployee(
     dto: ConductEmployeeDto,
     actor: any,
-  ): Promise<{ status: boolean; message: string; data: MonthlyTrainingPlanDocument }> {
+  ): Promise<{
+    status: boolean;
+    message: string;
+    data: MonthlyTrainingPlanDocument;
+  }> {
     const plan = await this.monthlyPlanModel.findById(dto.monthlyPlanId).exec();
     if (!plan) {
       throw new NotFoundException('Monthly training plan not found');
     }
     if (plan.ScheduleStatus === 'Cancelled') {
-      throw new BadRequestException('Cannot conduct a cancelled training session');
+      throw new BadRequestException(
+        'Cannot conduct a cancelled training session',
+      );
     }
 
     await this.assertTrainerOnPlan(actor, plan);
@@ -1033,17 +1060,13 @@ export class MonthlyTrainingPlanService {
     evaluation.conductedAt = new Date();
     evaluation.conductedBy = actorDisplayName(actor);
 
-    await this.syncEmployeeTrainingEntry(
-      dto.employeeId,
-      plan.Training as Types.ObjectId,
-      {
-        marks: evaluation.marks ?? 0,
-        isPresent: evaluation.isPresent ?? false,
-        isPass: evaluation.isPass ?? false,
-        remarks: evaluation.remarks ?? evaluation.reviewComments,
-        conducted: true,
-      },
-    );
+    await this.syncEmployeeTrainingEntry(dto.employeeId, plan.Training, {
+      marks: evaluation.marks ?? 0,
+      isPresent: evaluation.isPresent ?? false,
+      isPass: evaluation.isPass ?? false,
+      remarks: evaluation.remarks ?? evaluation.reviewComments,
+      conducted: true,
+    });
 
     this.refreshPlanConductedStatus(plan);
     await plan.save();

@@ -69,7 +69,9 @@ export class CreateCompanyDto {
   @IsEnum(CompanyStatus)
   status?: CompanyStatus;
 
-  @ApiPropertyOptional({ description: 'Bootstrap a company-admin user during company creation' })
+  @ApiPropertyOptional({
+    description: 'Bootstrap a company-admin user during company creation',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => CompanyAdminDto)

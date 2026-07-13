@@ -166,6 +166,9 @@ export class PreventiveMaintenanceService {
       throw new NotFoundException(
         'No maintenance record found for the given Maintenance ID to delete.',
       );
-    return { status: true, message: 'Successfully deleted the maintenance record.' };
+    return {
+      status: true,
+      message: 'Successfully deleted the maintenance record.',
+    };
   }
 }

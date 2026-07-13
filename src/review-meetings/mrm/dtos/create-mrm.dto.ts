@@ -1,4 +1,11 @@
-import { IsMongoId, IsArray, IsString, IsDateString, IsOptional, ValidateNested } from 'class-validator';
+import {
+  IsMongoId,
+  IsArray,
+  IsString,
+  IsDateString,
+  IsOptional,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AgendaDetailDto {

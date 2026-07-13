@@ -15,8 +15,29 @@ import {
 } from '../review-plan/schemas/review-plan.schema';
 import { CreateMeetingMinutesDto } from './dtos/create-meeting-minutes.dto';
 import { UpdateMeetingMinutesDto } from './dtos/update-meeting-minutes.dto';
+import {
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
+
 function actorDisplayName(actor: any): string | undefined {
   return actor?.name || actor?.userName || actor?._id?.toString() || undefined;
+}
+
+function stripHtml(value?: string): string {
+  if (!value) return '---';
+  const text = String(value)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text || '---';
 }
 
 const MINUTES_POPULATE = [
@@ -40,10 +61,12 @@ export class MeetingMinutesService {
     private readonly meetingMinutesModel: Model<MeetingMinutesDocument>,
     @InjectModel(ReviewPlan.name)
     private readonly reviewPlanModel: Model<ReviewPlanDocument>,
+    @InjectModel('Company') private companyModel: Model<any>,
   ) {}
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
   }
 
@@ -62,7 +85,8 @@ export class MeetingMinutesService {
       );
     }
 
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     const minutes = new this.meetingMinutesModel({
       reviewPlan: plan._id,
       records: dto.records,
@@ -133,9 +157,7 @@ export class MeetingMinutesService {
   }
 
   async deleteMinutes(id: string) {
-    const minutes = await this.meetingMinutesModel
-      .findByIdAndDelete(id)
-      .exec();
+    const minutes = await this.meetingMinutesModel.findByIdAndDelete(id).exec();
     if (!minutes) {
       throw new NotFoundException('Meeting minutes not found');
     }
@@ -150,6 +172,100 @@ export class MeetingMinutesService {
       status: true,
       message: 'Meeting minutes deleted successfully',
       data: minutes,
+    };
+  }
+
+  async downloadMeetingMinutesPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.getAllMinutes(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Meeting Minutes Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'mrmNumber', label: 'MRM NO', width: 1.5 },
+        { key: 'createdBy', label: 'CREATED BY', width: 2 },
+        { key: 'created_at', label: 'CREATED', width: 1.5 },
+        { key: 'recordsCount', label: 'RECORDS', width: 1.2 },
+      ],
+      rows: data.map((m: any) => ({
+        mrmNumber: m.reviewPlan?.mrmNumber || '---',
+        createdBy: m.createdBy || '---',
+        created_at: formatDate(m.created_at),
+        recordsCount: Array.isArray(m.records) ? String(m.records.length) : '0',
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('meeting_minutes', 'directory'),
+    };
+  }
+
+  async downloadMeetingMinutesByIdPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: minutes } = await this.getMinutesById(id);
+    const plan = (minutes as any).reviewPlan;
+    const mrmNumber = plan?.mrmNumber || '---';
+
+    const recordSections =
+      Array.isArray(minutes.records) && minutes.records.length
+        ? minutes.records.map((record: any, index: number) => {
+            const participantName =
+              record.participant?.fullName ||
+              record.participant?.memberCode ||
+              '---';
+            return {
+              heading: `Record ${index + 1} — ${participantName}`,
+              rows: [
+                ['Discussion', stripHtml(record.discussion)],
+                ['Responsibility', stripHtml(record.responsibility)],
+                ['Target Date', formatDate(record.targetDate)],
+              ] as Array<[string, string]>,
+            };
+          })
+        : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: `Meeting Minutes — ${mrmNumber}`,
+      subtitle: minutes.createdBy || undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['MRM Number', mrmNumber],
+        ['Created By', minutes.createdBy || '---'],
+        ['Created At', formatDate((minutes as any).created_at)],
+        [
+          'Records',
+          Array.isArray(minutes.records) ? String(minutes.records.length) : '0',
+        ],
+      ],
+      sections: [
+        {
+          heading: 'Summary',
+          rows: [
+            ['MRM Number', mrmNumber],
+            ['Created By', minutes.createdBy || '---'],
+            ['Created At', formatDate((minutes as any).created_at)],
+            [
+              'Records',
+              Array.isArray(minutes.records)
+                ? String(minutes.records.length)
+                : '0',
+            ],
+          ],
+        },
+        ...recordSections,
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        mrmNumber !== '---' ? mrmNumber : 'meeting_minutes',
+        'minutes',
+      ),
     };
   }
 }

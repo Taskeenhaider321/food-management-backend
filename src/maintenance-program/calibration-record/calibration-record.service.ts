@@ -46,9 +46,9 @@ export class CalibrationRecordService {
   private addFirstPage(
     page: any,
     logoImage: any,
-    company: any,
-    user: any,
-    equipmentCode: string,
+    _company: any,
+    _user: any,
+    _equipmentCode: string,
   ) {
     const { width, height } = page.getSize();
     const logoDims = { width: 300, height: 300 };
@@ -182,7 +182,9 @@ export class CalibrationRecordService {
         const result = await this.uploadToCloudinary(modifiedPdf);
         CertificateURL = result.secure_url;
       } else {
-        const result = await this.uploadToCloudinary(uploads.Certificate[0].buffer);
+        const result = await this.uploadToCloudinary(
+          uploads.Certificate[0].buffer,
+        );
         CertificateURL = result.secure_url;
       }
     }
@@ -200,7 +202,9 @@ export class CalibrationRecordService {
         const result = await this.uploadToCloudinary(modifiedPdf);
         exCertificateURL = result.secure_url;
       } else {
-        const result = await this.uploadToCloudinary(uploads.exCertificate[0].buffer);
+        const result = await this.uploadToCloudinary(
+          uploads.exCertificate[0].buffer,
+        );
         exCertificateURL = result.secure_url;
       }
     }
@@ -218,7 +222,9 @@ export class CalibrationRecordService {
         const result = await this.uploadToCloudinary(modifiedPdf);
         masterCertificateURL = result.secure_url;
       } else {
-        const result = await this.uploadToCloudinary(uploads.masterCertificate[0].buffer);
+        const result = await this.uploadToCloudinary(
+          uploads.masterCertificate[0].buffer,
+        );
         masterCertificateURL = result.secure_url;
       }
     }
@@ -228,7 +234,9 @@ export class CalibrationRecordService {
       lastCallibrationDate: new Date(dto.lastDate.replace(/^"(.*)"$/, '$1')),
       nextCallibrationDate: new Date(dto.nextDate.replace(/^"(.*)"$/, '$1')),
       CaliberateBy: user.name,
-      ...(equipment.UserDepartment ? { UserDepartment: equipment.UserDepartment } : {}),
+      ...(equipment.UserDepartment
+        ? { UserDepartment: equipment.UserDepartment }
+        : {}),
       CaliberatDate: new Date(),
       dateType: dto.dateType,
       callibrationType: dto.callibrationType,

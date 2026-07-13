@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { YearlyAuditingPlan } from './schemas/yearly-auditing-plan.schema';
@@ -15,11 +19,15 @@ const RISK_MIN_AUDITS: Record<string, number> = {
 @Injectable()
 export class YearlyAuditingPlanService {
   constructor(
-    @InjectModel(YearlyAuditingPlan.name) private yearlyPlanModel: Model<YearlyAuditingPlan>,
-    @InjectModel(ProcessOwner.name) private processOwnerModel: Model<ProcessOwner>,
+    @InjectModel(YearlyAuditingPlan.name)
+    private yearlyPlanModel: Model<YearlyAuditingPlan>,
+    @InjectModel(ProcessOwner.name)
+    private processOwnerModel: Model<ProcessOwner>,
   ) {}
 
-  private validateRiskSchedule(selected: { Risk: string; monthNames: string[] }[]) {
+  private validateRiskSchedule(
+    selected: { Risk: string; monthNames: string[] }[],
+  ) {
     for (const item of selected) {
       const minRequired = RISK_MIN_AUDITS[item.Risk];
       if (minRequired && item.monthNames.length < minRequired) {
@@ -50,7 +58,11 @@ export class YearlyAuditingPlanService {
     });
 
     await plan.save();
-    return { status: true, message: 'The YearlyAuditPlan is added!', data: plan };
+    return {
+      status: true,
+      message: 'The YearlyAuditPlan is added!',
+      data: plan,
+    };
   }
 
   async editYearlyAuditPlan(updateDto: UpdateYearlyPlanDto) {
@@ -74,7 +86,11 @@ export class YearlyAuditingPlanService {
       { ...rest, UserDepartment: departmentId },
       { returnDocument: 'after' },
     );
-    return { status: true, message: 'The YearlyAuditPlan is Updated!', data: updated };
+    return {
+      status: true,
+      message: 'The YearlyAuditPlan is Updated!',
+      data: updated,
+    };
   }
 
   async readYearlyAuditPlan(departmentId: string) {
@@ -95,7 +111,11 @@ export class YearlyAuditingPlanService {
         },
       })
       .populate('UserDepartment');
-    return { status: true, message: 'Yearly Audit Plans retrieved successfully', data: plans };
+    return {
+      status: true,
+      message: 'Yearly Audit Plans retrieved successfully',
+      data: plans,
+    };
   }
 
   async readYearlyAuditPlanById(planId: string) {
@@ -117,18 +137,36 @@ export class YearlyAuditingPlanService {
       })
       .populate('UserDepartment');
     if (!plan) throw new NotFoundException('YearlyAuditPlan not found');
-    return { status: true, message: 'The following is the yearlyAuditPlan!', data: plan };
+    return {
+      status: true,
+      message: 'The following is the yearlyAuditPlan!',
+      data: plan,
+    };
   }
 
   async deleteYearlyAuditPlan(planId: string) {
     const deleted = await this.yearlyPlanModel.findByIdAndDelete(planId);
-    if (!deleted) throw new NotFoundException('This YearlyAuditPlan is Not found!');
-    return { status: true, message: 'The following yearlyAuditPlan has been Deleted!', data: deleted };
+    if (!deleted)
+      throw new NotFoundException('This YearlyAuditPlan is Not found!');
+    return {
+      status: true,
+      message: 'The following yearlyAuditPlan has been Deleted!',
+      data: deleted,
+    };
   }
 
-  async deleteAllYearlyAuditPlans(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllYearlyAuditPlans(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.yearlyPlanModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No YearlyAuditPlans Found to delete!');
-    return { status: true, message: 'All yearlyAuditPlans have been deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No YearlyAuditPlans Found to delete!');
+    return {
+      status: true,
+      message: 'All yearlyAuditPlans have been deleted!',
+      data: result,
+    };
   }
 }

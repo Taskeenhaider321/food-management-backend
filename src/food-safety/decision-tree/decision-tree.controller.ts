@@ -69,14 +69,23 @@ export class DecisionTreeController {
 
   @Patch('reject')
   @ApiBearerAuth()
-  async rejectDecisionTree(@Body() body: { id: string; actor: string; reason: string }) {
-    return this.decisionTreeService.rejectDecisionTree(body.id, body.actor, body.reason);
+  async rejectDecisionTree(
+    @Body() body: { id: string; actor: string; reason: string },
+  ) {
+    return this.decisionTreeService.rejectDecisionTree(
+      body.id,
+      body.actor,
+      body.reason,
+    );
   }
 
   @Patch('toggle-enabled')
   @ApiBearerAuth()
   async toggleDecisionTreeEnabled(@Body() body: { id: string; actor: string }) {
-    return this.decisionTreeService.toggleDecisionTreeEnabled(body.id, body.actor);
+    return this.decisionTreeService.toggleDecisionTreeEnabled(
+      body.id,
+      body.actor,
+    );
   }
 
   @Patch('approve')

@@ -3,19 +3,12 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsEmail,
-  IsIn,
   IsMongoId,
   IsOptional,
   IsString,
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { UserRoleType } from '../schemas/user.schema';
-
-const CREATABLE_ROLE_TYPES: UserRoleType[] = [
-  UserRoleType.COMPANY_ADMIN,
-  UserRoleType.COMPANY_USER,
-];
 
 export class UserCoreDto {
   @ApiProperty({ example: 'Ali' })
@@ -49,7 +42,9 @@ export class UserCoreDto {
   // @IsIn(CREATABLE_ROLE_TYPES)
   // roleType?: UserRoleType;
 
-  @ApiPropertyOptional({ description: 'Overrides batch departmentId for this user' })
+  @ApiPropertyOptional({
+    description: 'Overrides batch departmentId for this user',
+  })
   @IsOptional()
   // @IsMongoId()
   departmentId?: string;

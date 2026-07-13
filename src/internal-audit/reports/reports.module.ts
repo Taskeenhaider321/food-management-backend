@@ -3,7 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { Reports, ReportsSchema } from './schemas/reports.schema';
-import { Checklist, ChecklistSchema } from '../create-checklist/schemas/checklist.schema';
+import {
+  Checklist,
+  ChecklistSchema,
+} from '../create-checklist/schemas/checklist.schema';
 import {
   ConductAudits,
   ConductAuditsSchema,

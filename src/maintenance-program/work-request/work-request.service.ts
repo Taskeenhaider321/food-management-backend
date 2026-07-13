@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { WorkRequest } from './schemas/work-request.schema';
@@ -15,6 +19,13 @@ import {
 } from './dtos/create-work-request.dto';
 import { UpdateWorkRequestDto } from './dtos/update-work-request.dto';
 import { v2 as cloudinary } from 'cloudinary';
+import {
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class WorkRequestService {
@@ -23,6 +34,7 @@ export class WorkRequestService {
     @InjectModel(Machinery.name) private machineryModel: Model<Machinery>,
     @InjectModel(Equipment.name) private equipmentModel: Model<Equipment>,
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel('Company') private companyModel: Model<any>,
   ) {
     cloudinary.config({
       cloud_name: process.env.cloud_name,
@@ -70,7 +82,9 @@ export class WorkRequestService {
       throw new BadRequestException('MachineId or EquipmentId is required.');
     }
     if (hasMachine && hasEquipment) {
-      throw new BadRequestException('Provide only one of MachineId or EquipmentId.');
+      throw new BadRequestException(
+        'Provide only one of MachineId or EquipmentId.',
+      );
     }
 
     if (dto.MachineId) {
@@ -88,11 +102,15 @@ export class WorkRequestService {
     const inferredDepartmentId = dto.departmentId || (user as any).departmentId;
 
     if (!imageFiles?.length) {
-      throw new BadRequestException('At least one image for the work request is required.');
+      throw new BadRequestException(
+        'At least one image for the work request is required.',
+      );
     }
 
     const imageURLs = await this.uploadMany(imageFiles);
-    const documentURLs = documentFiles?.length ? await this.uploadMany(documentFiles) : [];
+    const documentURLs = documentFiles?.length
+      ? await this.uploadMany(documentFiles)
+      : [];
 
     const workRequest = new this.workRequestModel({
       Area: dto.Area,
@@ -103,7 +121,10 @@ export class WorkRequestService {
       imageURLs,
       documentURLs,
       ...(inferredDepartmentId
-        ? { UserDepartment: inferredDepartmentId, Department: inferredDepartmentId }
+        ? {
+            UserDepartment: inferredDepartmentId,
+            Department: inferredDepartmentId,
+          }
         : {}),
       Machinery: dto.MachineId,
       Equipment: dto.EquipmentId,
@@ -121,7 +142,12 @@ export class WorkRequestService {
     });
 
     await workRequest.save();
-    return { status: true, message: 'The Maintenance Work Request (MWR) has been added successfully!', data: workRequest };
+    return {
+      status: true,
+      message:
+        'The Maintenance Work Request (MWR) has been added successfully!',
+      data: workRequest,
+    };
   }
 
   async reject(id: string, dto: RejectWorkRequestDto) {
@@ -130,9 +156,13 @@ export class WorkRequestService {
     }
 
     const mwr = await this.workRequestModel.findById(id);
-    if (!mwr) throw new NotFoundException('Maintenance Work Request not found.');
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
 
-    const rejectedByName = await this.resolveUserName(dto.rejectedBy, String(dto.rejectedBy));
+    const rejectedByName = await this.resolveUserName(
+      dto.rejectedBy,
+      String(dto.rejectedBy),
+    );
 
     mwr.Reason = dto.Reason;
     mwr.Status = 'Rejected';
@@ -153,18 +183,28 @@ export class WorkRequestService {
     ];
 
     await mwr.save();
-    return { status: true, message: 'The Maintenance Work Request has been rejected successfully.', data: mwr };
+    return {
+      status: true,
+      message: 'The Maintenance Work Request has been rejected successfully.',
+      data: mwr,
+    };
   }
 
   async accept(id: string, dto: AcceptWorkRequestDto) {
     if (!dto.JobAssigned || !dto.Designation || !dto.DetailOfWork) {
-      throw new BadRequestException('All fields (JobAssigned, Designation, DetailOfWork) are required.');
+      throw new BadRequestException(
+        'All fields (JobAssigned, Designation, DetailOfWork) are required.',
+      );
     }
 
     const mwr = await this.workRequestModel.findById(id);
-    if (!mwr) throw new NotFoundException('Maintenance Work Request not found.');
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
 
-    const acceptedByName = await this.resolveUserName(dto.acceptedBy, String(dto.acceptedBy));
+    const acceptedByName = await this.resolveUserName(
+      dto.acceptedBy,
+      String(dto.acceptedBy),
+    );
 
     mwr.JobAssigned = dto.JobAssigned;
     mwr.Designation = dto.Designation;
@@ -192,7 +232,11 @@ export class WorkRequestService {
     ];
 
     await mwr.save();
-    return { status: true, message: 'The Maintenance Work Request has been accepted successfully.', data: mwr };
+    return {
+      status: true,
+      message: 'The Maintenance Work Request has been accepted successfully.',
+      data: mwr,
+    };
   }
 
   async complete(
@@ -202,13 +246,19 @@ export class WorkRequestService {
     completionDocuments: Express.Multer.File[],
   ) {
     const mwr = await this.workRequestModel.findById(id);
-    if (!mwr) throw new NotFoundException('Maintenance Work Request not found.');
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
 
     if (mwr.Status === 'Completed') {
-      throw new BadRequestException('Maintenance Work Request is already completed.');
+      throw new BadRequestException(
+        'Maintenance Work Request is already completed.',
+      );
     }
 
-    const completedByName = await this.resolveUserName(dto.completedBy, String(dto.completedBy));
+    const completedByName = await this.resolveUserName(
+      dto.completedBy,
+      String(dto.completedBy),
+    );
 
     const completionImageURLs = completionImages?.length
       ? await this.uploadMany(completionImages)
@@ -235,7 +285,11 @@ export class WorkRequestService {
     ];
 
     await mwr.save();
-    return { status: true, message: 'The Maintenance Work Request has been marked as completed.', data: mwr };
+    return {
+      status: true,
+      message: 'The Maintenance Work Request has been marked as completed.',
+      data: mwr,
+    };
   }
 
   async changePriority(id: string, dto: ChangePriorityDto) {
@@ -244,9 +298,13 @@ export class WorkRequestService {
     }
 
     const mwr = await this.workRequestModel.findById(id);
-    if (!mwr) throw new NotFoundException('Maintenance Work Request not found.');
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
 
-    const changedByName = await this.resolveUserName(dto.changedBy, String(dto.changedBy));
+    const changedByName = await this.resolveUserName(
+      dto.changedBy,
+      String(dto.changedBy),
+    );
     const prev = mwr.Priority;
     mwr.Priority = dto.Priority;
     mwr.History = [
@@ -261,14 +319,21 @@ export class WorkRequestService {
       },
     ];
     await mwr.save();
-    return { status: true, message: 'Priority changed successfully.', data: mwr };
+    return {
+      status: true,
+      message: 'Priority changed successfully.',
+      data: mwr,
+    };
   }
 
   async resubmit(id: string, dto: ResubmitWorkRequestDto) {
     const mwr = await this.workRequestModel.findById(id);
-    if (!mwr) throw new NotFoundException('Maintenance Work Request not found.');
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
     if (mwr.Status !== 'Rejected') {
-      throw new BadRequestException('Only rejected requests can be resubmitted.');
+      throw new BadRequestException(
+        'Only rejected requests can be resubmitted.',
+      );
     }
 
     const resubmittedByName = await this.resolveUserName(
@@ -287,7 +352,11 @@ export class WorkRequestService {
     ];
 
     await mwr.save();
-    return { status: true, message: 'Work request resubmitted successfully.', data: mwr };
+    return {
+      status: true,
+      message: 'Work request resubmitted successfully.',
+      data: mwr,
+    };
   }
 
   async update(
@@ -297,14 +366,19 @@ export class WorkRequestService {
     documentFiles: Express.Multer.File[],
   ) {
     const mwr = await this.workRequestModel.findById(id);
-    if (!mwr) throw new NotFoundException('Maintenance Work Request not found.');
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
 
     if (mwr.Status !== 'Pending' && mwr.Status !== 'Rejected') {
-      throw new BadRequestException('Only pending or rejected requests can be edited.');
+      throw new BadRequestException(
+        'Only pending or rejected requests can be edited.',
+      );
     }
 
     if (dto.MachineId && dto.EquipmentId) {
-      throw new BadRequestException('Provide only one of MachineId or EquipmentId.');
+      throw new BadRequestException(
+        'Provide only one of MachineId or EquipmentId.',
+      );
     }
 
     if (dto.departmentId) {
@@ -329,11 +403,17 @@ export class WorkRequestService {
     if (dto.Area) (mwr as any).Area = dto.Area;
     if (dto.Priority) (mwr as any).Priority = dto.Priority;
     if (dto.Description) (mwr as any).Description = dto.Description;
-    if (dto.SpecialInstruction) (mwr as any).SpecialInstruction = dto.SpecialInstruction;
-    if (dto.Discipline) (mwr as any).Discipline = JSON.parse(String(dto.Discipline));
+    if (dto.SpecialInstruction)
+      (mwr as any).SpecialInstruction = dto.SpecialInstruction;
+    if (dto.Discipline)
+      (mwr as any).Discipline = JSON.parse(String(dto.Discipline));
 
-    const imageURLs = imageFiles?.length ? await this.uploadMany(imageFiles) : [];
-    const documentURLs = documentFiles?.length ? await this.uploadMany(documentFiles) : [];
+    const imageURLs = imageFiles?.length
+      ? await this.uploadMany(imageFiles)
+      : [];
+    const documentURLs = documentFiles?.length
+      ? await this.uploadMany(documentFiles)
+      : [];
 
     if (imageURLs.length) {
       (mwr as any).imageURLs = imageURLs;
@@ -352,7 +432,11 @@ export class WorkRequestService {
     ];
 
     await mwr.save();
-    return { status: true, message: 'Work request updated successfully.', data: mwr };
+    return {
+      status: true,
+      message: 'Work request updated successfully.',
+      data: mwr,
+    };
   }
 
   async findAll(departmentId?: string) {
@@ -363,7 +447,11 @@ export class WorkRequestService {
       .populate('Machinery')
       .populate('Equipment')
       .populate('UserDepartment');
-    return { status: true, message: 'All work requests retrieved successfully', data: workRequests };
+    return {
+      status: true,
+      message: 'All work requests retrieved successfully',
+      data: workRequests,
+    };
   }
 
   async findById(id: string) {
@@ -371,14 +459,22 @@ export class WorkRequestService {
       .findById(id)
       .populate('Machinery Equipment Department');
     if (!workRequest) throw new NotFoundException('Work request not found.');
-    return { status: true, message: `Work request with ID ${id} retrieved successfully`, data: workRequest };
+    return {
+      status: true,
+      message: `Work request with ID ${id} retrieved successfully`,
+      data: workRequest,
+    };
   }
 
   async findByMachineId(machineId: string, departmentId: string) {
     const workRequest = await this.workRequestModel
       .find({ Machinery: machineId, UserDepartment: departmentId })
       .populate('Machinery');
-    return { status: true, message: `Work request with ID ${machineId} retrieved successfully`, data: workRequest };
+    return {
+      status: true,
+      message: `Work request with ID ${machineId} retrieved successfully`,
+      data: workRequest,
+    };
   }
 
   async removeAll() {
@@ -389,6 +485,80 @@ export class WorkRequestService {
   async remove(id: string) {
     const result = await this.workRequestModel.findByIdAndDelete(id);
     if (!result) throw new NotFoundException('Work request not found.');
-    return { status: true, message: `Work request with ID ${id} deleted successfully` };
+    return {
+      status: true,
+      message: `Work request with ID ${id} deleted successfully`,
+    };
+  }
+
+  private mapWorkRequestPdfRow(wr: any) {
+    const discipline = Array.isArray(wr.Discipline)
+      ? wr.Discipline.filter(Boolean).join(', ')
+      : wr.Discipline || '---';
+    return {
+      MWRId: wr.MWRId || '---',
+      Area: wr.Area || '---',
+      Priority: wr.Priority || '---',
+      Discipline: discipline,
+      Description: wr.Description || '---',
+      Status: wr.Status || '---',
+      CreatedBy: wr.CreatedBy || '---',
+      CreationDate: formatDate(wr.CreationDate),
+    };
+  }
+
+  async downloadWorkRequestsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAll();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Work Requests Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'MWRId', label: 'MWR ID', width: 1.2 },
+        { key: 'Area', label: 'AREA', width: 1.5 },
+        { key: 'Priority', label: 'PRIORITY', width: 1.2 },
+        { key: 'Discipline', label: 'DISCIPLINE', width: 1.5 },
+        { key: 'Description', label: 'DESCRIPTION', width: 2.5 },
+        { key: 'Status', label: 'STATUS', width: 1.2 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.5 },
+        { key: 'CreationDate', label: 'CREATED', width: 1.2 },
+      ],
+      rows: data.map((wr) => this.mapWorkRequestPdfRow(wr)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('work_requests', 'directory'),
+    };
+  }
+
+  async downloadWorkRequestByIdPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: wr } = await this.findById(id);
+    const row = this.mapWorkRequestPdfRow(wr);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.MWRId || 'Work Request',
+      subtitle: row.Area,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['MWR ID', row.MWRId],
+        ['Area', row.Area],
+        ['Priority', row.Priority],
+        ['Discipline', row.Discipline],
+        ['Description', row.Description],
+        ['Status', row.Status],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.MWRId || 'work_request', 'work_request'),
+    };
   }
 }

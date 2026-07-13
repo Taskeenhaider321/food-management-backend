@@ -192,7 +192,9 @@ export class YearlyTrainingPlanService {
     }
 
     if (dto.departmentId !== undefined) {
-      const department = await this.departmentModel.findById(dto.departmentId).exec();
+      const department = await this.departmentModel
+        .findById(dto.departmentId)
+        .exec();
       if (!department) {
         throw new NotFoundException('Department not found');
       }
@@ -238,9 +240,7 @@ export class YearlyTrainingPlanService {
     };
   }
 
-  async findByDepartment(
-    departmentId: string,
-  ): Promise<{
+  async findByDepartment(departmentId: string): Promise<{
     status: boolean;
     message: string;
     data: YearlyTrainingPlanDocument[];
@@ -260,7 +260,7 @@ export class YearlyTrainingPlanService {
    * List yearly plans for the authenticated user's company (all departments in that company).
    * Super-admin and super-staff: all plans.
    */
-  async findForActor(actor: any): Promise<{
+  async findForActor(_actor: any): Promise<{
     status: boolean;
     message: string;
     data: YearlyTrainingPlanDocument[];

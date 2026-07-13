@@ -29,7 +29,10 @@ export class CreateChecklistDto {
   @IsMongoId()
   Department: string;
 
-  @ApiPropertyOptional({ description: 'Multiple departments associated', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Multiple departments associated',
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsMongoId({ each: true })

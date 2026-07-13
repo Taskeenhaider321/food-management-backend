@@ -18,7 +18,10 @@ import { ApproveChecklistDto } from './dtos/approve-checklist.dto';
 import { DisapproveChecklistDto } from './dtos/disapprove-checklist.dto';
 import { ReviewChecklistDto } from './dtos/review-checklist.dto';
 import { RejectChecklistDto } from './dtos/reject-checklist.dto';
-import { CreateResponseGroupDto, UpdateResponseGroupDto } from './dtos/response-group.dto';
+import {
+  CreateResponseGroupDto,
+  UpdateResponseGroupDto,
+} from './dtos/response-group.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Checklist')
@@ -52,7 +55,9 @@ export class CreateChecklistController {
   }
 
   @Put()
-  @ApiOperation({ summary: 'Update checklist (only when In Review, Rejected, or Disapproved)' })
+  @ApiOperation({
+    summary: 'Update checklist (only when In Review, Rejected, or Disapproved)',
+  })
   @ApiBearerAuth()
   async updateChecklist(@Body() updateDto: UpdateChecklistDto) {
     return this.createChecklistService.updateChecklist(updateDto);

@@ -52,7 +52,8 @@ export class TrainerController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'List trainers for the signed-in user’s company (all for super-admin)',
+    summary:
+      'List trainers for the signed-in user’s company (all for super-admin)',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Trainers found' })
   async listByCompany(@CurrentUser() actor: any) {

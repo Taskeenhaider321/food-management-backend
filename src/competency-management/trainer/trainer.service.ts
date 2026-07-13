@@ -50,10 +50,16 @@ export class TrainerService {
     createTrainerDto: CreateTrainerDto,
     actor: any,
   ): Promise<{ status: boolean; message: string; data: TrainerDocument }> {
-    const { user, profile, trainer, trainerDocumentUrl, applyTrainerDocumentBranding } =
-      createTrainerDto;
+    const {
+      user,
+      profile,
+      trainer,
+      trainerDocumentUrl,
+      applyTrainerDocumentBranding,
+    } = createTrainerDto;
 
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const emailTaken = await this.userModel.findOne({
       email: user.email.toLowerCase(),
@@ -312,7 +318,9 @@ export class TrainerService {
     let textY = logoImage ? height - 420 : height - 280;
 
     page.drawText(companyName, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(companyName, fontSize) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(companyName, fontSize) / 2,
       y: textY,
       color: rgb(0, 0, 0),
       size: fontSize,
@@ -321,7 +329,9 @@ export class TrainerService {
     textY -= 30;
     const contactText = `Contact # ${phone}`;
     page.drawText(contactText, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(contactText, fontSize) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(contactText, fontSize) / 2,
       y: textY,
       color: rgb(0, 0, 0),
       size: fontSize,
@@ -393,7 +403,7 @@ export class TrainerService {
   /**
    * Trainers whose user belongs to the actor's company (or all for super-admin).
    */
-  async findAllForCompany(actor: any): Promise<{
+  async findAllForCompany(_actor: any): Promise<{
     status: boolean;
     message: string;
     data: TrainerDocument[];
@@ -461,7 +471,10 @@ export class TrainerService {
       .findById(id)
       .populate({
         path: 'profileId',
-        populate: { path: 'userId', populate: ['companyId', 'departmentId', 'roleId'] },
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
       })
       .exec();
 
@@ -477,10 +490,14 @@ export class TrainerService {
       if (u.password !== undefined) updatePayload.password = u.password;
       if (u.roleId !== undefined) updatePayload.roleId = u.roleId;
       if (u.roleType !== undefined) {
-        updatePayload.roleType = normalizeRoleType(u.roleType) as UserRoleType;
+        updatePayload.roleType = normalizeRoleType(u.roleType);
       }
       if (Object.keys(updatePayload).length > 0) {
-        await this.userService.update(String(userDoc._id), updatePayload, actor);
+        await this.userService.update(
+          String(userDoc._id),
+          updatePayload,
+          actor,
+        );
       }
     }
 
@@ -509,7 +526,8 @@ export class TrainerService {
     if (dto.trainer) {
       const t = dto.trainer;
       const trainerUpdate: Record<string, unknown> = {};
-      if (t.specialities !== undefined) trainerUpdate.specialities = t.specialities;
+      if (t.specialities !== undefined)
+        trainerUpdate.specialities = t.specialities;
       if (t.trainingIds !== undefined) {
         trainerUpdate.trainings = t.trainingIds.map((tid) => ({
           training: new Types.ObjectId(tid),
@@ -524,7 +542,10 @@ export class TrainerService {
       .findById(id)
       .populate({
         path: 'profileId',
-        populate: { path: 'userId', populate: ['companyId', 'departmentId', 'roleId'] },
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
       })
       .populate('trainings.training')
       .exec();
