@@ -8,8 +8,16 @@ import {
   Param,
   Delete,
   HttpStatus,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dtos/create-employee.dto';
@@ -42,11 +50,30 @@ export class EmployeeController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'List employees for the signed-in user’s company (all for super-admin)',
+    summary:
+      'List employees for the signed-in user’s company (all for super-admin)',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'List of employees' })
   async listByCompany(@CurrentUser() actor: any) {
     return this.employeeService.findAllForCompany(actor);
+  }
+
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Download a professional employees directory PDF (cover page + list)',
+  })
+  @Header('Content-Type', 'application/pdf')
+  async downloadEmployeesPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.employeeService.downloadEmployeesPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get('department/:departmentId')
@@ -92,6 +119,26 @@ export class EmployeeController {
   @ApiResponse({ status: HttpStatus.OK, description: 'List of employees' })
   async listAllAlias(@CurrentUser() actor: any) {
     return this.employeeService.findAllForCompany(actor);
+  }
+
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Download a professional PDF for a single employee profile',
+  })
+  @Header('Content-Type', 'application/pdf')
+  async downloadEmployeePdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } = await this.employeeService.downloadEmployeePdf(
+      id,
+      actor,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':id')

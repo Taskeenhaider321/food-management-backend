@@ -3,7 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
 import { Reports, ReportsSchema } from './schemas/reports.schema';
-import { Checklist, ChecklistSchema } from '../create-checklist/schemas/checklist.schema';
+import {
+  Checklist,
+  ChecklistSchema,
+} from '../create-checklist/schemas/checklist.schema';
 import {
   ConductAudits,
   ConductAuditsSchema,
@@ -16,6 +19,10 @@ import {
   ChecklistQuestion,
   ChecklistQuestionSchema,
 } from '../create-checklist/schemas/checklist-question.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -25,6 +32,7 @@ import {
       { name: ConductAudits.name, schema: ConductAuditsSchema },
       { name: ChecklistAnswer.name, schema: ChecklistAnswerSchema },
       { name: ChecklistQuestion.name, schema: ChecklistQuestionSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [ReportsController],

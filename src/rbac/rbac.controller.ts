@@ -4,11 +4,13 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Query,
   Req,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -18,6 +20,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AssignRoleDto } from './dtos/assign-role.dto';
 import { CreateRoleDto } from './dtos/create-role.dto';
 import { CreateDerivedModuleDto } from './dtos/create-derived-module.dto';
@@ -162,6 +165,40 @@ export class RbacController {
       throw new ForbiddenException('Your account is suspended');
     }
     return this.rbacService.createRole(dto, user?._id?.toString());
+  }
+
+  /** Must be registered before any `roles/:id` routes. */
+  @Get('roles/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download company-scoped RBAC roles directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadRolesPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.rbacService.downloadRolesPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before any broader `roles/:id` route. */
+  @Get('roles/:id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single RBAC role PDF' })
+  @ApiParam({ name: 'id', description: 'Role ID' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadRolePdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.rbacService.downloadRolePdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get('roles')

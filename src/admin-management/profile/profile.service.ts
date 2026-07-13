@@ -77,9 +77,7 @@ export class ProfileService {
         errorResponse?: { errmsg?: string; code?: number };
       };
       const msg = String(
-        anyErr?.message ||
-          anyErr?.errorResponse?.errmsg ||
-          '',
+        anyErr?.message || anyErr?.errorResponse?.errmsg || '',
       );
       const code = anyErr?.code ?? anyErr?.errorResponse?.code;
       const noTxn =

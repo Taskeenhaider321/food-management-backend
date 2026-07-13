@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ConductAudits } from './schemas/conduct-audits.schema';
@@ -16,6 +20,14 @@ import {
 } from '../common/audit-frequency.util';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import axios from 'axios';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 const CONDUCT_AUDIT_QUERY = [
   {
@@ -43,15 +55,20 @@ const CONDUCT_AUDIT_QUERY = [
 @Injectable()
 export class ConductAuditsService {
   constructor(
-    @InjectModel(ConductAudits.name) private conductAuditsModel: Model<ConductAudits>,
-    @InjectModel(ChecklistAnswer.name) private checklistAnswerModel: Model<ChecklistAnswer>,
+    @InjectModel(ConductAudits.name)
+    private conductAuditsModel: Model<ConductAudits>,
+    @InjectModel(ChecklistAnswer.name)
+    private checklistAnswerModel: Model<ChecklistAnswer>,
     @InjectModel(Checklist.name) private checklistModel: Model<Checklist>,
     @InjectModel('User') private userModel: Model<any>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
 
   async addConductAudit(createDto: CreateConductAuditDto) {
-    const requestUser = await this.userModel.findById(createDto.userId).populate('companyId departmentId');
+    const requestUser = await this.userModel
+      .findById(createDto.userId)
+      .populate('companyId departmentId');
     const checklist = await this.checklistModel.findById(createDto.Checklist);
     if (!checklist) throw new NotFoundException('Checklist not found');
 
@@ -62,10 +79,7 @@ export class ConductAuditsService {
       .findOne({ Checklist: createDto.Checklist as any })
       .sort({ AuditDate: -1 });
 
-    if (
-      latest &&
-      !canSubmitNewAudit(latest.AuditDate, frequency)
-    ) {
+    if (latest && !canSubmitNewAudit(latest.AuditDate, frequency)) {
       throw new BadRequestException(
         `This checklist cannot be submitted again until the ${frequency.toLowerCase()} audit cycle completes.`,
       );
@@ -94,7 +108,7 @@ export class ConductAuditsService {
       UserDepartment:
         createDto.departmentId ??
         (checklist as any)?.UserDepartment ??
-        (requestUser.departmentId as any)?._id ??
+        requestUser.departmentId?._id ??
         requestUser.departmentId,
     });
 
@@ -102,15 +116,25 @@ export class ConductAuditsService {
     const populated = await this.conductAuditsModel
       .findById(conductAudit._id)
       .populate(CONDUCT_AUDIT_QUERY);
-    return { status: true, message: 'ConductAudits added successfully!', data: populated };
+    return {
+      status: true,
+      message: 'ConductAudits added successfully!',
+      data: populated,
+    };
   }
 
   async updateConductAudit(updateDto: UpdateConductAuditDto) {
-    const requestUser = await this.userModel.findById(updateDto.userId).populate('companyId departmentId');
-    const conductAudit = await this.conductAuditsModel.findById(updateDto.conductAuditId);
+    const requestUser = await this.userModel
+      .findById(updateDto.userId)
+      .populate('companyId departmentId');
+    const conductAudit = await this.conductAuditsModel.findById(
+      updateDto.conductAuditId,
+    );
     if (!conductAudit) throw new NotFoundException('Conduct audit not found');
 
-    const checklist = await this.checklistModel.findById(conductAudit.Checklist);
+    const checklist = await this.checklistModel.findById(
+      conductAudit.Checklist,
+    );
     if (!checklist) throw new NotFoundException('Checklist not found');
 
     const frequency = this.getChecklistFrequency(checklist);
@@ -129,7 +153,9 @@ export class ConductAuditsService {
         frequency,
       )
     ) {
-      throw new BadRequestException('This audit record is locked and cannot be edited.');
+      throw new BadRequestException(
+        'This audit record is locked and cannot be edited.',
+      );
     }
 
     if (conductAudit.Answers?.length) {
@@ -152,14 +178,23 @@ export class ConductAuditsService {
     const populated = await this.conductAuditsModel
       .findById(conductAudit._id)
       .populate(CONDUCT_AUDIT_QUERY);
-    return { status: true, message: 'Conduct audit updated successfully!', data: populated };
+    return {
+      status: true,
+      message: 'Conduct audit updated successfully!',
+      data: populated,
+    };
   }
 
   private getChecklistFrequency(checklist: Checklist): AuditFrequency {
-    return normalizeAuditFrequency((checklist as any)?.settings?.auditFrequency);
+    return normalizeAuditFrequency(
+      (checklist as any)?.settings?.auditFrequency,
+    );
   }
 
-  private async applyFrequencyLocks(checklistId: string, frequency: AuditFrequency) {
+  private async applyFrequencyLocks(
+    checklistId: string,
+    frequency: AuditFrequency,
+  ) {
     if (frequency === 'None') return;
     const audits = await this.conductAuditsModel
       .find({ Checklist: checklistId as any })
@@ -189,7 +224,8 @@ export class ConductAuditsService {
           requestUser,
           checklist,
         );
-        const uploadResult = await this.cloudinaryService.uploadBuffer(modifiedPdfBuffer);
+        const uploadResult =
+          await this.cloudinaryService.uploadBuffer(modifiedPdfBuffer);
         answers[index].EvidenceDoc = uploadResult;
       }
     }
@@ -198,50 +234,86 @@ export class ConductAuditsService {
     return createdAnswers.map((a) => a._id);
   }
 
-  private async processPdfWithWatermark(buffer: Buffer, user: any, checklist: any): Promise<Buffer> {
-    const company = user.companyId as any;
-    const response = await axios.get(company.CompanyLogo, { responseType: 'arraybuffer' });
+  private async processPdfWithWatermark(
+    buffer: Buffer,
+    user: any,
+    checklist: any,
+  ): Promise<Buffer> {
+    const company = user.companyId;
+    const response = await axios.get(company.CompanyLogo, {
+      responseType: 'arraybuffer',
+    });
     const pdfDoc = await PDFDocument.load(buffer);
     const logoImage = Buffer.from(response.data);
-    const isJpg = company.CompanyLogo.includes('.jpeg') || company.CompanyLogo.includes('.jpg');
-    const pdfLogoImage = isJpg ? await pdfDoc.embedJpg(logoImage) : await pdfDoc.embedPng(logoImage);
+    const isJpg =
+      company.CompanyLogo.includes('.jpeg') ||
+      company.CompanyLogo.includes('.jpg');
+    const pdfLogoImage = isJpg
+      ? await pdfDoc.embedJpg(logoImage)
+      : await pdfDoc.embedPng(logoImage);
 
     const firstPage = pdfDoc.insertPage(0);
-    await this.addFirstPage(firstPage, pdfLogoImage, company, user, checklist.ChecklistId);
+    await this.addFirstPage(
+      firstPage,
+      pdfLogoImage,
+      company,
+      user,
+      checklist.ChecklistId,
+    );
 
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    pdfDoc.getPages().slice(1).forEach(page => {
-      const { width, height } = page.getSize();
-      const extraSpace = 38;
-      page.setSize(width, height + extraSpace);
-      page.translateContent(0, -extraSpace);
+    pdfDoc
+      .getPages()
+      .slice(1)
+      .forEach((page) => {
+        const { width, height } = page.getSize();
+        const extraSpace = 38;
+        page.setSize(width, height + extraSpace);
+        page.translateContent(0, -extraSpace);
 
-      page.drawText('Evidence Document', {
-        x: width / 2 - helveticaFont.widthOfTextAtSize('Evidence Document', 15) / 2,
-        y: height + extraSpace - 10,
-        size: 15,
-        color: rgb(0, 0, 0),
-      });
+        page.drawText('Evidence Document', {
+          x:
+            width / 2 -
+            helveticaFont.widthOfTextAtSize('Evidence Document', 15) / 2,
+          y: height + extraSpace - 10,
+          size: 15,
+          color: rgb(0, 0, 0),
+        });
 
-      page.drawText(company.CompanyName, {
-        x: width - helveticaFont.widthOfTextAtSize(company.CompanyName, 10) - 20,
-        y: height + extraSpace,
-        size: 10,
-        color: rgb(0, 0, 0),
-      });
+        page.drawText(company.CompanyName, {
+          x:
+            width -
+            helveticaFont.widthOfTextAtSize(company.CompanyName, 10) -
+            20,
+          y: height + extraSpace,
+          size: 10,
+          color: rgb(0, 0, 0),
+        });
 
-      page.drawText(`Document ID : ${checklist.ChecklistId}`, {
-        x: width - helveticaFont.widthOfTextAtSize(`Document ID : ${checklist.ChecklistId}`, 10) - 20,
-        y: height + extraSpace - 12,
-        size: 10,
-        color: rgb(0, 0, 0),
+        page.drawText(`Document ID : ${checklist.ChecklistId}`, {
+          x:
+            width -
+            helveticaFont.widthOfTextAtSize(
+              `Document ID : ${checklist.ChecklistId}`,
+              10,
+            ) -
+            20,
+          y: height + extraSpace - 12,
+          size: 10,
+          color: rgb(0, 0, 0),
+        });
       });
-    });
 
     return Buffer.from(await pdfDoc.save());
   }
 
-  private async addFirstPage(page: any, logoImage: any, company: any, user: any, documentId: string) {
+  private async addFirstPage(
+    page: any,
+    logoImage: any,
+    company: any,
+    user: any,
+    documentId: string,
+  ) {
     const { width, height } = page.getSize();
     const pdfDoc = await PDFDocument.create();
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -257,35 +329,49 @@ export class ConductAuditsService {
 
     const fontSize = 25;
     page.drawText(company.CompanyName, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(company.CompanyName, fontSize) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(company.CompanyName, fontSize) / 2,
       y: height - 420,
       color: rgb(0, 0, 0),
       size: fontSize,
     });
 
     page.drawText(company.Address, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(company.Address, fontSize) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(company.Address, fontSize) / 2,
       y: height - 450,
       color: rgb(0, 0, 0),
       size: fontSize,
     });
 
     page.drawText(`Created By : ${user.name}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Created By : ${user.name}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(`Created By : ${user.name}`, 20) / 2,
       y: height - 530,
       color: rgb(0, 0, 0),
       size: 20,
     });
 
     page.drawText(`Creation Date : ${new Date().toLocaleDateString('en-GB')}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Creation Date : ${new Date().toLocaleDateString('en-GB')}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(
+          `Creation Date : ${new Date().toLocaleDateString('en-GB')}`,
+          20,
+        ) /
+          2,
       y: height - 560,
       color: rgb(0, 0, 0),
       size: 20,
     });
 
     page.drawText(`Document ID : ${documentId}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Document ID : ${documentId}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(`Document ID : ${documentId}`, 20) / 2,
       y: height - 590,
       color: rgb(0, 0, 0),
       size: 20,
@@ -319,17 +405,30 @@ export class ConductAuditsService {
       .populate(CONDUCT_AUDIT_QUERY)
       .sort({ AuditDate: -1 });
 
-    return { status: true, message: 'The following are ConductAudits!', data: audits };
+    return {
+      status: true,
+      message: 'The following are ConductAudits!',
+      data: audits,
+    };
   }
 
-  async getConductAuditsByChecklistId(checklistId: string, departmentId: string) {
+  async getConductAuditsByChecklistId(
+    checklistId: string,
+    departmentId: string,
+  ) {
     const checklist = await this.checklistModel.findById(checklistId);
     if (checklist) {
-      await this.applyFrequencyLocks(checklistId, this.getChecklistFrequency(checklist));
+      await this.applyFrequencyLocks(
+        checklistId,
+        this.getChecklistFrequency(checklist),
+      );
     }
 
     let audits = await this.conductAuditsModel
-      .find({ Checklist: checklistId as any, UserDepartment: departmentId as any })
+      .find({
+        Checklist: checklistId as any,
+        UserDepartment: departmentId as any,
+      })
       .populate(CONDUCT_AUDIT_QUERY);
 
     if (!audits.length) {
@@ -352,18 +451,161 @@ export class ConductAuditsService {
       .findById(auditId)
       .populate(CONDUCT_AUDIT_QUERY);
     if (!audit) throw new NotFoundException('Conduct audit not found');
-    return { status: true, message: 'The following are ConductAudits!', data: audit };
+    return {
+      status: true,
+      message: 'The following are ConductAudits!',
+      data: audit,
+    };
   }
 
   async deleteConductAudit(id: string) {
     const deleted = await this.conductAuditsModel.findByIdAndDelete(id);
     if (!deleted) throw new NotFoundException('ConductAudit not found!');
-    return { status: true, message: 'ConductAudit has been deleted!', data: deleted };
+    return {
+      status: true,
+      message: 'ConductAudit has been deleted!',
+      data: deleted,
+    };
   }
 
-  async deleteAllConductAudits(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllConductAudits(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.conductAuditsModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No ConductAudits Found to Delete!');
-    return { status: true, message: 'All ConductAudits have been deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No ConductAudits Found to Delete!');
+    return {
+      status: true,
+      message: 'All ConductAudits have been deleted!',
+      data: result,
+    };
+  }
+
+  private answerValue(answer: any): string {
+    const parts = [
+      answer?.YesNoAnswer,
+      answer?.GoodFairPoorAnswer,
+      answer?.SafeAtRiskAnswer,
+      answer?.PassFailAnswer,
+      answer?.CompliantNonCompliantAnswer,
+      answer?.ConformObservationAnswer,
+      answer?.GradingSystemAnswer != null
+        ? String(answer.GradingSystemAnswer)
+        : null,
+      answer?.Remarks ? `Remarks: ${answer.Remarks}` : null,
+    ].filter(Boolean);
+    return parts.length ? parts.join(' | ') : '---';
+  }
+
+  private mapConductAuditPdfRow(audit: any) {
+    const checklist = audit?.Checklist;
+    const department =
+      audit?.UserDepartment?.departmentName ||
+      audit?.UserDepartment?.shortName ||
+      checklist?.UserDepartment?.departmentName ||
+      '---';
+    const answers = Array.isArray(audit?.Answers) ? audit.Answers : [];
+    return {
+      checklistName: asText(checklist?.title || checklist?.ChecklistId),
+      checklistId: asText(checklist?.ChecklistId),
+      AuditBy: asText(audit?.AuditBy),
+      AuditDate: formatDate(audit?.AuditDate),
+      department: asText(department),
+      answersCount: String(answers.length),
+      isLocked: audit?.isLocked ? 'Yes' : 'No',
+    };
+  }
+
+  private answerSummaryRows(audit: any): Array<[string, string]> {
+    const answers = Array.isArray(audit?.Answers) ? audit.Answers : [];
+    return answers.map((answer: any, index: number) => {
+      const questionText =
+        answer?.question?.questionText ||
+        answer?.question?.QuestionText ||
+        `Question ${index + 1}`;
+      return [asText(questionText), this.answerValue(answer)];
+    });
+  }
+
+  async downloadConductAuditsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const departmentId =
+      actor?.departmentId?._id?.toString() ||
+      actor?.departmentId?.toString();
+
+    let data: any[];
+    if (departmentId) {
+      const result = await this.readConductAudits(departmentId);
+      data = result.data || [];
+    } else {
+      data = await this.conductAuditsModel
+        .find()
+        .populate(CONDUCT_AUDIT_QUERY)
+        .sort({ AuditDate: -1 })
+        .exec();
+    }
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Conduct Audits Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'checklistName', label: 'CHECKLIST', width: 2 },
+        { key: 'checklistId', label: 'ID', width: 1.3 },
+        { key: 'AuditBy', label: 'AUDIT BY', width: 1.5 },
+        { key: 'AuditDate', label: 'AUDIT DATE', width: 1.3 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.5 },
+        { key: 'answersCount', label: 'ANSWERS', width: 1 },
+        { key: 'isLocked', label: 'LOCKED', width: 0.9 },
+      ],
+      rows: (data || []).map((r) => this.mapConductAuditPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('conduct-audits', 'directory'),
+    };
+  }
+
+  async downloadConductAuditPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const audit = await this.conductAuditsModel
+      .findById(id)
+      .populate(CONDUCT_AUDIT_QUERY)
+      .exec();
+    if (!audit) throw new NotFoundException('Conduct audit not found');
+
+    const row = this.mapConductAuditPdfRow(audit);
+    const answerRows = this.answerSummaryRows(audit);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.checklistName !== '---' ? row.checklistName : 'Conduct Audit',
+      subtitle: row.AuditDate !== '---' ? row.AuditDate : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Checklist', row.checklistName],
+        ['Checklist ID', row.checklistId],
+        ['Audit By', row.AuditBy],
+        ['Audit Date', row.AuditDate],
+        ['Department', row.department],
+        ['Answers Count', row.answersCount],
+        ['Locked', row.isLocked],
+      ],
+      sections: answerRows.length
+        ? [{ heading: 'Answers Summary', rows: answerRows }]
+        : [],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.checklistId || row.checklistName || 'conduct-audit',
+        'audit',
+      ),
+    };
   }
 }

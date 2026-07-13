@@ -1,9 +1,13 @@
-import { UploadDocumentsSchema, UploadDocumentsDocument } from '../schemas/upload-documents.schema';
-import { Model } from 'mongoose';
+import {
+  UploadDocumentsSchema,
+  UploadDocumentsDocument,
+} from '../schemas/upload-documents.schema';
 UploadDocumentsSchema.pre<UploadDocumentsDocument>('save', async function () {
   if (!this.DocumentId) {
     const DepartmentModel = this.db.model('Department');
-    const department = await DepartmentModel.findById(this.Department).populate('Company');
+    const department = await DepartmentModel.findById(this.Department).populate(
+      'Company',
+    );
 
     if (!department) throw new Error('Department not found');
 
@@ -28,6 +32,6 @@ UploadDocumentsSchema.pre<UploadDocumentsDocument>('save', async function () {
       nextNumericPart = parseInt(parts[3], 10) + 1;
     }
 
-    this.DocumentId = `${(department as any).Company.ShortName}/${(department as any).ShortName}/${documentTypeNumber}/${nextNumericPart.toString().padStart(3, '0')}`;
+    this.DocumentId = `${department.Company.ShortName}/${department.ShortName}/${documentTypeNumber}/${nextNumericPart.toString().padStart(3, '0')}`;
   }
 });

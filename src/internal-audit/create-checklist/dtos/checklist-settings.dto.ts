@@ -27,7 +27,9 @@ export class ChecklistSettingsDto {
   @IsBoolean()
   isEnabled?: boolean;
 
-  @ApiPropertyOptional({ enum: ['None', 'Hourly', 'Daily', 'Weekly', 'Monthly'] })
+  @ApiPropertyOptional({
+    enum: ['None', 'Hourly', 'Daily', 'Weekly', 'Monthly'],
+  })
   @IsOptional()
   @IsEnum(['None', 'Hourly', 'Daily', 'Weekly', 'Monthly'])
   auditFrequency?: string;

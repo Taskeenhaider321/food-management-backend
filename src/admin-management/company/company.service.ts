@@ -13,6 +13,11 @@ import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { Types } from 'mongoose';
+import {
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class CompanyService {
@@ -84,7 +89,7 @@ export class CompanyService {
   }
 
   async findAll(
-    userId?: string,
+    _userId?: string,
   ): Promise<{ status: boolean; data: CompanyDocument[] }> {
     const companies = await this.companyModel.find().exec();
     return { status: true, data: companies };
@@ -92,7 +97,7 @@ export class CompanyService {
 
   async findOne(
     id: string,
-    userId?: string,
+    _userId?: string,
   ): Promise<{ status: boolean; data: CompanyDocument }> {
     const company = await this.companyModel.findById(id).exec();
     if (!company) {
@@ -104,7 +109,7 @@ export class CompanyService {
   async update(
     id: string,
     updateCompanyDto: UpdateCompanyDto,
-    userId?: string,
+    _userId?: string,
   ): Promise<{ status: boolean; message: string; data: CompanyDocument }> {
     const company = await this.companyModel
       .findByIdAndUpdate(id, updateCompanyDto, { returnDocument: 'after' })
@@ -121,7 +126,7 @@ export class CompanyService {
 
   async delete(
     id: string,
-    userId?: string,
+    _userId?: string,
   ): Promise<{ status: boolean; message: string }> {
     const company = await this.companyModel.findByIdAndDelete(id).exec();
     if (!company) {
@@ -133,12 +138,80 @@ export class CompanyService {
   }
 
   async deleteAll(
-    userId?: string,
+    _userId?: string,
   ): Promise<{ status: boolean; message: string; data: any }> {
     const result = await this.companyModel.deleteMany({});
     if (result.deletedCount === 0) {
       throw new NotFoundException('No companies found to delete');
     }
     return { status: true, message: 'All companies deleted', data: result };
+  }
+
+  async downloadCompaniesPdf(actor?: any) {
+    const { data } = await this.findAll();
+    const brandCompany =
+      data.find(
+        (c) =>
+          c._id.toString() ===
+          (actor?.companyId?._id?.toString() || actor?.companyId?.toString()),
+      ) || data[0];
+
+    const pdfBytes = await buildBrandedListPdf({
+      company: brandCompany
+        ? {
+            companyName: brandCompany.companyName,
+            address: brandCompany.address,
+            companyLogo: brandCompany.companyLogo,
+          }
+        : { companyName: 'Feat Technology' },
+      title: 'Companies Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'companyName', label: 'NAME', width: 3 },
+        { key: 'shortName', label: 'SHORT', width: 1.2 },
+        { key: 'email', label: 'EMAIL', width: 2.5 },
+        { key: 'contactNo', label: 'CONTACT', width: 1.5 },
+        { key: 'status', label: 'STATUS', width: 1.2 },
+      ],
+      rows: data.map((c) => ({
+        companyName: c.companyName,
+        shortName: c.shortName,
+        email: c.email,
+        contactNo: c.contactNo || '---',
+        status: c.status || '---',
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('companies', 'directory'),
+    };
+  }
+
+  async downloadCompanyPdf(id: string, actor?: any) {
+    const { data: company } = await this.findOne(id);
+    const pdfBytes = await buildBrandedDetailPdf({
+      company: {
+        companyName: company.companyName,
+        address: company.address,
+        companyLogo: company.companyLogo,
+      },
+      title: company.companyName,
+      subtitle: company.shortName,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Company Name', company.companyName],
+        ['Short Name', company.shortName],
+        ['Email', company.email],
+        ['Contact No', company.contactNo || '---'],
+        ['Address', company.address || '---'],
+        ['Status', company.status || '---'],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(company.companyName, 'company'),
+    };
   }
 }

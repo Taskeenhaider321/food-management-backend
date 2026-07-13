@@ -1,13 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsObject, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsObject,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 export class MaintenanceFrequencyDto {
   @ApiProperty({ example: 'Monthly' })
   @IsString()
   type: string;
 
-  @ApiProperty({ description: 'Reason for selecting this maintenance frequency' })
+  @ApiProperty({
+    description: 'Reason for selecting this maintenance frequency',
+  })
   @IsString()
   reason: string;
 }

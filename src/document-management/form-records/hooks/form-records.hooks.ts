@@ -15,17 +15,12 @@ export function FormRecordsHooks(schema: any) {
     let nextNumericPart = 1;
 
     if (latestRecord?.FormRecordId) {
-      const numericPart = parseInt(
-        latestRecord.FormRecordId.slice(2),
-        10,
-      );
+      const numericPart = parseInt(latestRecord.FormRecordId.slice(2), 10);
       if (!isNaN(numericPart)) {
         nextNumericPart = numericPart + 1;
       }
     }
 
-    doc.FormRecordId = `FR${nextNumericPart
-      .toString()
-      .padStart(3, '0')}`;
+    doc.FormRecordId = `FR${nextNumericPart.toString().padStart(3, '0')}`;
   });
 }

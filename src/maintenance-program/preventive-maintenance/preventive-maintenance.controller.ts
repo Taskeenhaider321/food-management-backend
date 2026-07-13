@@ -9,7 +9,12 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiConsumes,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { PreventiveMaintenanceService } from './preventive-maintenance.service';
 import { CreatePreventiveMaintenanceDto } from './dtos/create-preventive-maintenance.dto';
 
@@ -50,7 +55,9 @@ export class PreventiveMaintenanceController {
 
   @Get('by-machine/:machineId/:departmentId')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get maintenance records by machine ID and department' })
+  @ApiOperation({
+    summary: 'Get maintenance records by machine ID and department',
+  })
   async findByMachineId(
     @Param('machineId') machineId: string,
     @Param('departmentId') departmentId: string,

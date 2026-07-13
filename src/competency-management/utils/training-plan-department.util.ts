@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Model } from 'mongoose';
 
 export async function resolveDepartmentIdForTrainingPlanCreate(
@@ -23,7 +20,10 @@ export async function resolveDepartmentIdForTrainingPlanCreate(
   }
 
   const fromUser = actor?.departmentId;
-  const fromUserId = fromUser && typeof fromUser === 'object' ? fromUser._id?.toString() : fromUser?.toString();
+  const fromUserId =
+    fromUser && typeof fromUser === 'object'
+      ? fromUser._id?.toString()
+      : fromUser?.toString();
   if (fromUserId) {
     const dept = await departmentModel.findById(fromUserId).exec();
     if (dept) {

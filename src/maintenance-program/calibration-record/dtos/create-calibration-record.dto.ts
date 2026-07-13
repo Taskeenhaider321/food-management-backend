@@ -13,17 +13,26 @@ export class CreateCalibrationRecordDto {
   @IsString()
   imageUrl?: string;
 
-  @ApiProperty({ description: 'Pre-uploaded calibration certificate URL', required: false })
+  @ApiProperty({
+    description: 'Pre-uploaded calibration certificate URL',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   certificateUrl?: string;
 
-  @ApiProperty({ description: 'Pre-uploaded master certificate URL', required: false })
+  @ApiProperty({
+    description: 'Pre-uploaded master certificate URL',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   masterCertificateUrl?: string;
 
-  @ApiProperty({ description: 'Pre-uploaded external certificate URL', required: false })
+  @ApiProperty({
+    description: 'Pre-uploaded external certificate URL',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   exCertificateUrl?: string;
@@ -44,7 +53,10 @@ export class CreateCalibrationRecordDto {
   @IsString()
   dateType: string;
 
-  @ApiProperty({ description: 'Calibration type', enum: ['Internal', 'External'] })
+  @ApiProperty({
+    description: 'Calibration type',
+    enum: ['Internal', 'External'],
+  })
   @IsEnum(['Internal', 'External'])
   callibrationType: string;
 
@@ -71,12 +83,18 @@ export class CreateCalibrationRecordDto {
   @IsNumber()
   thirdReading: number;
 
-  @ApiProperty({ description: 'Company name for external calibration', required: false })
+  @ApiProperty({
+    description: 'Company name for external calibration',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   companyName?: string;
 
-  @ApiProperty({ description: 'Master reference for external calibration', required: false })
+  @ApiProperty({
+    description: 'Master reference for external calibration',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   masterReference?: string;

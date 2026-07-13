@@ -7,12 +7,21 @@ const DOCUMENT_TYPE_MAP: Record<string, number> = {
   Forms: 4,
 };
 
+type CompanyRef = {
+  shortName?: string;
+};
+
+type DepartmentDoc = {
+  shortName?: string;
+  companyId?: CompanyRef | string | null;
+};
+
 type DocumentIdTarget = {
   isNew: boolean;
   DocumentId?: string;
   Department: unknown;
   DocumentType: string;
-  model: (name: string) => Model<unknown>;
+  model: (name: string) => Model<DepartmentDoc>;
   constructor: unknown;
 };
 
@@ -21,10 +30,10 @@ export async function assignHaccpDocumentId(target: DocumentIdTarget) {
     return;
   }
 
-  const DepartmentModel = target.model('Department') as Model<Record<string, unknown>>;
+  const DepartmentModel = target.model('Department');
 
   const department = await DepartmentModel.findById(target.Department)
-    .populate('companyId')
+    .populate<{ companyId: CompanyRef | null }>('companyId')
     .lean()
     .exec();
 
@@ -33,7 +42,7 @@ export async function assignHaccpDocumentId(target: DocumentIdTarget) {
   }
 
   const company = department.companyId;
-  if (!company || typeof company !== 'object' || !(company as { shortName?: string }).shortName) {
+  if (!company || typeof company !== 'object' || !company.shortName) {
     throw new Error('Company not found in Department');
   }
 
@@ -62,7 +71,11 @@ export async function assignHaccpDocumentId(target: DocumentIdTarget) {
     }
   }
 
-  target.DocumentId = `${(company as { shortName: string }).shortName}/${department.shortName as string}/${documentTypeNumber}/${nextNumericPart
+  if (!department.shortName) {
+    throw new Error('Department shortName is missing');
+  }
+
+  target.DocumentId = `${company.shortName}/${department.shortName}/${documentTypeNumber}/${nextNumericPart
     .toString()
     .padStart(3, '0')}`;
 }

@@ -3,8 +3,14 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PersonalRequisitionController } from './personal-requisition.controller';
 import { PersonalRequisitionService } from './personal-requisition.service';
-import { PersonalRequisition, PersonalRequisitionSchema } from './schemas/personal-requisition.schema';
-import { Department, DepartmentSchema } from '../../admin-management/department/schemas/department.schema';
+import {
+  PersonalRequisition,
+  PersonalRequisitionSchema,
+} from './schemas/personal-requisition.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../../admin-management/department/schemas/department.schema';
 
 @Module({
   imports: [

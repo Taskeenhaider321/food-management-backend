@@ -73,7 +73,7 @@ export class AffiliationService {
       return [];
     }
 
-    const pid = profile._id as Types.ObjectId;
+    const pid = profile._id;
 
     const [
       employee,

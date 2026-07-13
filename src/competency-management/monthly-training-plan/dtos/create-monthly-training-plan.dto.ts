@@ -80,7 +80,8 @@ export class CreateMonthlyTrainingPlanDto {
   Venue: string;
 
   @ApiPropertyOptional({
-    description: 'Legacy duration label. Omit when sending SessionStartAt / SessionEndAt.',
+    description:
+      'Legacy duration label. Omit when sending SessionStartAt / SessionEndAt.',
   })
   @ValidateIf((o) => !o.SessionStartAt)
   @IsString()

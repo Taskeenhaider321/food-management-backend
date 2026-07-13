@@ -8,6 +8,8 @@ import {
   Param,
   Delete,
   HttpStatus,
+  Header,
+  StreamableFile,
   Req,
 } from '@nestjs/common';
 import {
@@ -52,7 +54,8 @@ export class TrainerController {
   @Get()
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'List trainers for the signed-in user’s company (all for super-admin)',
+    summary:
+      'List trainers for the signed-in user’s company (all for super-admin)',
   })
   @ApiResponse({ status: HttpStatus.OK, description: 'Trainers found' })
   async listByCompany(@CurrentUser() actor: any) {
@@ -64,6 +67,42 @@ export class TrainerController {
   @ApiOperation({ summary: 'Get trainer profile for the signed-in user' })
   async findMe(@CurrentUser() actor: any) {
     return this.trainerService.findMe(actor);
+  }
+
+  /** Must be registered before `GET :departmentId`. */
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download trainers directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadTrainersPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.trainerService.downloadTrainersPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Two-segment route; safe alongside single-segment `:departmentId`. */
+  @Get(':id/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single trainer PDF' })
+  @ApiParam({ name: 'id', description: 'Trainer ID' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadTrainerPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } = await this.trainerService.downloadTrainerPdf(
+      id,
+      actor,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':departmentId')

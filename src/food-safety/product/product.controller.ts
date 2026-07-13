@@ -6,13 +6,16 @@ import {
   Delete,
   Body,
   Param,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dtos/create-product.dto';
 import { UpdateProductDto } from './dtos/update-product.dto';
 import { ApproveProductDto } from './dtos/approve-product.dto';
 import { DisapproveProductDto } from './dtos/disapprove-product.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Product')
 @Controller('product')
@@ -29,6 +32,39 @@ export class ProductController {
   @ApiBearerAuth()
   async getAllProducts(@Param('departmentId') departmentId: string) {
     return this.productService.getAllProducts(departmentId);
+  }
+
+  /** Must be registered before `GET :productId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download products directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadProductsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.productService.downloadProductsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :productId`. */
+  @Get(':productId/download-pdf')
+  @ApiOperation({ summary: 'Download a single product PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadProductPdf(
+    @Param('productId') productId: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.productService.downloadProductPdf(productId, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':productId')
@@ -61,7 +97,9 @@ export class ProductController {
 
   @Patch('reject')
   @ApiBearerAuth()
-  async rejectProduct(@Body() body: { id: string; actor: string; reason: string }) {
+  async rejectProduct(
+    @Body() body: { id: string; actor: string; reason: string },
+  ) {
     return this.productService.rejectProduct(body.id, body.actor, body.reason);
   }
 

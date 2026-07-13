@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEmail, IsMongoId, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsEmail,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ProfilePayloadDto } from '../../../admin-management/profile/dtos/profile-fields.dto';
 
 /** Name + email; `companyId` is taken from the JWT in the controller, not the body. */

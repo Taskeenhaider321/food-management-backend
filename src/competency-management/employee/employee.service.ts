@@ -27,6 +27,16 @@ import {
   Training,
   TrainingDocument,
 } from '../training/schemas/training.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../../admin-management/company/schemas/company.schema';
+import { buildEmployeesListPdf } from './employee-pdf.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class EmployeeService {
@@ -35,6 +45,7 @@ export class EmployeeService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(Training.name) private trainingModel: Model<TrainingDocument>,
+    @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     private readonly profileService: ProfileService,
     private readonly userService: UserService,
     private cloudinaryService: CloudinaryService,
@@ -50,7 +61,8 @@ export class EmployeeService {
     credentials: { userName: string; password: string };
   }> {
     const { user, profile, employee } = createEmployeeDto;
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const emailTaken = await this.userModel.findOne({
       email: user.email.toLowerCase(),
@@ -220,7 +232,7 @@ export class EmployeeService {
   /**
    * Employees whose user belongs to the actor's company (or all employees for super-admin).
    */
-  async findAllForCompany(actor: any): Promise<{
+  async findAllForCompany(_actor: any): Promise<{
     status: boolean;
     message: string;
     data: EmployeeDocument[];
@@ -243,7 +255,7 @@ export class EmployeeService {
     };
   }
 
-  async findOne(id: string, actor?: any): Promise<EmployeeDocument> {
+  async findOne(id: string, _actor?: any): Promise<EmployeeDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid employee id');
     }
@@ -268,6 +280,176 @@ export class EmployeeService {
     return employee;
   }
 
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
+    );
+  }
+
+  private employeeCompanyId(employee: any): string | undefined {
+    const user = employee?.profileId?.userId;
+    return (
+      user?.companyId?._id?.toString() ||
+      user?.companyId?.toString() ||
+      undefined
+    );
+  }
+
+  private mapEmployeeRow(employee: any) {
+    const profile = employee?.profileId;
+    const user = profile?.userId;
+    const department =
+      user?.departmentId?.departmentName ||
+      user?.departmentId?.shortName ||
+      '---';
+    const trainingsTotal = Array.isArray(employee?.trainings)
+      ? employee.trainings.length
+      : 0;
+
+    return {
+      name: user?.name || '---',
+      email: user?.email || '---',
+      designation: employee?.designation || '---',
+      department,
+      trainingsTotal,
+      trainingsLabel: `${trainingsTotal} assigned`,
+    };
+  }
+
+  async downloadEmployeesPdf(actor: any) {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) {
+      throw new BadRequestException(
+        'Company context is required to export employees PDF',
+      );
+    }
+
+    const company = await this.companyModel.findById(companyId).exec();
+    if (!company) throw new NotFoundException('Company not found');
+
+    const { data } = await this.findAllForCompany(actor);
+    const employees = (data || []).filter(
+      (emp) => this.employeeCompanyId(emp) === companyId,
+    );
+
+    const pdfBytes = await buildEmployeesListPdf({
+      company: {
+        companyName: company.companyName,
+        address: company.address,
+        companyLogo: company.companyLogo,
+      },
+      employees: employees.map((emp) => this.mapEmployeeRow(emp)),
+      exportedBy: actor?.name || 'System',
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName:
+        `employees_${company.companyName || 'company'}`
+          .replace(/[^\w-]+/g, '_')
+          .replace(/_+/g, '_')
+          .slice(0, 80) + '.pdf',
+    };
+  }
+
+  async downloadEmployeePdf(id: string, actor: any) {
+    const employee = await this.findOne(id, actor);
+    const companyId =
+      this.employeeCompanyId(employee) || this.actorCompanyId(actor);
+    if (!companyId) {
+      throw new BadRequestException(
+        'Company context is required to export employee PDF',
+      );
+    }
+
+    const actorCompanyId = this.actorCompanyId(actor);
+    if (actorCompanyId && actorCompanyId !== companyId) {
+      throw new NotFoundException('Employee not found');
+    }
+
+    const company = await this.companyModel.findById(companyId).exec();
+    if (!company) throw new NotFoundException('Company not found');
+
+    const profile = (employee as any).profileId;
+    const user = profile?.userId;
+    const trainings = Array.isArray((employee as any).trainings)
+      ? (employee as any).trainings
+          .map(
+            (t: any) => t?.training?.trainingName || t?.training?.TrainingName,
+          )
+          .filter(Boolean)
+      : [];
+    const avatarUrl = profile?.avatar || profile?.Avatar || '';
+    const name = user?.name || '---';
+    const designation = (employee as any).designation || '---';
+    const department =
+      user?.departmentId?.departmentName ||
+      user?.departmentId?.shortName ||
+      '---';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company: {
+        companyName: company.companyName,
+        address: company.address,
+        companyLogo: company.companyLogo,
+      },
+      title: name !== '---' ? name : 'Employee',
+      subtitle: designation !== '---' ? designation : undefined,
+      exportedBy: actor?.name || 'System',
+      portraitUrl: typeof avatarUrl === 'string' ? avatarUrl.trim() : '',
+      coverRows: [
+        ['Employee Name', asText(name)],
+        ['Email', asText(user?.email)],
+        ['Username', asText(user?.userName)],
+        ['Designation', asText(designation)],
+        ['Department', asText(department)],
+        ['Phone', asText(profile?.phoneNo)],
+      ],
+      sections: [
+        {
+          heading: 'Profile Details',
+          rows: [
+            ['Address', asText(profile?.address)],
+            [
+              'Qualification',
+              Array.isArray(profile?.qualification)
+                ? asText(profile.qualification.filter(Boolean).join(', '))
+                : asText(profile?.qualification),
+            ],
+            [
+              'Experience',
+              Array.isArray(profile?.experience)
+                ? asText(profile.experience.filter(Boolean).join(', '))
+                : asText(profile?.experience),
+            ],
+            [
+              'Skills',
+              Array.isArray(profile?.skills)
+                ? asText(profile.skills.filter(Boolean).join(', '))
+                : asText(profile?.skills),
+            ],
+          ],
+        },
+        {
+          heading: 'Assigned Trainings',
+          rows: trainings.length
+            ? trainings.map(
+                (t: string, i: number) =>
+                  [`Training ${i + 1}`, asText(t)] as [string, string],
+              )
+            : [['Trainings', 'None']],
+        },
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(name || 'employee', 'employee'),
+    };
+  }
+
   async update(
     id: string,
     updateEmployeeDto: UpdateEmployeeDto,
@@ -282,7 +464,10 @@ export class EmployeeService {
       .findById(id)
       .populate({
         path: 'profileId',
-        populate: { path: 'userId', populate: ['companyId', 'departmentId', 'roleId'] },
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
       })
       .exec();
 
@@ -295,9 +480,14 @@ export class EmployeeService {
       if (u.name !== undefined) updatePayload.name = u.name;
       if (u.email !== undefined) updatePayload.email = u.email;
       if (u.userName !== undefined) updatePayload.userName = u.userName;
-      if (u.departmentId !== undefined) updatePayload.departmentId = u.departmentId;
+      if (u.departmentId !== undefined)
+        updatePayload.departmentId = u.departmentId;
       if (Object.keys(updatePayload).length > 0) {
-        await this.userService.update(String(userDoc._id), updatePayload, actor);
+        await this.userService.update(
+          String(userDoc._id),
+          updatePayload,
+          actor,
+        );
       }
     }
 
@@ -323,7 +513,8 @@ export class EmployeeService {
     if (updateEmployeeDto.employee) {
       const e = updateEmployeeDto.employee;
       const employeeUpdate: Record<string, unknown> = {};
-      if (e.designation !== undefined) employeeUpdate.designation = e.designation;
+      if (e.designation !== undefined)
+        employeeUpdate.designation = e.designation;
       if (e.cv !== undefined) employeeUpdate.cv = e.cv;
       if (e.trainings !== undefined) {
         employeeUpdate.trainings = e.trainings.map((t) => ({
@@ -339,7 +530,10 @@ export class EmployeeService {
       .findById(id)
       .populate({
         path: 'profileId',
-        populate: { path: 'userId', populate: ['companyId', 'departmentId', 'roleId'] },
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
       })
       .populate({
         path: 'trainings.training',

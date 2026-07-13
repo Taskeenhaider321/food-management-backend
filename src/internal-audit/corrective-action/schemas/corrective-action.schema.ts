@@ -3,7 +3,11 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 
 @Schema({ _id: false })
 export class CorrectiveAnswer {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ChecklistAnswer', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'ChecklistAnswer',
+    required: true,
+  })
   question: MongooseSchema.Types.ObjectId;
 
   @Prop()
@@ -46,4 +50,5 @@ export class CorrectiveAction extends Document {
   CorrectionDate: Date;
 }
 
-export const CorrectiveActionSchema = SchemaFactory.createForClass(CorrectiveAction);
+export const CorrectiveActionSchema =
+  SchemaFactory.createForClass(CorrectiveAction);

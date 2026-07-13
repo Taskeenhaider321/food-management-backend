@@ -1,7 +1,5 @@
 import { Model, Types } from 'mongoose';
-import {
-  matchPlansByUserDepartmentScope,
-} from './department-scope.util';
+import { matchPlansByUserDepartmentScope } from './department-scope.util';
 
 export function yearlyPlanYearFilter(
   year: string | number,
@@ -33,8 +31,7 @@ export async function findYearlyPlanByYear(
     andClauses.push(matchPlansByUserDepartmentScope(departmentScope));
   }
 
-  const query =
-    andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
+  const query = andClauses.length === 1 ? andClauses[0] : { $and: andClauses };
 
   return yearlyPlanModel.findOne(query).sort({ updated_at: -1 }).exec();
 }

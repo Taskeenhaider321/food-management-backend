@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FoodSafety } from './schemas/food-safety-plan.schema';
@@ -16,7 +20,9 @@ export class FoodSafetyPlanService {
   ) {}
 
   async createFoodSafety(createFoodSafetyPlanDto: CreateFoodSafetyPlanDto) {
-    const createdPlans = await this.planModel.create(createFoodSafetyPlanDto.Plans as any);
+    const createdPlans = await this.planModel.create(
+      createFoodSafetyPlanDto.Plans as any,
+    );
     const plansArr = Object.values(createdPlans);
     const plansIds = plansArr.map((planObj: any) => planObj._id);
 
@@ -31,8 +37,16 @@ export class FoodSafetyPlanService {
     });
 
     await createdFoodSafety.save();
-    console.log(new Date().toLocaleString() + ' ' + 'CREATE FoodSafety document Successfully!');
-    return { status: true, message: 'FoodSafety document created successfully', data: createdFoodSafety };
+    console.log(
+      new Date().toLocaleString() +
+        ' ' +
+        'CREATE FoodSafety document Successfully!',
+    );
+    return {
+      status: true,
+      message: 'FoodSafety document created successfully',
+      data: createdFoodSafety,
+    };
   }
 
   async getAllFoodSafety(departmentId: string) {
@@ -46,7 +60,11 @@ export class FoodSafetyPlanService {
           path: 'ConductHaccp',
           model: 'ConductHaccp',
           populate: [
-            { path: 'Teams', model: 'HaccpTeam', populate: { path: 'TeamMembers', model: 'User' } },
+            {
+              path: 'Teams',
+              model: 'HaccpTeam',
+              populate: { path: 'TeamMembers', model: 'User' },
+            },
             { path: 'Process', model: 'Processes' },
           ],
         },
@@ -57,7 +75,11 @@ export class FoodSafetyPlanService {
         populate: {
           path: 'Decision',
           model: 'Decision',
-          populate: { path: 'Hazard', model: 'Hazard', populate: { path: 'Process', model: 'ProcessDetail' } },
+          populate: {
+            path: 'Hazard',
+            model: 'Hazard',
+            populate: { path: 'Process', model: 'ProcessDetail' },
+          },
         },
       })
       .exec();
@@ -81,7 +103,11 @@ export class FoodSafetyPlanService {
           path: 'ConductHaccp',
           model: 'ConductHaccp',
           populate: [
-            { path: 'Teams', model: 'HaccpTeam', populate: { path: 'TeamMembers', model: 'User' } },
+            {
+              path: 'Teams',
+              model: 'HaccpTeam',
+              populate: { path: 'TeamMembers', model: 'User' },
+            },
             { path: 'Process', model: 'Processes' },
           ],
         },
@@ -92,43 +118,74 @@ export class FoodSafetyPlanService {
         populate: {
           path: 'Decision',
           model: 'Decision',
-          populate: { path: 'Hazard', model: 'Hazard', populate: { path: 'Process', model: 'ProcessDetail' } },
+          populate: {
+            path: 'Hazard',
+            model: 'Hazard',
+            populate: { path: 'Process', model: 'ProcessDetail' },
+          },
         },
       })
       .exec();
 
     if (!foodSafety) {
-      throw new NotFoundException(`FoodSafety document with ID: ${planId} not found`);
+      throw new NotFoundException(
+        `FoodSafety document with ID: ${planId} not found`,
+      );
     }
 
-    console.log(`FoodSafety document with ID: ${planId} retrieved successfully`);
+    console.log(
+      `FoodSafety document with ID: ${planId} retrieved successfully`,
+    );
     return { status: true, data: foodSafety };
   }
 
   async deleteFoodSafety(id: string) {
     const deletedFoodSafety = await this.foodSafetyModel.findByIdAndDelete(id);
     if (!deletedFoodSafety) {
-      throw new NotFoundException(`FoodSafety document with ID: ${id} not found`);
+      throw new NotFoundException(
+        `FoodSafety document with ID: ${id} not found`,
+      );
     }
 
     console.log(`FoodSafety document with ID: ${id} deleted successfully`);
-    return { status: true, message: 'FoodSafety document deleted successfully', data: deletedFoodSafety };
+    return {
+      status: true,
+      message: 'FoodSafety document deleted successfully',
+      data: deletedFoodSafety,
+    };
   }
 
-  async deleteAllFoodSafety(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllFoodSafety(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.foodSafetyModel.deleteMany({});
     if (result.deletedCount === 0) {
       throw new NotFoundException('No FoodSafety documents found to delete!');
     }
 
-    console.log(new Date().toLocaleString() + ' ' + 'DELETE All FoodSafety documents Successfully!');
-    return { status: true, message: 'All FoodSafety documents have been deleted!', data: result };
+    console.log(
+      new Date().toLocaleString() +
+        ' ' +
+        'DELETE All FoodSafety documents Successfully!',
+    );
+    return {
+      status: true,
+      message: 'All FoodSafety documents have been deleted!',
+      data: result,
+    };
   }
 
-  async updateFoodSafety(planId: string, updateFoodSafetyPlanDto: UpdateFoodSafetyPlanDto) {
+  async updateFoodSafety(
+    planId: string,
+    updateFoodSafetyPlanDto: UpdateFoodSafetyPlanDto,
+  ) {
     const existingFoodSafety = await this.foodSafetyModel.findById(planId);
     if (!existingFoodSafety) {
-      throw new NotFoundException(`FoodSafety document with ID: ${planId} not found`);
+      throw new NotFoundException(
+        `FoodSafety document with ID: ${planId} not found`,
+      );
     }
 
     const createdPlans = await this.planModel.create(
@@ -139,7 +196,7 @@ export class FoodSafetyPlanService {
         } else {
           return plan;
         }
-      })
+      }),
     );
     const plansArr = Object.values(createdPlans);
     const plansIds = plansArr.map((planObj: any) => planObj._id);
@@ -158,15 +215,27 @@ export class FoodSafetyPlanService {
       Reason: undefined,
     };
 
-    const updatedFoodSafety = await this.foodSafetyModel.findByIdAndUpdate(planId, updates, { returnDocument: 'after' });
+    const updatedFoodSafety = await this.foodSafetyModel.findByIdAndUpdate(
+      planId,
+      updates,
+      { returnDocument: 'after' },
+    );
     console.log(`FoodSafety document with ID: ${planId} updated successfully`);
-    return { status: true, message: 'FoodSafety document updated successfully', data: updatedFoodSafety };
+    return {
+      status: true,
+      message: 'FoodSafety document updated successfully',
+      data: updatedFoodSafety,
+    };
   }
 
   async approveFoodSafety(approveFoodSafetyPlanDto: ApproveFoodSafetyPlanDto) {
-    const foodSafety = await this.foodSafetyModel.findById(approveFoodSafetyPlanDto.id);
+    const foodSafety = await this.foodSafetyModel.findById(
+      approveFoodSafetyPlanDto.id,
+    );
     if (!foodSafety) {
-      throw new NotFoundException(`FoodSafety with ID: ${approveFoodSafetyPlanDto.id} not found.`);
+      throw new NotFoundException(
+        `FoodSafety with ID: ${approveFoodSafetyPlanDto.id} not found.`,
+      );
     }
 
     if (foodSafety.Status === 'Approved') {
@@ -180,15 +249,29 @@ export class FoodSafetyPlanService {
     foodSafety.Reason = undefined;
     foodSafety.ApprovedBy = approveFoodSafetyPlanDto.approvedBy;
 
-    await this.foodSafetyModel.findByIdAndUpdate(foodSafety._id, foodSafety, { returnDocument: 'after' });
-    console.log(`FoodSafety with ID: ${approveFoodSafetyPlanDto.id} has been approved.`);
-    return { status: true, message: 'The FoodSafety has been marked as approved.', data: foodSafety };
+    await this.foodSafetyModel.findByIdAndUpdate(foodSafety._id, foodSafety, {
+      returnDocument: 'after',
+    });
+    console.log(
+      `FoodSafety with ID: ${approveFoodSafetyPlanDto.id} has been approved.`,
+    );
+    return {
+      status: true,
+      message: 'The FoodSafety has been marked as approved.',
+      data: foodSafety,
+    };
   }
 
-  async disapproveFoodSafety(disapproveFoodSafetyPlanDto: DisapproveFoodSafetyPlanDto) {
-    const foodSafety = await this.foodSafetyModel.findById(disapproveFoodSafetyPlanDto.id);
+  async disapproveFoodSafety(
+    disapproveFoodSafetyPlanDto: DisapproveFoodSafetyPlanDto,
+  ) {
+    const foodSafety = await this.foodSafetyModel.findById(
+      disapproveFoodSafetyPlanDto.id,
+    );
     if (!foodSafety) {
-      throw new NotFoundException(`FoodSafety with ID: ${disapproveFoodSafetyPlanDto.id} not found.`);
+      throw new NotFoundException(
+        `FoodSafety with ID: ${disapproveFoodSafetyPlanDto.id} not found.`,
+      );
     }
 
     if (foodSafety.Status === 'Approved') {
@@ -202,8 +285,16 @@ export class FoodSafetyPlanService {
     foodSafety.ApprovedBy = undefined;
     foodSafety.DisapprovedBy = disapproveFoodSafetyPlanDto.disapprovedBy;
 
-    await this.foodSafetyModel.findByIdAndUpdate(foodSafety._id, foodSafety, { returnDocument: 'after' });
-    console.log(`FoodSafety with ID: ${disapproveFoodSafetyPlanDto.id} has been disapproved.`);
-    return { status: true, message: 'The FoodSafety has been marked as disapproved.', data: foodSafety };
+    await this.foodSafetyModel.findByIdAndUpdate(foodSafety._id, foodSafety, {
+      returnDocument: 'after',
+    });
+    console.log(
+      `FoodSafety with ID: ${disapproveFoodSafetyPlanDto.id} has been disapproved.`,
+    );
+    return {
+      status: true,
+      message: 'The FoodSafety has been marked as disapproved.',
+      data: foodSafety,
+    };
   }
 }

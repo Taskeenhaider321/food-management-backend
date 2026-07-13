@@ -6,7 +6,10 @@ export async function workRequestPreSave(this: WorkRequestDocument) {
 
   const model = this.constructor as Model<WorkRequestDocument>;
 
-  const latest = await model.findOne({}, { MWRId: 1 }).sort({ created_at: -1 }).lean();
+  const latest = await model
+    .findOne({}, { MWRId: 1 })
+    .sort({ created_at: -1 })
+    .lean();
 
   let nextNumber = 1;
   if (latest?.MWRId) {

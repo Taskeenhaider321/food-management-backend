@@ -63,11 +63,16 @@ export function actorDepartmentIdString(user: any): string | null {
   return String(d);
 }
 
-export function assertActorMayAccessCompany(user: any, targetCompanyId: string): void {
+export function assertActorMayAccessCompany(
+  user: any,
+  targetCompanyId: string,
+): void {
   if (isSuperAdminActor(user)) return;
   const mine = actorCompanyIdString(user);
   if (!mine || mine !== String(targetCompanyId)) {
-    throw new ForbiddenException('You may only access resources for your company');
+    throw new ForbiddenException(
+      'You may only access resources for your company',
+    );
   }
 }
 
@@ -77,16 +82,16 @@ export function assertActorMayAccessCompany(user: any, targetCompanyId: string):
  * - Company-admin: any user in the same company
  * - Company-user: only their own document
  */
-export function assertActorMayAccessUserRecord(actor: any, targetUser: any | null): void {
+export function assertActorMayAccessUserRecord(
+  actor: any,
+  targetUser: any,
+): void {
   if (!targetUser) return;
   if (isSuperAdminActor(actor)) return;
 
   if (isCompanyUserActor(actor)) {
     const aid = actorIdString(actor);
-    const tid =
-      targetUser._id != null
-        ? String((targetUser as any)._id)
-        : null;
+    const tid = targetUser._id != null ? String(targetUser._id) : null;
     if (aid && tid && aid === tid) return;
     throw new ForbiddenException('You may only access your own user record');
   }
@@ -96,8 +101,8 @@ export function assertActorMayAccessUserRecord(actor: any, targetUser: any | nul
       targetUser.companyId == null
         ? null
         : typeof targetUser.companyId === 'object' &&
-            (targetUser.companyId as any)._id != null
-          ? String((targetUser.companyId as any)._id)
+            targetUser.companyId._id != null
+          ? String(targetUser.companyId._id)
           : String(targetUser.companyId);
     const mine = actorCompanyIdString(actor);
     if (!mine || !tid || mine !== tid) {

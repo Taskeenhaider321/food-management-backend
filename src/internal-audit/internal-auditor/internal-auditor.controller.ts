@@ -9,6 +9,8 @@ import {
   Param,
   UseInterceptors,
   UploadedFiles,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { InternalAuditorService } from './internal-auditor.service';
@@ -19,6 +21,7 @@ import {
   ResetAccountCredentialsDto,
 } from './dtos/account-credentials.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Internal Auditor')
 @Controller('internal-auditor')
@@ -64,6 +67,39 @@ export class InternalAuditorController {
   @ApiBearerAuth()
   async readAuditor(@Param('departmentId') departmentId: string) {
     return this.auditorService.readAuditor(departmentId);
+  }
+
+  /** Must be registered before `GET :auditorId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download internal auditors directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadAuditorsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.auditorService.downloadAuditorsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :auditorId`. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single internal auditor PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadAuditorPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.auditorService.downloadAuditorPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':auditorId')

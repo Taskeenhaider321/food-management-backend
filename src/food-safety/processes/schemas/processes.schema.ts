@@ -5,10 +5,7 @@ import {
   TimelineEntry,
   TimelineEntrySchema,
 } from '../../common/timeline.schema';
-import {
-  VersionEntry,
-  VersionEntrySchema,
-} from '../../common/version.schema';
+import { VersionEntry, VersionEntrySchema } from '../../common/version.schema';
 import { ProcessesHooks } from '../hooks/processes.hooks';
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
@@ -16,10 +13,18 @@ export class Processes extends Document {
   @Prop({ unique: true })
   DocumentId: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
   @Prop()
@@ -28,7 +33,9 @@ export class Processes extends Document {
   @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
   DocumentType: string;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ProcessDetail' }] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ProcessDetail' }],
+  })
   ProcessDetails: MongooseSchema.Types.ObjectId[];
 
   @Prop({ default: 0 })

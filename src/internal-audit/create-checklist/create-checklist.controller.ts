@@ -9,6 +9,8 @@ import {
   Param,
   UseInterceptors,
   UploadedFile,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateChecklistService } from './create-checklist.service';
@@ -18,8 +20,12 @@ import { ApproveChecklistDto } from './dtos/approve-checklist.dto';
 import { DisapproveChecklistDto } from './dtos/disapprove-checklist.dto';
 import { ReviewChecklistDto } from './dtos/review-checklist.dto';
 import { RejectChecklistDto } from './dtos/reject-checklist.dto';
-import { CreateResponseGroupDto, UpdateResponseGroupDto } from './dtos/response-group.dto';
+import {
+  CreateResponseGroupDto,
+  UpdateResponseGroupDto,
+} from './dtos/response-group.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Checklist')
 @Controller('checklist')
@@ -44,6 +50,39 @@ export class CreateChecklistController {
     return this.createChecklistService.getChecklists(departmentId);
   }
 
+  /** Must be registered before `GET :checklistId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download checklists directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadChecklistsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.createChecklistService.downloadChecklistsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :checklistId`. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single checklist PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadChecklistPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.createChecklistService.downloadChecklistPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
   @Get(':checklistId')
   @ApiOperation({ summary: 'Get checklist by ID' })
   @ApiBearerAuth()
@@ -52,7 +91,9 @@ export class CreateChecklistController {
   }
 
   @Put()
-  @ApiOperation({ summary: 'Update checklist (only when In Review, Rejected, or Disapproved)' })
+  @ApiOperation({
+    summary: 'Update checklist (only when In Review, Rejected, or Disapproved)',
+  })
   @ApiBearerAuth()
   async updateChecklist(@Body() updateDto: UpdateChecklistDto) {
     return this.createChecklistService.updateChecklist(updateDto);

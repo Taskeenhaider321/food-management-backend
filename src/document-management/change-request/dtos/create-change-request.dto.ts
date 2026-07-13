@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { CHANGE_REQUEST_TARGET_MODELS } from '../schemas/change-request.schema';
 
 export class CreateChangeRequestDto {
@@ -18,7 +24,9 @@ export class CreateChangeRequestDto {
 }
 
 export class UpdateChangeRequestDto {
-  @ApiPropertyOptional({ description: 'Mongo id of the controlled document / form' })
+  @ApiPropertyOptional({
+    description: 'Mongo id of the controlled document / form',
+  })
   @IsOptional()
   @IsMongoId()
   document?: string;

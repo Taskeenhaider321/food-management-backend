@@ -3,7 +3,11 @@ import { Document, Schema as MongooseSchema } from 'mongoose';
 
 @Schema()
 export class ChecklistAnswer extends Document {
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ChecklistQuestion', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'ChecklistQuestion',
+    required: true,
+  })
   question: MongooseSchema.Types.ObjectId;
 
   @Prop()
@@ -34,4 +38,5 @@ export class ChecklistAnswer extends Document {
   ConformObservationAnswer?: string;
 }
 
-export const ChecklistAnswerSchema = SchemaFactory.createForClass(ChecklistAnswer);
+export const ChecklistAnswerSchema =
+  SchemaFactory.createForClass(ChecklistAnswer);

@@ -5,9 +5,18 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { DerivedModule, DerivedModuleDocument } from './schemas/company-module.schema';
-import { MasterModule, MasterModuleDocument } from './schemas/master-module.schema';
-import { MasterPermission, MasterPermissionDocument } from './schemas/master-permission.schema';
+import {
+  DerivedModule,
+  DerivedModuleDocument,
+} from './schemas/company-module.schema';
+import {
+  MasterModule,
+  MasterModuleDocument,
+} from './schemas/master-module.schema';
+import {
+  MasterPermission,
+  MasterPermissionDocument,
+} from './schemas/master-permission.schema';
 import { CreateDerivedModuleDto } from './dtos/create-derived-module.dto';
 import { UpdateDerivedModuleDto } from './dtos/update-derived-module.dto';
 import { resourceDefaultDisplayName } from './utils/display-name.util';
@@ -15,15 +24,20 @@ import { resourceDefaultDisplayName } from './utils/display-name.util';
 @Injectable()
 export class DerivedModuleService {
   constructor(
-    @InjectModel(MasterModule.name) private readonly masterModuleModel: Model<MasterModuleDocument>,
-    @InjectModel(MasterPermission.name) private readonly masterPermissionModel: Model<MasterPermissionDocument>,
-    @InjectModel(DerivedModule.name) private readonly derivedModuleModel: Model<DerivedModuleDocument>,
+    @InjectModel(MasterModule.name)
+    private readonly masterModuleModel: Model<MasterModuleDocument>,
+    @InjectModel(MasterPermission.name)
+    private readonly masterPermissionModel: Model<MasterPermissionDocument>,
+    @InjectModel(DerivedModule.name)
+    private readonly derivedModuleModel: Model<DerivedModuleDocument>,
   ) {}
 
   async getMasterModuleDetails(masterModuleId: string) {
     this.ensureObjectId(masterModuleId, 'masterModuleId');
 
-    const masterModule = await this.masterModuleModel.findById(masterModuleId).lean();
+    const masterModule = await this.masterModuleModel
+      .findById(masterModuleId)
+      .lean();
     if (!masterModule) throw new NotFoundException('Master module not found');
 
     const permissions = await this.masterPermissionModel
@@ -31,12 +45,15 @@ export class DerivedModuleService {
       .sort({ resource: 1, action: 1 })
       .lean();
 
-    const resourceKeys = [...new Set(permissions.map((p) => p.resource))].sort();
+    const resourceKeys = [
+      ...new Set(permissions.map((p) => p.resource)),
+    ].sort();
     const resources = resourceKeys.map((rk) => {
       const first = permissions.find((p) => p.resource === rk);
       return {
         key: rk,
-        defaultLabel: first?.resourceGroupLabel || resourceDefaultDisplayName(rk),
+        defaultLabel:
+          first?.resourceGroupLabel || resourceDefaultDisplayName(rk),
         permissions: permissions.filter((p) => p.resource === rk),
       };
     });
@@ -55,7 +72,10 @@ export class DerivedModuleService {
       throw new NotFoundException('Master module not found or inactive');
     }
 
-    const permOids = this.uniqueObjectIds(dto.selectedPermissionIds, 'selectedPermissionIds');
+    const permOids = this.uniqueObjectIds(
+      dto.selectedPermissionIds,
+      'selectedPermissionIds',
+    );
     const validPerms = await this.masterPermissionModel.find({
       _id: { $in: permOids },
       moduleId: masterModule._id,
@@ -103,7 +123,10 @@ export class DerivedModuleService {
     }
 
     if (dto.selectedPermissionIds) {
-      const permOids = this.uniqueObjectIds(dto.selectedPermissionIds, 'selectedPermissionIds');
+      const permOids = this.uniqueObjectIds(
+        dto.selectedPermissionIds,
+        'selectedPermissionIds',
+      );
       const validPerms = await this.masterPermissionModel.find({
         _id: { $in: permOids },
         moduleId: existing.masterModuleId,
@@ -138,7 +161,9 @@ export class DerivedModuleService {
     return modules.map((dm) => {
       const master = dm.masterModuleId as any;
       const perms = (dm.selectedPermissionIds as any[]) || [];
-      const resourceKeys = [...new Set(perms.map((p: any) => p.resource))].sort();
+      const resourceKeys = [
+        ...new Set(perms.map((p: any) => p.resource)),
+      ].sort();
 
       return {
         ...dm,
@@ -148,7 +173,10 @@ export class DerivedModuleService {
           const first = perms.find((p: any) => p.resource === rk);
           return {
             key: rk,
-            displayName: customLabel || first?.resourceGroupLabel || resourceDefaultDisplayName(rk),
+            displayName:
+              customLabel ||
+              first?.resourceGroupLabel ||
+              resourceDefaultDisplayName(rk),
             permissions: perms.filter((p: any) => p.resource === rk),
           };
         }),
@@ -165,14 +193,17 @@ export class DerivedModuleService {
 
   async remove(derivedModuleId: string) {
     this.ensureObjectId(derivedModuleId, 'derivedModuleId');
-    const doc = await this.derivedModuleModel.findByIdAndDelete(derivedModuleId);
+    const doc =
+      await this.derivedModuleModel.findByIdAndDelete(derivedModuleId);
     if (!doc) throw new NotFoundException('Derived module not found');
     return { status: true, message: 'Derived module deleted' };
   }
 
   // ─── Runtime permission resolution (used by guards) ───────────────
 
-  async resolvePermissionsForDerivedModules(derivedModuleIds: any[]): Promise<string[]> {
+  async resolvePermissionsForDerivedModules(
+    derivedModuleIds: any[],
+  ): Promise<string[]> {
     const dms = await this.derivedModuleModel
       .find({ _id: { $in: derivedModuleIds }, isActive: true })
       .lean();

@@ -23,9 +23,7 @@ export function normalizeStatus(status?: string): string {
 export function canEditRecord(record: HaccpWorkflowRecord): boolean {
   const status = normalizeStatus(record.Status);
   return (
-    status === 'In Review' ||
-    status === 'Rejected' ||
-    status === 'Disapproved'
+    status === 'In Review' || status === 'Rejected' || status === 'Disapproved'
   );
 }
 

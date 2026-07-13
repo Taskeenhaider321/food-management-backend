@@ -22,8 +22,30 @@ import {
 } from './schemas/internal-auditor.schema';
 import { ProfileService } from '../../admin-management/profile/profile.service';
 import { UserService } from '../../admin-management/users/user.service';
-import { User, UserDocument } from '../../admin-management/users/schemas/user.schema';
-import { Profile, ProfileDocument } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  User,
+  UserDocument,
+} from '../../admin-management/users/schemas/user.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from '../../admin-management/profile/schemas/profile.schema';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
+
+const AUDITOR_POPULATE = [
+  {
+    path: 'profileId',
+    populate: { path: 'userId', populate: ['companyId', 'departmentId'] },
+  },
+  { path: 'departmentId' },
+];
 
 @Injectable()
 export class InternalAuditorService {
@@ -32,13 +54,17 @@ export class InternalAuditorService {
     private internalAuditorModel: Model<InternalAuditorDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
+    @InjectModel('Company') private readonly companyModel: Model<any>,
     private cloudinaryService: CloudinaryService,
     private emailService: EmailService,
     private readonly profileService: ProfileService,
     private readonly userService: UserService,
   ) {}
 
-  async addAuditor(createDto: CreateAuditorDto, files: Record<string, Express.Multer.File[] | undefined>) {
+  async addAuditor(
+    createDto: CreateAuditorDto,
+    files: Record<string, Express.Multer.File[] | undefined>,
+  ) {
     const { actorUserId, user, profile, auditor } = createDto;
 
     if (!user.companyId) {
@@ -59,7 +85,9 @@ export class InternalAuditorService {
       throw new BadRequestException('Username already exists!');
     }
 
-    const emailTaken = await this.userModel.findOne({ email: user.email.toLowerCase() });
+    const emailTaken = await this.userModel.findOne({
+      email: user.email.toLowerCase(),
+    });
     if (emailTaken) {
       throw new ConflictException('Email already in use');
     }
@@ -69,13 +97,19 @@ export class InternalAuditorService {
     const approvalDocUrls: string[] = [];
 
     if (files['AuditorImage']?.[0]) {
-      auditorImageUrl = await this.cloudinaryService.uploadFile(files['AuditorImage'][0]);
+      auditorImageUrl = await this.cloudinaryService.uploadFile(
+        files['AuditorImage'][0],
+      );
     }
 
     if (files['SupportingDocuments']) {
       for (const file of files['SupportingDocuments']) {
         supportingDocUrls.push(
-          await this.uploadWithOptionalWatermark(file, requestUser, 'Auditor Supporting Document'),
+          await this.uploadWithOptionalWatermark(
+            file,
+            requestUser,
+            'Auditor Supporting Document',
+          ),
         );
       }
     }
@@ -83,7 +117,11 @@ export class InternalAuditorService {
     if (files['ApprovalDocuments']) {
       for (const file of files['ApprovalDocuments']) {
         approvalDocUrls.push(
-          await this.uploadWithOptionalWatermark(file, requestUser, 'Approved Auditor Document'),
+          await this.uploadWithOptionalWatermark(
+            file,
+            requestUser,
+            'Approved Auditor Document',
+          ),
         );
       }
     }
@@ -93,7 +131,10 @@ export class InternalAuditorService {
       avatar: auditorImageUrl ?? profile.avatar,
       docs: [
         ...(profile.docs ?? []),
-        ...supportingDocUrls.map((url) => ({ label: 'Supporting document', url })),
+        ...supportingDocUrls.map((url) => ({
+          label: 'Supporting document',
+          url,
+        })),
       ],
     };
 
@@ -111,11 +152,17 @@ export class InternalAuditorService {
         session,
       );
 
-      const p = await this.profileService.createForUser(u._id, profilePayload, session);
+      const p = await this.profileService.createForUser(
+        u._id,
+        profilePayload,
+        session,
+      );
 
       const ia = new this.internalAuditorModel({
         profileId: p._id,
-        departmentId: user.departmentId ? new Types.ObjectId(user.departmentId) : undefined,
+        departmentId: user.departmentId
+          ? new Types.ObjectId(user.departmentId)
+          : undefined,
         roleInTeam: auditor.roleInTeam,
         experience: auditor.experience,
         skills: auditor.skills ?? [],
@@ -153,7 +200,11 @@ Best regards,
 Food Safety Quality Team`;
 
       try {
-        await this.emailService.sendEmail(udoc.email, 'Auditor Registration Confirmation', emailBody);
+        await this.emailService.sendEmail(
+          udoc.email,
+          'Auditor Registration Confirmation',
+          emailBody,
+        );
       } catch (error) {
         console.error('Email sending failed:', error);
       }
@@ -162,29 +213,42 @@ Food Safety Quality Team`;
     return { status: true, message: 'The Auditor is added!', data: populated };
   }
 
-  async updateAuditor(updateDto: UpdateAuditorDto, files?: Record<string, Express.Multer.File[] | undefined>) {
+  async updateAuditor(
+    updateDto: UpdateAuditorDto,
+    files?: Record<string, Express.Multer.File[] | undefined>,
+  ) {
     const auditor = await this.internalAuditorModel.findById(updateDto._id);
     if (!auditor) throw new NotFoundException('Auditor not found');
 
     const updateData: any = {};
     if (updateDto.roleInTeam) updateData.roleInTeam = updateDto.roleInTeam;
-    if (updateDto.experience !== undefined) updateData.experience = updateDto.experience;
+    if (updateDto.experience !== undefined)
+      updateData.experience = updateDto.experience;
     if (updateDto.skills) updateData.skills = updateDto.skills;
-    if (updateDto.education !== undefined) updateData.education = updateDto.education;
-    if (updateDto.isApprovedAuditor !== undefined) updateData.isApprovedAuditor = updateDto.isApprovedAuditor;
+    if (updateDto.education !== undefined)
+      updateData.education = updateDto.education;
+    if (updateDto.isApprovedAuditor !== undefined)
+      updateData.isApprovedAuditor = updateDto.isApprovedAuditor;
 
     // ── Personal information lives on the linked Profile / User documents ──
     const profileUpdate: any = {};
-    if (updateDto.designation !== undefined) profileUpdate.designation = updateDto.designation;
+    if (updateDto.designation !== undefined)
+      profileUpdate.designation = updateDto.designation;
     if (updateDto.age !== undefined) profileUpdate.age = updateDto.age;
-    if (updateDto.phoneNo !== undefined) profileUpdate.phoneNo = updateDto.phoneNo;
+    if (updateDto.phoneNo !== undefined)
+      profileUpdate.phoneNo = updateDto.phoneNo;
 
     if (files?.['AuditorImage']?.[0]) {
-      profileUpdate.avatar = await this.cloudinaryService.uploadFile(files['AuditorImage'][0]);
+      profileUpdate.avatar = await this.cloudinaryService.uploadFile(
+        files['AuditorImage'][0],
+      );
     }
 
     if (Object.keys(profileUpdate).length > 0) {
-      await this.profileModel.findByIdAndUpdate(auditor.profileId, profileUpdate);
+      await this.profileModel.findByIdAndUpdate(
+        auditor.profileId,
+        profileUpdate,
+      );
     }
 
     if (updateDto.name || updateDto.email) {
@@ -210,7 +274,10 @@ Food Safety Quality Team`;
         const url = await this.cloudinaryService.uploadFile(file);
         urls.push(url);
       }
-      updateData.supportingDocuments = [...(auditor.supportingDocuments || []), ...urls];
+      updateData.supportingDocuments = [
+        ...(auditor.supportingDocuments || []),
+        ...urls,
+      ];
     }
 
     if (files?.['ApprovalDocuments']) {
@@ -219,7 +286,10 @@ Food Safety Quality Team`;
         const url = await this.cloudinaryService.uploadFile(file);
         urls.push(url);
       }
-      updateData.approvalDocuments = [...(auditor.approvalDocuments || []), ...urls];
+      updateData.approvalDocuments = [
+        ...(auditor.approvalDocuments || []),
+        ...urls,
+      ];
     }
 
     const updated = await this.internalAuditorModel
@@ -230,7 +300,11 @@ Food Safety Quality Team`;
       })
       .populate('departmentId');
 
-    return { status: true, message: 'Auditor updated successfully!', data: updated };
+    return {
+      status: true,
+      message: 'Auditor updated successfully!',
+      data: updated,
+    };
   }
 
   async getAuditorById(auditorId: string) {
@@ -243,7 +317,11 @@ Food Safety Quality Team`;
       .populate('departmentId')
       .exec();
     if (!auditor) throw new NotFoundException('Auditor not found');
-    return { status: true, message: 'Auditor profile retrieved!', data: auditor };
+    return {
+      status: true,
+      message: 'Auditor profile retrieved!',
+      data: auditor,
+    };
   }
 
   async toggleStatus(auditorId: string) {
@@ -261,13 +339,17 @@ Food Safety Quality Team`;
   }
 
   async addAccountCredentials(dto: AddAccountCredentialsDto) {
-    const auditor = await this.internalAuditorModel.findById(dto.auditorId).populate('profileId');
+    const auditor = await this.internalAuditorModel
+      .findById(dto.auditorId)
+      .populate('profileId');
     if (!auditor) throw new NotFoundException('Auditor not found');
 
     const profile = auditor.profileId as any;
     if (!profile) throw new NotFoundException('Auditor profile not found');
 
-    const existingUser = await this.userModel.findOne({ userName: dto.userName });
+    const existingUser = await this.userModel.findOne({
+      userName: dto.userName,
+    });
     if (existingUser) throw new ConflictException('Username already taken');
 
     await this.userModel.findByIdAndUpdate(profile.userId, {
@@ -279,7 +361,9 @@ Food Safety Quality Team`;
   }
 
   async resetAccountCredentials(dto: ResetAccountCredentialsDto) {
-    const auditor = await this.internalAuditorModel.findById(dto.auditorId).populate('profileId');
+    const auditor = await this.internalAuditorModel
+      .findById(dto.auditorId)
+      .populate('profileId');
     if (!auditor) throw new NotFoundException('Auditor not found');
 
     const profile = auditor.profileId as any;
@@ -291,7 +375,11 @@ Food Safety Quality Team`;
     });
     if (existingUser) throw new ConflictException('Username already taken');
 
-    await this.userService.resetCredentials(profile.userId, dto.newUserName, dto.newPassword);
+    await this.userService.resetCredentials(
+      profile.userId,
+      dto.newUserName,
+      dto.newPassword,
+    );
 
     return { status: true, message: 'Account credentials reset successfully!' };
   }
@@ -306,7 +394,11 @@ Food Safety Quality Team`;
       .populate('departmentId')
       .exec();
 
-    return { status: true, message: 'The Following are the Auditors!', data: auditors };
+    return {
+      status: true,
+      message: 'The Following are the Auditors!',
+      data: auditors,
+    };
   }
 
   async deleteAuditor(id: string) {
@@ -314,21 +406,42 @@ Food Safety Quality Team`;
     if (!auditor) throw new NotFoundException('This Auditor is Not found!');
 
     await this.profileService.withTransaction(async (session) => {
-      await this.internalAuditorModel.deleteOne({ _id: auditor._id }).session(session);
-      const profile = await this.profileModel.findById(auditor.profileId).session(session);
+      await this.internalAuditorModel
+        .deleteOne({ _id: auditor._id })
+        .session(session);
+      const profile = await this.profileModel
+        .findById(auditor.profileId)
+        .session(session);
       if (profile) {
-        await this.userModel.deleteOne({ _id: profile.userId }).session(session);
-        await this.profileModel.deleteOne({ _id: profile._id }).session(session);
+        await this.userModel
+          .deleteOne({ _id: profile.userId })
+          .session(session);
+        await this.profileModel
+          .deleteOne({ _id: profile._id })
+          .session(session);
       }
     });
 
-    return { status: true, message: 'The following Auditor has been Deleted!', data: auditor };
+    return {
+      status: true,
+      message: 'The following Auditor has been Deleted!',
+      data: auditor,
+    };
   }
 
-  async deleteAllAuditors(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllAuditors(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.internalAuditorModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No Auditors Found to Delete!');
-    return { status: true, message: 'All Auditors have been Deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No Auditors Found to Delete!');
+    return {
+      status: true,
+      message: 'All Auditors have been Deleted!',
+      data: result,
+    };
   }
 
   /** Watermarking only works for PDFs with a configured company logo; fall back to a plain upload otherwise. */
@@ -342,52 +455,80 @@ Food Safety Quality Team`;
       file.originalname?.toLowerCase().endsWith('.pdf');
     if (isPdf) {
       try {
-        const modifiedPdf = await this.processPdfWithWatermark(file.buffer, actor, watermarkText);
+        const modifiedPdf = await this.processPdfWithWatermark(
+          file.buffer,
+          actor,
+          watermarkText,
+        );
         return await this.cloudinaryService.uploadBuffer(modifiedPdf);
       } catch (error) {
-        console.error('PDF watermarking failed, uploading original file:', error);
+        console.error(
+          'PDF watermarking failed, uploading original file:',
+          error,
+        );
       }
     }
     return this.cloudinaryService.uploadFile(file);
   }
 
-  private async processPdfWithWatermark(buffer: Buffer, actor: any, watermarkText: string): Promise<Buffer> {
-    const company = actor.companyId as any;
-    const response = await axios.get(company.CompanyLogo, { responseType: 'arraybuffer' });
+  private async processPdfWithWatermark(
+    buffer: Buffer,
+    actor: any,
+    watermarkText: string,
+  ): Promise<Buffer> {
+    const company = actor.companyId;
+    const response = await axios.get(company.CompanyLogo, {
+      responseType: 'arraybuffer',
+    });
     const pdfDoc = await PDFDocument.load(buffer);
     const logoImage = Buffer.from(response.data);
-    const isJpg = company.CompanyLogo.includes('.jpeg') || company.CompanyLogo.includes('.jpg');
-    const pdfLogoImage = isJpg ? await pdfDoc.embedJpg(logoImage) : await pdfDoc.embedPng(logoImage);
+    const isJpg =
+      company.CompanyLogo.includes('.jpeg') ||
+      company.CompanyLogo.includes('.jpg');
+    const pdfLogoImage = isJpg
+      ? await pdfDoc.embedJpg(logoImage)
+      : await pdfDoc.embedPng(logoImage);
 
     const firstPage = pdfDoc.insertPage(0);
     await this.addFirstPage(firstPage, pdfLogoImage, company, actor);
 
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    pdfDoc.getPages().slice(1).forEach((page) => {
-      const { width, height } = page.getSize();
-      const extraSpace = 24;
-      page.setSize(width, height + extraSpace);
-      page.translateContent(0, -extraSpace);
+    pdfDoc
+      .getPages()
+      .slice(1)
+      .forEach((page) => {
+        const { width, height } = page.getSize();
+        const extraSpace = 24;
+        page.setSize(width, height + extraSpace);
+        page.translateContent(0, -extraSpace);
 
-      page.drawText(watermarkText, {
-        x: width / 2 - helveticaFont.widthOfTextAtSize(watermarkText, 15) / 2,
-        y: height + extraSpace - 10,
-        size: 15,
-        color: rgb(0, 0, 0),
-      });
+        page.drawText(watermarkText, {
+          x: width / 2 - helveticaFont.widthOfTextAtSize(watermarkText, 15) / 2,
+          y: height + extraSpace - 10,
+          size: 15,
+          color: rgb(0, 0, 0),
+        });
 
-      page.drawText(company.CompanyName, {
-        x: width - helveticaFont.widthOfTextAtSize(company.CompanyName, 10) - 20,
-        y: height + extraSpace,
-        size: 10,
-        color: rgb(0, 0, 0),
+        page.drawText(company.CompanyName, {
+          x:
+            width -
+            helveticaFont.widthOfTextAtSize(company.CompanyName, 10) -
+            20,
+          y: height + extraSpace,
+          size: 10,
+          color: rgb(0, 0, 0),
+        });
       });
-    });
 
     return Buffer.from(await pdfDoc.save());
   }
 
-  private async addFirstPage(page: any, logoImage: any, company: any, user: any) {
+  private async addFirstPage(
+    page: any,
+    logoImage: any,
+    company: any,
+    user: any,
+  ) {
     const { width, height } = page.getSize();
     const pdfDoc = await PDFDocument.create();
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -402,7 +543,9 @@ Food Safety Quality Team`;
     });
 
     page.drawText(company.CompanyName, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(company.CompanyName, 25) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(company.CompanyName, 25) / 2,
       y: height - 420,
       color: rgb(0, 0, 0),
       size: 25,
@@ -416,17 +559,126 @@ Food Safety Quality Team`;
     });
 
     page.drawText(`Uploaded By : ${user.name}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Uploaded By : ${user.name}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(`Uploaded By : ${user.name}`, 20) / 2,
       y: height - 530,
       color: rgb(0, 0, 0),
       size: 20,
     });
 
     page.drawText(`Uploaded Date : ${new Date().toLocaleDateString('en-GB')}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Uploaded Date : ${new Date().toLocaleDateString('en-GB')}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(
+          `Uploaded Date : ${new Date().toLocaleDateString('en-GB')}`,
+          20,
+        ) /
+          2,
       y: height - 560,
       color: rgb(0, 0, 0),
       size: 20,
     });
+  }
+
+  private mapAuditorPdfRow(auditor: any) {
+    const profile = auditor?.profileId;
+    const user = profile?.userId;
+    const department =
+      auditor?.departmentId?.departmentName ||
+      auditor?.departmentId?.shortName ||
+      user?.departmentId?.departmentName ||
+      '---';
+    return {
+      name: asText(user?.name),
+      email: asText(user?.email),
+      designation: asText(profile?.designation),
+      roleInTeam: asText(auditor?.roleInTeam),
+      department: asText(department),
+      isApprovedAuditor: auditor?.isApprovedAuditor ? 'Yes' : 'No',
+      isEnabled: auditor?.isEnabled === false ? 'No' : 'Yes',
+      skills: asText(auditor?.skills),
+      education: asText(auditor?.education),
+      experience: asText(auditor?.experience),
+      phoneNo: asText(profile?.phoneNo),
+      created: formatDate(auditor?.created_at),
+    };
+  }
+
+  async downloadAuditorsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const data = await this.internalAuditorModel
+      .find()
+      .populate(AUDITOR_POPULATE)
+      .sort({ created_at: -1 })
+      .exec();
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Internal Auditors Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'name', label: 'NAME', width: 1.6 },
+        { key: 'email', label: 'EMAIL', width: 2 },
+        { key: 'designation', label: 'DESIGNATION', width: 1.4 },
+        { key: 'roleInTeam', label: 'ROLE', width: 1.3 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.4 },
+        { key: 'isApprovedAuditor', label: 'APPROVED', width: 1 },
+        { key: 'isEnabled', label: 'ENABLED', width: 1 },
+      ],
+      rows: (data || []).map((r) => this.mapAuditorPdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('internal-auditors', 'directory'),
+    };
+  }
+
+  async downloadAuditorPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const auditor = await this.internalAuditorModel
+      .findById(id)
+      .populate(AUDITOR_POPULATE)
+      .exec();
+    if (!auditor) throw new NotFoundException('Auditor not found');
+
+    const row = this.mapAuditorPdfRow(auditor);
+    const profile = auditor?.profileId as any;
+    const avatarUrl = profile?.avatar || profile?.Avatar || '';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.name !== '---' ? row.name : 'Internal Auditor',
+      subtitle: row.roleInTeam !== '---' ? row.roleInTeam : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      portraitUrl: typeof avatarUrl === 'string' ? avatarUrl.trim() : '',
+      coverRows: [
+        ['Name', row.name],
+        ['Email', row.email],
+        ['Designation', row.designation],
+        ['Role in Team', row.roleInTeam],
+        ['Department', row.department],
+        ['Phone', row.phoneNo],
+        ['Approved Auditor', row.isApprovedAuditor],
+        ['Enabled', row.isEnabled],
+        ['Created', row.created],
+      ],
+      sections: [
+        {
+          heading: 'Skills / Education / Experience',
+          rows: [
+            ['Skills', row.skills],
+            ['Education', row.education],
+            ['Experience', row.experience],
+          ],
+        },
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.name || 'internal-auditor', 'auditor'),
+    };
   }
 }

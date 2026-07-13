@@ -12,12 +12,15 @@ export class MRMService {
     @InjectModel(MRM.name) private mrmModel: Model<MRM>,
     @InjectModel('Notification') private notificationModel: Model<any>,
     @InjectModel('Agenda') private agendaModel: Model<any>,
-    @InjectModel(MeetingParticipant.name) private participantsModel: Model<MeetingParticipant>,
+    @InjectModel(MeetingParticipant.name)
+    private participantsModel: Model<MeetingParticipant>,
     private emailService: EmailService,
   ) {}
 
   async createMRM(createDto: CreateMRMDto) {
-    const notification = await this.notificationModel.findById(createDto.Notification);
+    const notification = await this.notificationModel.findById(
+      createDto.Notification,
+    );
     if (!notification) throw new NotFoundException('Notification not found');
 
     const mrm = new this.mrmModel({
@@ -32,7 +35,10 @@ export class MRMService {
       const agenda = await this.agendaModel.findById(agendaDetail.Agenda);
       const participants = await this.participantsModel
         .find({ _id: { $in: agendaDetail.Participants } })
-        .populate({ path: 'profileId', populate: { path: 'userId', select: 'email' } })
+        .populate({
+          path: 'profileId',
+          populate: { path: 'userId', select: 'email' },
+        })
         .exec();
       const participantEmails = participants
         .map((p) => (p.profileId as any)?.userId?.email)
@@ -48,7 +54,11 @@ Responsibilities: ${agendaDetail.Responsibilities || 'No responsibilities'}`;
 
         for (const email of participantEmails) {
           try {
-            await this.emailService.sendEmail(email, 'MRM Discussion Update', emailBody);
+            await this.emailService.sendEmail(
+              email,
+              'MRM Discussion Update',
+              emailBody,
+            );
           } catch (error) {
             console.error(`Failed to send email to ${email}:`, error);
           }
@@ -57,7 +67,11 @@ Responsibilities: ${agendaDetail.Responsibilities || 'No responsibilities'}`;
     }
 
     await mrm.save();
-    return { status: true, message: 'MRM document created successfully', data: mrm };
+    return {
+      status: true,
+      message: 'MRM document created successfully',
+      data: mrm,
+    };
   }
 
   async getAllMRMs(departmentId: string) {
@@ -83,19 +97,34 @@ Responsibilities: ${agendaDetail.Responsibilities || 'No responsibilities'}`;
         path: 'AgendaDetails.Participants',
         populate: { path: 'profileId', populate: { path: 'userId' } },
       });
-    if (!mrm) throw new NotFoundException(`MRM document with ID: ${mrmId} not found`);
+    if (!mrm)
+      throw new NotFoundException(`MRM document with ID: ${mrmId} not found`);
     return { status: true, data: mrm };
   }
 
   async deleteMRM(id: string) {
     const deleted = await this.mrmModel.findByIdAndDelete(id);
-    if (!deleted) throw new NotFoundException(`MRM document with ID: ${id} not found`);
-    return { status: true, message: 'MRM document deleted successfully', data: deleted };
+    if (!deleted)
+      throw new NotFoundException(`MRM document with ID: ${id} not found`);
+    return {
+      status: true,
+      message: 'MRM document deleted successfully',
+      data: deleted,
+    };
   }
 
-  async deleteAllMRMs(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllMRMs(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.mrmModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No MRM documents found to delete!');
-    return { status: true, message: 'All MRM documents have been deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No MRM documents found to delete!');
+    return {
+      status: true,
+      message: 'All MRM documents have been deleted!',
+      data: result,
+    };
   }
 }

@@ -8,6 +8,8 @@ import {
   Delete,
   HttpStatus,
   Req,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -46,6 +48,38 @@ export class CompanyController {
   @ApiResponse({ status: HttpStatus.OK, description: 'List of companies' })
   async findAll(@Req() req: any) {
     return this.companyService.findAll(req.user);
+  }
+
+  @Get('download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download companies directory PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadCompaniesPdf(@Req() req: any): Promise<StreamableFile> {
+    const { buffer, fileName } = await this.companyService.downloadCompaniesPdf(
+      req.user,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  @Get(':companyId/download-pdf')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Download a single company PDF' })
+  @Header('Content-Type', 'application/pdf')
+  async downloadCompanyPdf(
+    @Param('companyId') id: string,
+    @Req() req: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } = await this.companyService.downloadCompanyPdf(
+      id,
+      req.user,
+    );
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':companyId')

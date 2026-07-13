@@ -1,4 +1,10 @@
-import { IsString, IsNotEmpty, IsEnum, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { HazardDto } from './hazard.dto';
 

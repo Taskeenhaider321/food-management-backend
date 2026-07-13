@@ -9,7 +9,9 @@ export class ConductAudits extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Checklist' })
   Checklist: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ChecklistAnswer' }] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ChecklistAnswer' }],
+  })
   Answers: MongooseSchema.Types.ObjectId[];
 
   @Prop()

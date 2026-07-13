@@ -21,7 +21,11 @@ export class MonthlyAuditingPlan extends Document {
   @Prop({ required: true })
   Year: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ProcessOwner' })
@@ -43,4 +47,5 @@ export class MonthlyAuditingPlan extends Document {
   CreationDate: Date;
 }
 
-export const MonthlyAuditingPlanSchema = SchemaFactory.createForClass(MonthlyAuditingPlan);
+export const MonthlyAuditingPlanSchema =
+  SchemaFactory.createForClass(MonthlyAuditingPlan);

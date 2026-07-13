@@ -41,4 +41,5 @@ export class MasterPermission {
   isActive: boolean;
 }
 
-export const MasterPermissionSchema = SchemaFactory.createForClass(MasterPermission);
+export const MasterPermissionSchema =
+  SchemaFactory.createForClass(MasterPermission);

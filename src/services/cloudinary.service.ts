@@ -22,7 +22,7 @@ export class CloudinaryService {
           } else {
             resolve(result?.secure_url || '');
           }
-        }
+        },
       );
       uploadStream.end(buffer);
     });

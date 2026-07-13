@@ -1,4 +1,10 @@
-import { IsString, IsMongoId, IsArray, ValidateNested, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsMongoId,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { TeamMemberDto } from './team-member.dto';
 

@@ -37,14 +37,16 @@ export class PermissionGuard implements CanActivate {
     );
 
     const request = context.switchToHttp().getRequest();
-    const user = request.user as any;
+    const user = request.user;
 
     if (user?.roleType === 'super-admin') {
       return true;
     }
 
     if (!requiredPermissions || requiredPermissions.length === 0) {
-      throw new ForbiddenException('Endpoint requires explicit permission metadata');
+      throw new ForbiddenException(
+        'Endpoint requires explicit permission metadata',
+      );
     }
 
     if (allowsTrainerSelfService(user, undefined, requiredPermissions)) {

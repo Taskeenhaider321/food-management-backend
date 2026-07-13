@@ -19,7 +19,8 @@ export class StatusTimelineEntry {
   reason?: string;
 }
 
-export const StatusTimelineEntrySchema = SchemaFactory.createForClass(StatusTimelineEntry);
+export const StatusTimelineEntrySchema =
+  SchemaFactory.createForClass(StatusTimelineEntry);
 
 @Schema({ _id: false })
 export class VersionHistoryEntry {
@@ -39,7 +40,8 @@ export class VersionHistoryEntry {
   dateTime: Date;
 }
 
-export const VersionHistoryEntrySchema = SchemaFactory.createForClass(VersionHistoryEntry);
+export const VersionHistoryEntrySchema =
+  SchemaFactory.createForClass(VersionHistoryEntry);
 
 @Schema({ _id: false })
 export class ChecklistSettings {
@@ -71,7 +73,8 @@ export class ChecklistSettings {
   auditFrequency: string;
 }
 
-export const ChecklistSettingsSchema = SchemaFactory.createForClass(ChecklistSettings);
+export const ChecklistSettingsSchema =
+  SchemaFactory.createForClass(ChecklistSettings);
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class Checklist {
@@ -90,10 +93,16 @@ export class Checklist {
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Department' }] })
   Departments: MongooseSchema.Types.ObjectId[];
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ChecklistQuestion' }] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ChecklistQuestion' }],
+  })
   ChecklistQuestions: MongooseSchema.Types.ObjectId[];
 
   @Prop({ default: 0 })

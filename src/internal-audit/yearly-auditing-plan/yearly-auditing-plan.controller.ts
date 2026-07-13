@@ -6,11 +6,14 @@ import {
   Body,
   Param,
   Put,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { YearlyAuditingPlanService } from './yearly-auditing-plan.service';
 import { CreateYearlyPlanDto } from './dtos/create-yearly-plan.dto';
 import { UpdateYearlyPlanDto } from './dtos/update-yearly-plan.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Yearly Audit Plan')
 @Controller('yearly-audit-plan')
@@ -34,6 +37,39 @@ export class YearlyAuditingPlanController {
   @ApiBearerAuth()
   async readYearlyAuditPlan(@Param('departmentId') departmentId: string) {
     return this.yearlyPlanService.readYearlyAuditPlan(departmentId);
+  }
+
+  /** Must be registered before `GET :planId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download audit schedules directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadYearlyPlansPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.yearlyPlanService.downloadYearlyPlansPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :planId`. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single audit schedule PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadYearlyPlanPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.yearlyPlanService.downloadYearlyPlanPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':planId')

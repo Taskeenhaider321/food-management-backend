@@ -13,7 +13,10 @@ import {
 import { ProfilePayloadDto } from '../../../admin-management/profile/dtos/profile-fields.dto';
 
 export class TrainerRolePayloadDto {
-  @ApiPropertyOptional({ type: [String], description: 'Training record references (optional)' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Training record references (optional)',
+  })
   @IsOptional()
   @IsArray()
   @IsMongoId({ each: true })

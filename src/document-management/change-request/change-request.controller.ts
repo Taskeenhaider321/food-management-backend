@@ -2,10 +2,12 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   Patch,
   Post,
   Put,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -22,12 +24,11 @@ export class ChangeRequestController {
   constructor(private readonly changeRequestService: ChangeRequestService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a change request for a controlled document' })
+  @ApiOperation({
+    summary: 'Create a change request for a controlled document',
+  })
   @ApiBearerAuth()
-  async create(
-    @Body() dto: CreateChangeRequestDto,
-    @CurrentUser() actor: any,
-  ) {
+  async create(@Body() dto: CreateChangeRequestDto, @CurrentUser() actor: any) {
     return this.changeRequestService.create(dto, actor);
   }
 
@@ -38,6 +39,39 @@ export class ChangeRequestController {
     return this.changeRequestService.findAll(actor);
   }
 
+  /** Must be registered before `GET :id`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download change requests directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadChangeRequestsPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.changeRequestService.downloadChangeRequestsPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :id`. */
+  @Get(':id/download-pdf')
+  @ApiOperation({ summary: 'Download a single change request PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadChangeRequestPdf(
+    @Param('id') id: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.changeRequestService.downloadChangeRequestPdf(id, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a change request by id (with timeline)' })
   @ApiBearerAuth()
@@ -46,7 +80,9 @@ export class ChangeRequestController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'Update / resubmit a pending or disapproved request' })
+  @ApiOperation({
+    summary: 'Update / resubmit a pending or disapproved request',
+  })
   @ApiBearerAuth()
   async update(
     @Param('id') id: string,
@@ -64,7 +100,9 @@ export class ChangeRequestController {
   }
 
   @Patch(':id/disapprove')
-  @ApiOperation({ summary: 'Disapprove a pending change request (reason required)' })
+  @ApiOperation({
+    summary: 'Disapprove a pending change request (reason required)',
+  })
   @ApiBearerAuth()
   async disapprove(
     @Param('id') id: string,

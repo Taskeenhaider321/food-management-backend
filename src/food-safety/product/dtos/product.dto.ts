@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional, IsMongoId, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsOptional,
+  IsMongoId,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 class ProductDetailsDto {

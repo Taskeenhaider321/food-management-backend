@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FormRecords } from './schemas/form-records.schema';
@@ -31,18 +35,32 @@ export class FormRecordsService {
     });
 
     await formRecords.save();
-    return { status: true, message: 'User responses submitted successfully', Data: formRecords };
+    return {
+      status: true,
+      message: 'User responses submitted successfully',
+      Data: formRecords,
+    };
   }
 
   async addComment(addCommentDto: AddCommentDto) {
-    const response = await this.formRecordsModel.findById(addCommentDto.resultId);
+    const response = await this.formRecordsModel.findById(
+      addCommentDto.resultId,
+    );
     if (!response) {
       throw new NotFoundException('Form record not found');
     }
 
     response.Comment = addCommentDto.comment;
-    const updated = await this.formRecordsModel.findByIdAndUpdate(response._id, response, { returnDocument: 'after' });
-    return { status: true, message: 'Comment added successfully', data: updated };
+    const updated = await this.formRecordsModel.findByIdAndUpdate(
+      response._id,
+      response,
+      { returnDocument: 'after' },
+    );
+    return {
+      status: true,
+      message: 'Comment added successfully',
+      data: updated,
+    };
   }
 
   async verifyResponse(verifyDto: VerifyResponseDto) {
@@ -54,8 +72,16 @@ export class FormRecordsService {
     response.Status = 'Verified';
     response.VerifiedBy = verifyDto.verifiedBy;
     response.VerificationDate = new Date();
-    const updated = await this.formRecordsModel.findByIdAndUpdate(response._id, response, { returnDocument: 'after' });
-    return { status: true, message: 'Response Verified successfully', data: updated };
+    const updated = await this.formRecordsModel.findByIdAndUpdate(
+      response._id,
+      response,
+      { returnDocument: 'after' },
+    );
+    return {
+      status: true,
+      message: 'Response Verified successfully',
+      data: updated,
+    };
   }
 
   async getResponsesByFormId(formId: string, departmentId: string) {
@@ -75,7 +101,11 @@ export class FormRecordsService {
       throw new NotFoundException('Form not found for responses');
     }
 
-    return { status: true, message: 'User Responses Retrieved Successfully', data: responseForm };
+    return {
+      status: true,
+      message: 'User Responses Retrieved Successfully',
+      data: responseForm,
+    };
   }
 
   async getRecordByRecordId(recordId: string) {
@@ -95,6 +125,10 @@ export class FormRecordsService {
       throw new NotFoundException('Form record not found');
     }
 
-    return { status: true, message: 'Form record retrieved successfully', data: responseForm };
+    return {
+      status: true,
+      message: 'Form record retrieved successfully',
+      data: responseForm,
+    };
   }
 }

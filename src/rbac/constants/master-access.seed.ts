@@ -595,7 +595,8 @@ export const MASTER_PERMISSION_SEED = [
     resource: 'form_records',
     action: 'view',
     key: 'EP_GET_FORM_RECORDS_GET_RESPONSES_BY_FORMID_FORMID_DEPARTMENTID',
-    description: 'GET /form-records/get-responses-by-formId/:formId/:departmentId',
+    description:
+      'GET /form-records/get-responses-by-formId/:formId/:departmentId',
     method: 'GET',
     path: '/form-records/get-responses-by-formId/:formId/:departmentId',
   },
@@ -2584,7 +2585,8 @@ export const MASTER_PERMISSION_SEED = [
     resource: 'calibration_record',
     action: 'view',
     key: 'EP_GET_READCALIBRATIONBYEQUIPMENTID_EQUIPMENTID_DEPARTMENTID',
-    description: 'GET /calibration-record/by-equipment/:equipmentId/:departmentId',
+    description:
+      'GET /calibration-record/by-equipment/:equipmentId/:departmentId',
     method: 'GET',
     path: '/calibration-record/by-equipment/:equipmentId/:departmentId',
   },
@@ -2701,7 +2703,8 @@ export const MASTER_PERMISSION_SEED = [
     resource: 'preventive_maintenance',
     action: 'view',
     key: 'EP_GET_GETMAINTENANCEBYMACHINEID_MACHINEID_DEPARTMENTID',
-    description: 'GET /preventive-maintenance/by-machine/:machineId/:departmentId',
+    description:
+      'GET /preventive-maintenance/by-machine/:machineId/:departmentId',
     method: 'GET',
     path: '/preventive-maintenance/by-machine/:machineId/:departmentId',
   },

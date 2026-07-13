@@ -11,6 +11,13 @@ import { UpdateTrainingDto } from './dtos/update-training.dto';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import axios from 'axios';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 function actorUploadLabel(actor: any): string {
   const n = actor?.name || actor?.userName || actor?.email;
@@ -45,7 +52,8 @@ export class TrainingService {
     }
 
     const deptCompanyId = String(department.companyId);
-    const actorCo = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const actorCo =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const companyIdStr = actorCo ?? deptCompanyId;
     const company = await this.companyModel.findById(companyIdStr).exec();
@@ -64,7 +72,11 @@ export class TrainingService {
         f.mimetype === 'application/pdf' ||
         f.originalname?.toLowerCase?.().endsWith?.('.pdf');
       if (isPdf) {
-        materialUrl = await this.processTrainingMaterial(f, company, uploadedBy);
+        materialUrl = await this.processTrainingMaterial(
+          f,
+          company,
+          uploadedBy,
+        );
       } else {
         materialUrl = await this.cloudinaryService.uploadFile(f);
       }
@@ -89,7 +101,7 @@ export class TrainingService {
   }
 
   async findAllForActor(
-    actor: any,
+    _actor: any,
   ): Promise<{ status: boolean; message: string; data: TrainingDocument[] }> {
     const trainings = await this.trainingModel
       .find({})
@@ -249,13 +261,12 @@ export class TrainingService {
 
   async findByDepartment(
     departmentId: string,
-    actor?: any,
+    _actor?: any,
   ): Promise<{ status: boolean; message: string; data: TrainingDocument[] }> {
     const department = await this.departmentModel.findById(departmentId).lean();
     if (!department) {
       throw new NotFoundException('Department not found');
     }
-
 
     const trainings = await this.trainingModel
       .find({
@@ -371,5 +382,83 @@ export class TrainingService {
       throw new NotFoundException('No Trainings Found to Delete!');
     }
     return { status: true, message: 'All Trainings have been Deleted!' };
+  }
+
+  private async getOrFail(id: string): Promise<TrainingDocument> {
+    const training = await this.trainingModel
+      .findById(id)
+      .populate('UserDepartment')
+      .exec();
+    if (!training) {
+      throw new NotFoundException('This Training is Not found!');
+    }
+    return training;
+  }
+
+  private mapTrainingPdfRow(training: any) {
+    const department =
+      training?.UserDepartment?.departmentName ||
+      training?.UserDepartment?.shortName ||
+      '---';
+    return {
+      TrainingName: asText(training?.trainingName),
+      Description: asText(training?.description),
+      EvaluationCriteria: asText(training?.evaluationCriteria),
+      department: asText(department),
+      TrainingMaterialUrl: asText(training?.TrainingMaterial),
+    };
+  }
+
+  async downloadTrainingsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Trainings Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'TrainingName', label: 'NAME', width: 2 },
+        { key: 'Description', label: 'DESCRIPTION', width: 2.5 },
+        { key: 'EvaluationCriteria', label: 'CRITERIA', width: 2 },
+        { key: 'department', label: 'DEPARTMENT', width: 1.5 },
+        { key: 'TrainingMaterialUrl', label: 'MATERIAL', width: 2 },
+      ],
+      rows: (data || []).map((t) => this.mapTrainingPdfRow(t)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('trainings', 'directory'),
+    };
+  }
+
+  async downloadTrainingPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const training = await this.getOrFail(id);
+    const row = this.mapTrainingPdfRow(training);
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title:
+        row.TrainingName !== '---' ? row.TrainingName : 'Training',
+      subtitle: row.department !== '---' ? row.department : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Training Name', row.TrainingName],
+        ['Description', row.Description],
+        ['Evaluation Criteria', row.EvaluationCriteria],
+        ['Department', row.department],
+        ['Training Material URL', row.TrainingMaterialUrl],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.TrainingName || 'training',
+        'training',
+      ),
+    };
   }
 }

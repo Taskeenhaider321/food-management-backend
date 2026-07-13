@@ -6,13 +6,16 @@ import {
   Delete,
   Body,
   Param,
+  Header,
+  StreamableFile,
 } from '@nestjs/common';
 import { ProcessesService } from './processes.service';
 import { CreateProcessesDto } from './dtos/create-processes.dto';
 import { UpdateProcessesDto } from './dtos/update-processes.dto';
 import { ApproveProcessesDto } from './dtos/approve-processes.dto';
 import { DisapproveProcessesDto } from './dtos/disapprove-processes.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 @ApiTags('Processes')
 @Controller('processes')
@@ -35,6 +38,39 @@ export class ProcessesController {
   @ApiBearerAuth()
   async getApprovedProcesses(@Param('departmentId') departmentId: string) {
     return this.processesService.getApprovedProcesses(departmentId);
+  }
+
+  /** Must be registered before `GET :processId`. */
+  @Get('download-pdf')
+  @ApiOperation({ summary: 'Download flow diagrams directory PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadProcessesPdf(
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.processesService.downloadProcessesPdf(actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
+  }
+
+  /** Must be registered before `GET :processId`. */
+  @Get(':processId/download-pdf')
+  @ApiOperation({ summary: 'Download a single flow diagram PDF' })
+  @ApiBearerAuth()
+  @Header('Content-Type', 'application/pdf')
+  async downloadProcessPdf(
+    @Param('processId') processId: string,
+    @CurrentUser() actor: any,
+  ): Promise<StreamableFile> {
+    const { buffer, fileName } =
+      await this.processesService.downloadProcessPdf(processId, actor);
+    return new StreamableFile(buffer, {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${fileName}"`,
+    });
   }
 
   @Get(':processId')
@@ -73,8 +109,14 @@ export class ProcessesController {
 
   @Patch('reject')
   @ApiBearerAuth()
-  async rejectProcess(@Body() body: { id: string; actor: string; reason: string }) {
-    return this.processesService.rejectProcess(body.id, body.actor, body.reason);
+  async rejectProcess(
+    @Body() body: { id: string; actor: string; reason: string },
+  ) {
+    return this.processesService.rejectProcess(
+      body.id,
+      body.actor,
+      body.reason,
+    );
   }
 
   @Patch('toggle-enabled')

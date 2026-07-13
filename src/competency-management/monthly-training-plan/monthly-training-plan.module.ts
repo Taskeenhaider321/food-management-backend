@@ -3,15 +3,34 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MonthlyTrainingPlanController } from './monthly-training-plan.controller';
 import { MonthlyTrainingPlanService } from './monthly-training-plan.service';
-import { MonthlyTrainingPlan, MonthlyTrainingPlanSchema } from './schemas/monthly-training-plan.schema';
-import { User, UserSchema } from '../../admin-management/users/schemas/user.schema';
+import {
+  MonthlyTrainingPlan,
+  MonthlyTrainingPlanSchema,
+} from './schemas/monthly-training-plan.schema';
+import {
+  User,
+  UserSchema,
+} from '../../admin-management/users/schemas/user.schema';
 import { Training, TrainingSchema } from '../training/schemas/training.schema';
-import { YearlyTrainingPlan, YearlyTrainingPlanSchema } from '../yearly-training-plan/schemas/yearly-training-plan.schema';
+import {
+  YearlyTrainingPlan,
+  YearlyTrainingPlanSchema,
+} from '../yearly-training-plan/schemas/yearly-training-plan.schema';
 import { Employee, EmployeeSchema } from '../employee/schemas/employee.schema';
-import { Department, DepartmentSchema } from '../../admin-management/department/schemas/department.schema';
-import { Profile, ProfileSchema } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../../admin-management/department/schemas/department.schema';
+import {
+  Profile,
+  ProfileSchema,
+} from '../../admin-management/profile/schemas/profile.schema';
 import { Trainer, TrainerSchema } from '../trainer/schemas/trainer.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -24,6 +43,7 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
       { name: Department.name, schema: DepartmentSchema },
       { name: Profile.name, schema: ProfileSchema },
       { name: Trainer.name, schema: TrainerSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     CloudinaryModule,
   ],

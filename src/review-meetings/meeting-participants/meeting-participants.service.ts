@@ -40,7 +40,8 @@ export class MeetingParticipantsService {
   ) {
     const { user, profile, participant, departmentId } = createDto;
 
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     if (!companyId) {
       throw new BadRequestException(
         'Company context is required (from your session)',

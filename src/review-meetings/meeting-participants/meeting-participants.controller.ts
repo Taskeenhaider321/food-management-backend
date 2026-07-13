@@ -35,7 +35,8 @@ export class MeetingParticipantsController {
   @Get()
   @ApiBearerAuth()
   async getMeetingParticipantsForCompany(@CurrentUser() user: any) {
-    const companyId = user?.companyId?._id?.toString() || user?.companyId?.toString();
+    const companyId =
+      user?.companyId?._id?.toString() || user?.companyId?.toString();
     return this.meetingParticipantsService.getMeetingParticipantsByCompany(
       companyId,
     );

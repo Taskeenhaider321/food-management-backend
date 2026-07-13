@@ -13,7 +13,8 @@ export class ResponseOption {
   textColor: string;
 }
 
-export const ResponseOptionSchema = SchemaFactory.createForClass(ResponseOption);
+export const ResponseOptionSchema =
+  SchemaFactory.createForClass(ResponseOption);
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class ResponseGroup extends Document {

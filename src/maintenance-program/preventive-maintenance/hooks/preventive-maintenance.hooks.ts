@@ -15,10 +15,7 @@ export async function preventiveMaintenancePreSave(
     let nextNumber = 1;
 
     if (latest?.maintenanceCode) {
-      const numericPart = parseInt(
-        latest.maintenanceCode.replace('M', ''),
-        10,
-      );
+      const numericPart = parseInt(latest.maintenanceCode.replace('M', ''), 10);
 
       if (!isNaN(numericPart)) {
         nextNumber = numericPart + 1;

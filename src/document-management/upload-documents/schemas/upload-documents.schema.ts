@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document as MongooseDocument, Schema as MongooseSchema, Types } from 'mongoose';
+import {
+  Document as MongooseDocument,
+  Schema as MongooseSchema,
+  Types,
+} from 'mongoose';
 
 export class UploadedDocument {
   @Prop()
@@ -43,7 +47,11 @@ export class UploadDocuments {
   @Prop({ unique: true })
   DocumentId: string;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: Types.ObjectId;
 
   @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
@@ -55,7 +63,10 @@ export class UploadDocuments {
   @Prop({ default: 0 })
   RevisionNo: number;
 
-  @Prop({ enum: ['Pending', 'Reviewed', 'Rejected', 'Approved', 'Disapproved'], default: 'Pending' })
+  @Prop({
+    enum: ['Pending', 'Reviewed', 'Rejected', 'Approved', 'Disapproved'],
+    default: 'Pending',
+  })
   Status: string;
 
   @Prop()
@@ -101,4 +112,5 @@ export class UploadDocuments {
   UploadedDocuments: UploadedDocument[];
 }
 
-export const UploadDocumentsSchema = SchemaFactory.createForClass(UploadDocuments);
+export const UploadDocumentsSchema =
+  SchemaFactory.createForClass(UploadDocuments);

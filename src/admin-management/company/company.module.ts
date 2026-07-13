@@ -4,7 +4,10 @@ import { UserModule } from '../users/user.module';
 import { CompanyController } from './company.controller';
 import { CompanyService } from './company.service';
 import { Company, CompanySchema } from './schemas/company.schema';
-import { Department, DepartmentSchema } from '../department/schemas/department.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../department/schemas/department.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
 

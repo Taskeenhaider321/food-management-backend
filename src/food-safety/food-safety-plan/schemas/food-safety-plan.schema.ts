@@ -10,7 +10,11 @@ export class FoodSafety extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department' })
   UserDepartment?: MongooseSchema.Types.ObjectId;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Department',
+    required: true,
+  })
   Department: MongooseSchema.Types.ObjectId;
 
   @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
@@ -39,8 +43,7 @@ export class FoodSafety extends Document {
   @Prop() DisapprovalDate?: Date;
 }
 
-export const FoodSafetySchema =
-  SchemaFactory.createForClass(FoodSafety);
+export const FoodSafetySchema = SchemaFactory.createForClass(FoodSafety);
 
 /* 🔗 attach hook */
 FoodSafetySchema.pre('save', FoodSafetyHooks.generateDocumentId);

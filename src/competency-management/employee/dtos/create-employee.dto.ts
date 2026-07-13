@@ -59,7 +59,9 @@ export class EmployeeUserInputDto {
   @MinLength(7)
   password?: string;
 
-  @ApiPropertyOptional({ description: 'Optional RBAC role _id for the new user' })
+  @ApiPropertyOptional({
+    description: 'Optional RBAC role _id for the new user',
+  })
   @IsOptional()
   @IsMongoId()
   roleId?: string;

@@ -11,6 +11,10 @@ import {
   ListOfForms,
   ListOfFormsSchema,
 } from '../list-of-forms/schemas/list-of-forms.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -18,6 +22,7 @@ import {
       { name: ChangeRequest.name, schema: ChangeRequestSchema },
       { name: Document.name, schema: DocumentSchema },
       { name: ListOfForms.name, schema: ListOfFormsSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [ChangeRequestController],

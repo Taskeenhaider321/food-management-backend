@@ -10,8 +10,14 @@ import { Supplier, SupplierDocument } from './schemas/supplier.schema';
 import { CreateSupplierDto } from './dtos/create-supplier.dto';
 import { ProfileService } from '../../admin-management/profile/profile.service';
 import { UserService } from '../../admin-management/users/user.service';
-import { User, UserDocument } from '../../admin-management/users/schemas/user.schema';
-import { Profile, ProfileDocument } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  User,
+  UserDocument,
+} from '../../admin-management/users/schemas/user.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from '../../admin-management/profile/schemas/profile.schema';
 
 @Injectable()
 export class SupplierService {
@@ -27,7 +33,8 @@ export class SupplierService {
   async create(
     createSupplierDto: CreateSupplierDto,
   ): Promise<{ status: boolean; message: string; data: SupplierDocument }> {
-    const { user, profile, supplier, departmentId, createdBy } = createSupplierDto;
+    const { user, profile, supplier, departmentId, createdBy } =
+      createSupplierDto;
 
     if (!user.companyId) {
       throw new BadRequestException('user.companyId is required');
@@ -40,7 +47,9 @@ export class SupplierService {
       }
     }
 
-    const emailTaken = await this.userModel.findOne({ email: user.email.toLowerCase() });
+    const emailTaken = await this.userModel.findOne({
+      email: user.email.toLowerCase(),
+    });
     if (emailTaken) {
       throw new ConflictException('Email already in use');
     }
@@ -59,11 +68,17 @@ export class SupplierService {
         session,
       );
 
-      const p = await this.profileService.createForUser(u._id, profile, session);
+      const p = await this.profileService.createForUser(
+        u._id,
+        profile,
+        session,
+      );
 
       const row = new this.supplierModel({
         profileId: p._id,
-        departmentId: departmentId ? new Types.ObjectId(departmentId) : undefined,
+        departmentId: departmentId
+          ? new Types.ObjectId(departmentId)
+          : undefined,
         contactNo: supplier.contactNo ?? [],
         contactPerson: supplier.contactPerson,
         productServiceOffered: supplier.productServiceOffered ?? [],
@@ -72,7 +87,9 @@ export class SupplierService {
         currentApprovalAt: supplier.currentApprovalAt
           ? new Date(supplier.currentApprovalAt)
           : undefined,
-        nextApprovalAt: supplier.nextApprovalAt ? new Date(supplier.nextApprovalAt) : undefined,
+        nextApprovalAt: supplier.nextApprovalAt
+          ? new Date(supplier.nextApprovalAt)
+          : undefined,
         createdBy,
       });
       return row.save({ session });
@@ -87,10 +104,16 @@ export class SupplierService {
       .populate('departmentId')
       .exec();
 
-    return { status: true, message: 'Supplier document created successfully', data: populated! };
+    return {
+      status: true,
+      message: 'Supplier document created successfully',
+      data: populated!,
+    };
   }
 
-  async findByDepartment(departmentId: string): Promise<{ status: boolean; data: SupplierDocument[] }> {
+  async findByDepartment(
+    departmentId: string,
+  ): Promise<{ status: boolean; data: SupplierDocument[] }> {
     const suppliers = await this.supplierModel
       .find({ departmentId: departmentId as any })
       .populate('departmentId')
@@ -102,7 +125,9 @@ export class SupplierService {
     return { status: true, data: suppliers };
   }
 
-  async findOne(id: string): Promise<{ status: boolean; data: SupplierDocument }> {
+  async findOne(
+    id: string,
+  ): Promise<{ status: boolean; data: SupplierDocument }> {
     const supplier = await this.supplierModel
       .findById(id)
       .populate({
@@ -123,11 +148,19 @@ export class SupplierService {
     }
 
     await this.profileService.withTransaction(async (session) => {
-      await this.supplierModel.deleteOne({ _id: supplier._id }).session(session);
-      const profile = await this.profileModel.findById(supplier.profileId).session(session);
+      await this.supplierModel
+        .deleteOne({ _id: supplier._id })
+        .session(session);
+      const profile = await this.profileModel
+        .findById(supplier.profileId)
+        .session(session);
       if (profile) {
-        await this.userModel.deleteOne({ _id: profile.userId }).session(session);
-        await this.profileModel.deleteOne({ _id: profile._id }).session(session);
+        await this.userModel
+          .deleteOne({ _id: profile.userId })
+          .session(session);
+        await this.profileModel
+          .deleteOne({ _id: profile._id })
+          .session(session);
       }
     });
 
@@ -139,10 +172,16 @@ export class SupplierService {
     if (result.deletedCount === 0) {
       throw new NotFoundException('No Supplier documents found to delete!');
     }
-    return { status: true, message: 'All Supplier documents have been deleted!' };
+    return {
+      status: true,
+      message: 'All Supplier documents have been deleted!',
+    };
   }
 
-  async approve(id: string, approvedBy: string): Promise<{ status: boolean; message: string; data: SupplierDocument }> {
+  async approve(
+    id: string,
+    approvedBy: string,
+  ): Promise<{ status: boolean; message: string; data: SupplierDocument }> {
     const supplier = await this.supplierModel.findById(id).exec();
     if (!supplier) {
       throw new NotFoundException('Supplier not found.');
@@ -171,7 +210,11 @@ export class SupplierService {
       throw new NotFoundException('Supplier not found.');
     }
 
-    return { status: true, message: 'The Supplier has been marked as approved.', data: updated };
+    return {
+      status: true,
+      message: 'The Supplier has been marked as approved.',
+      data: updated,
+    };
   }
 
   async disapprove(
@@ -207,6 +250,10 @@ export class SupplierService {
       throw new NotFoundException('Supplier not found.');
     }
 
-    return { status: true, message: 'The Supplier has been disapproved.', data: updated };
+    return {
+      status: true,
+      message: 'The Supplier has been disapproved.',
+      data: updated,
+    };
   }
 }

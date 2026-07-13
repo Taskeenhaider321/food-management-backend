@@ -163,7 +163,8 @@ export class MonthlyTrainingPlan {
   SessionEvaluations: SessionEmployeeEvaluation[];
 }
 
-export const MonthlyTrainingPlanSchema = SchemaFactory.createForClass(MonthlyTrainingPlan);
+export const MonthlyTrainingPlanSchema =
+  SchemaFactory.createForClass(MonthlyTrainingPlan);
 
 MonthlyTrainingPlanSchema.index({ UserDepartment: 1, Year: 1, Month: 1 });
 MonthlyTrainingPlanSchema.index({ Trainers: 1, SessionStartAt: 1 });

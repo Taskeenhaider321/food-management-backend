@@ -14,6 +14,10 @@ import {
   ReviewTeamMember,
   ReviewTeamMemberSchema,
 } from '../review-team/schemas/review-team-member.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -21,6 +25,7 @@ import {
       { name: MeetingMinutes.name, schema: MeetingMinutesSchema },
       { name: ReviewPlan.name, schema: ReviewPlanSchema },
       { name: ReviewTeamMember.name, schema: ReviewTeamMemberSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [MeetingMinutesController],

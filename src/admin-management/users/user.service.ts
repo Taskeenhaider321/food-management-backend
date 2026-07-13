@@ -15,8 +15,6 @@ import { CreateSuperAdminDto } from './dtos/create-super-admin.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { User, UserDocument, UserRoleType } from './schemas/user.schema';
-import { CompanyStatus } from '../company/schemas/company.schema';
-
 @Injectable()
 export class UserService {
   constructor(
@@ -36,7 +34,10 @@ export class UserService {
       throw new ConflictException(`User ${userName} already exists`);
     }
 
-    let company = await this.companyModel.findOne().sort({ created_at: 1 }).exec();
+    let company = await this.companyModel
+      .findOne()
+      .sort({ created_at: 1 })
+      .exec();
     if (!company) {
       company = await new this.companyModel({
         companyName: 'Default Company',
@@ -112,7 +113,10 @@ export class UserService {
       if (u.companyId) {
         companyOid = new Types.ObjectId(u.companyId);
       } else if (actor?.companyId) {
-        const cid = typeof actor.companyId === 'object' ? actor.companyId._id : actor.companyId;
+        const cid =
+          typeof actor.companyId === 'object'
+            ? actor.companyId._id
+            : actor.companyId;
         if (cid) companyOid = new Types.ObjectId(String(cid));
       }
 
@@ -206,7 +210,7 @@ export class UserService {
     return doc.save();
   }
 
-  async getUser(userId: string, actor?: any) {
+  async getUser(userId: string, _actor?: any) {
     const user = await this.getPopulatedUser(userId);
     if (!user) {
       throw new NotFoundException(
@@ -218,7 +222,7 @@ export class UserService {
     return { status: true, data };
   }
 
-  async getUserByCompany(companyId: string, actor?: any) {
+  async getUserByCompany(companyId: string, _actor?: any) {
     const users = await this.userModel
       .find({ companyId: new Types.ObjectId(companyId) })
       .populate('departmentId')
@@ -228,7 +232,7 @@ export class UserService {
     return { status: true, data: users };
   }
 
-  async getUsersByDepartment(departmentId: string, actor?: any) {
+  async getUsersByDepartment(departmentId: string, _actor?: any) {
     const users = await this.userModel
       .find({ departmentId: new Types.ObjectId(departmentId) })
       .populate('departmentId')
@@ -238,7 +242,7 @@ export class UserService {
     return { status: true, data: users };
   }
 
-  async getAllUsers(departmentId: string, actor?: any) {
+  async getAllUsers(departmentId: string, _actor?: any) {
     const departmentExist = await this.departmentModel.findById(departmentId);
     if (!departmentExist) {
       throw new NotFoundException(
@@ -260,7 +264,7 @@ export class UserService {
   async getUsersByCompanyAndDepartment(
     companyId: string,
     departmentId: string,
-    actor?: any,
+    _actor?: any,
   ) {
     const dept = await this.departmentModel.findById(departmentId).lean();
     if (!dept) {
@@ -281,7 +285,7 @@ export class UserService {
     return { status: true, data: users };
   }
 
-  async deleteUser(userId: string, actor?: any) {
+  async deleteUser(userId: string, _actor?: any) {
     const deletedUser = await this.userModel.findByIdAndDelete(userId);
     if (!deletedUser) {
       throw new NotFoundException(`User document with ID: ${userId} not found`);
@@ -294,7 +298,7 @@ export class UserService {
     };
   }
 
-  async updateUser(updateData: UpdateUserDto, actor?: any) {
+  async updateUser(updateData: UpdateUserDto, _actor?: any) {
     const { userId, password, ...updates } = updateData;
     if (!userId) {
       throw new BadRequestException('userId is required');
@@ -329,8 +333,8 @@ export class UserService {
 
   async assignRole(
     userId: string,
-    roleData: { roleId: string; companyId?: string },
-    actor?: any,
+    _roleData: { roleId: string; companyId?: string },
+    _actor?: any,
   ) {
     const user = await this.userModel.findById(userId);
     if (!user) {
@@ -390,7 +394,7 @@ export class UserService {
     };
   }
 
-  async reassignAccess(userId: string, actor?: any) {
+  async reassignAccess(userId: string, _actor?: any) {
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
       { $set: { isSuspended: false } },
@@ -407,7 +411,7 @@ export class UserService {
     };
   }
 
-  async suspendUser(userId: string, suspended: boolean, actor?: any) {
+  async suspendUser(userId: string, suspended: boolean, _actor?: any) {
     const updated = await this.userModel.findByIdAndUpdate(
       userId,
       { $set: { isSuspended: suspended } },
@@ -428,23 +432,21 @@ export class UserService {
 
   async changePassword(userId: string, newPassword: string) {
     if (!userId || !newPassword) {
-      throw new BadRequestException(
-        'userId and newPassword are required',
-      );
+      throw new BadRequestException('userId and newPassword are required');
     }
-  
+
     const hashedPassword = this.encryptPassword(newPassword);
-  
+
     const updatedUser = await this.userModel.findByIdAndUpdate(
       userId,
       { password: hashedPassword },
       { new: true },
     );
-  
+
     if (!updatedUser) {
       throw new NotFoundException('User not found');
     }
-  
+
     return {
       status: true,
       message: 'Password changed successfully',
@@ -452,7 +454,11 @@ export class UserService {
     };
   }
 
-  async resetCredentials(userId: any, newUserName: string, newPassword: string) {
+  async resetCredentials(
+    userId: any,
+    newUserName: string,
+    newPassword: string,
+  ) {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
 
@@ -485,7 +491,7 @@ export class UserService {
     return result.data;
   }
 
-  async findOne(id: string, actor?: any): Promise<UserDocument> {
+  async findOne(id: string, _actor?: any): Promise<UserDocument> {
     const user = await this.getPopulatedUser(id);
     if (!user) {
       throw new NotFoundException(
@@ -495,7 +501,7 @@ export class UserService {
     return user;
   }
 
-  async findAll(actor?: any): Promise<UserDocument[]> {
+  async findAll(_actor?: any): Promise<UserDocument[]> {
     return this.userModel
       .find()
       .populate('companyId')
@@ -521,10 +527,10 @@ export class UserService {
     user: UserDocument,
   ): Promise<Record<string, unknown>> {
     const raw = user.toObject();
-    delete (raw as any).password;
-    delete (raw as any).__v;
+    delete raw.password;
+    delete raw.__v;
 
-    const { companyId, departmentId, ...rest } = raw as any;
+    const { companyId, departmentId, ...rest } = raw;
 
     return {
       ...rest,

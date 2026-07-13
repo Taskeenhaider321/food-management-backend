@@ -3,9 +3,22 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { WorkRequestController } from './work-request.controller';
 import { WorkRequestService } from './work-request.service';
 import { WorkRequest, WorkRequestSchema } from './schemas/work-request.schema';
-import { Machinery, MachinerySchema } from '../machinery/schemas/machinery.schema';
-import { Equipment, EquipmentSchema } from '../equipment/schemas/equipment.schema';
-import { User, UserSchema } from '../../admin-management/users/schemas/user.schema';
+import {
+  Machinery,
+  MachinerySchema,
+} from '../machinery/schemas/machinery.schema';
+import {
+  Equipment,
+  EquipmentSchema,
+} from '../equipment/schemas/equipment.schema';
+import {
+  User,
+  UserSchema,
+} from '../../admin-management/users/schemas/user.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -14,6 +27,7 @@ import { User, UserSchema } from '../../admin-management/users/schemas/user.sche
       { name: Machinery.name, schema: MachinerySchema },
       { name: Equipment.name, schema: EquipmentSchema },
       { name: User.name, schema: UserSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [WorkRequestController],

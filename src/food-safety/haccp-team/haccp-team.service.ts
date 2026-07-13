@@ -1,7 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { User, UserDocument } from '../../admin-management/users/schemas/user.schema';
+import {
+  User,
+  UserDocument,
+} from '../../admin-management/users/schemas/user.schema';
 import { HaccpTeam } from './schemas/haccp-team.schema';
 import { TeamMember } from './schemas/team-member.schema';
 import { CreateHaccpTeamDto } from './dtos/create-haccp-team.dto';
@@ -17,6 +24,14 @@ import {
   reviewRecord,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class HaccpTeamService {
@@ -24,8 +39,152 @@ export class HaccpTeamService {
     @InjectModel(HaccpTeam.name) private haccpTeamModel: Model<HaccpTeam>,
     @InjectModel(TeamMember.name) private teamMemberModel: Model<TeamMember>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel('Company') private companyModel: Model<any>,
+    @InjectModel('Department') private departmentModel: Model<any>,
     private cloudinaryService: CloudinaryService,
   ) {}
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private departmentLabel(dept: any): string {
+    if (!dept || typeof dept !== 'object') return '---';
+    return asText(dept.departmentName || dept.shortName);
+  }
+
+  private memberNames(members: any[]): string {
+    if (!Array.isArray(members) || members.length === 0) return '---';
+    const names = members
+      .map(
+        (m) =>
+          m?.fullName ||
+          m?.profileId?.userId?.name ||
+          m?.profileId?.fullName,
+      )
+      .filter(Boolean);
+    return names.length ? names.join(', ') : String(members.length);
+  }
+
+  private mapHaccpTeamPdfRow(team: any) {
+    const members = Array.isArray(team?.TeamMembers) ? team.TeamMembers : [];
+    return {
+      DocumentId: asText(team?.DocumentId),
+      TeamName: asText(team?.TeamName),
+      department: this.departmentLabel(team?.Department || team?.UserDepartment),
+      DocumentType: asText(team?.DocumentType),
+      Status: asText(team?.Status),
+      members: this.memberNames(members),
+      membersCount: String(members.length),
+      CreatedBy: asText(team?.CreatedBy),
+      CreationDate: formatDate(team?.CreationDate),
+    };
+  }
+
+  async findAllForActor(actor: any) {
+    const deptIds = await this.companyDepartmentIds(actor);
+    const filter: Record<string, unknown> =
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const teams = await this.haccpTeamModel
+      .find(filter as any)
+      .populate('Department')
+      .populate('UserDepartment')
+      .populate({
+        path: 'TeamMembers',
+        populate: { path: 'profileId', populate: { path: 'userId' } },
+      })
+      .exec();
+    return { status: true, data: teams };
+  }
+
+  async downloadHaccpTeamsPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForActor(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'HACCP Teams Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'DocumentId', label: 'DOC ID', width: 1.2 },
+        { key: 'TeamName', label: 'TEAM', width: 1.8 },
+        { key: 'department', label: 'DEPT', width: 1.3 },
+        { key: 'DocumentType', label: 'TYPE', width: 1.1 },
+        { key: 'Status', label: 'STATUS', width: 1.2 },
+        { key: 'members', label: 'MEMBERS', width: 1.8 },
+        { key: 'CreatedBy', label: 'CREATED BY', width: 1.2 },
+        { key: 'CreationDate', label: 'CREATED', width: 1.1 },
+      ],
+      rows: (data || []).map((t) => this.mapHaccpTeamPdfRow(t)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('haccp-teams', 'directory'),
+    };
+  }
+
+  async downloadHaccpTeamPdf(teamId: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data: team } = await this.getHaccpTeam(teamId);
+    const row = this.mapHaccpTeamPdfRow(team);
+    const members = Array.isArray((team as any)?.TeamMembers)
+      ? (team as any).TeamMembers
+      : [];
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.TeamName !== '---' ? row.TeamName : 'HACCP Team',
+      subtitle: row.DocumentId !== '---' ? row.DocumentId : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Document ID', row.DocumentId],
+        ['Team Name', row.TeamName],
+        ['Department', row.department],
+        ['Document Type', row.DocumentType],
+        ['Status', row.Status],
+        ['Members', row.members],
+        ['Created By', row.CreatedBy],
+        ['Creation Date', row.CreationDate],
+      ],
+      sections: members.map((m: any, i: number) => ({
+        heading: `Member ${i + 1}`,
+        rows: [
+          ['Full Name', asText(m?.fullName)],
+          ['Designation', asText(m?.designation)],
+          ['Role In Team', asText(m?.roleInTeam)],
+          [
+            'Training Attended',
+            asText(
+              Array.isArray(m?.trainingAttended)
+                ? m.trainingAttended.join(', ')
+                : m?.trainingAttended,
+            ),
+          ],
+        ],
+      })),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(
+        row.DocumentId || row.TeamName || 'haccp-team',
+        'haccp-team',
+      ),
+    };
+  }
 
   private resolveUserDepartmentId(
     userDepartment: unknown,
@@ -34,7 +193,10 @@ export class HaccpTeamService {
     if (userDepartment instanceof Types.ObjectId) {
       return userDepartment;
     }
-    if (typeof userDepartment === 'string' && Types.ObjectId.isValid(userDepartment)) {
+    if (
+      typeof userDepartment === 'string' &&
+      Types.ObjectId.isValid(userDepartment)
+    ) {
       return new Types.ObjectId(userDepartment);
     }
     if (
@@ -91,7 +253,8 @@ export class HaccpTeamService {
           createdTeam,
           0,
         );
-        const uploadResult = await this.cloudinaryService.uploadBuffer(outputBuffer);
+        const uploadResult =
+          await this.cloudinaryService.uploadBuffer(outputBuffer);
         createDto.TeamMembers[index].documentUrl = uploadResult;
       }
     }
@@ -109,11 +272,19 @@ export class HaccpTeamService {
         });
         await addedUser.save();
         return addedUser._id;
-      })
+      }),
     );
 
-    await this.haccpTeamModel.findByIdAndUpdate(createdTeam._id, { TeamMembers: membersIds }, { returnDocument: 'after' });
-    return { status: true, message: 'HACCP Team document created successfully', data: createdTeam };
+    await this.haccpTeamModel.findByIdAndUpdate(
+      createdTeam._id,
+      { TeamMembers: membersIds },
+      { returnDocument: 'after' },
+    );
+    return {
+      status: true,
+      message: 'HACCP Team document created successfully',
+      data: createdTeam,
+    };
   }
 
   private normalizeCompany(user: any) {
@@ -196,48 +367,58 @@ export class HaccpTeamService {
       revisionNo,
     );
 
-    pdfDoc.getPages().slice(1).forEach((page) => {
-      const { width, height } = page.getSize();
-      const extraSpace = 24;
-      page.setSize(width, height + extraSpace);
-      page.translateContent(0, -extraSpace);
+    pdfDoc
+      .getPages()
+      .slice(1)
+      .forEach((page) => {
+        const { width, height } = page.getSize();
+        const extraSpace = 24;
+        page.setSize(width, height + extraSpace);
+        page.translateContent(0, -extraSpace);
 
-      page.drawText('HACCP Team Member Document', {
-        x:
-          width / 2 -
-          helveticaFont.widthOfTextAtSize('HACCP Team Member Document', 15) / 2,
-        y: height + extraSpace - 10,
-        size: 15,
-        color: rgb(0, 0, 0),
-      });
+        page.drawText('HACCP Team Member Document', {
+          x:
+            width / 2 -
+            helveticaFont.widthOfTextAtSize('HACCP Team Member Document', 15) /
+              2,
+          y: height + extraSpace - 10,
+          size: 15,
+          color: rgb(0, 0, 0),
+        });
 
-      page.drawText(company.companyName, {
-        x: width - helveticaFont.widthOfTextAtSize(company.companyName, 10) - 20,
-        y: height + extraSpace,
-        size: 10,
-        color: rgb(0, 0, 0),
-      });
+        page.drawText(company.companyName, {
+          x:
+            width -
+            helveticaFont.widthOfTextAtSize(company.companyName, 10) -
+            20,
+          y: height + extraSpace,
+          size: 10,
+          color: rgb(0, 0, 0),
+        });
 
-      page.drawText(`Document ID : ${team.DocumentId}`, {
-        x:
-          width -
-          helveticaFont.widthOfTextAtSize(`Document ID : ${team.DocumentId}`, 10) -
-          20,
-        y: height + extraSpace - 12,
-        size: 10,
-        color: rgb(0, 0, 0),
-      });
+        page.drawText(`Document ID : ${team.DocumentId}`, {
+          x:
+            width -
+            helveticaFont.widthOfTextAtSize(
+              `Document ID : ${team.DocumentId}`,
+              10,
+            ) -
+            20,
+          y: height + extraSpace - 12,
+          size: 10,
+          color: rgb(0, 0, 0),
+        });
 
-      page.drawText(`Revision No : ${revisionNo}`, {
-        x:
-          width -
-          helveticaFont.widthOfTextAtSize(`Revision No : ${revisionNo}`, 10) -
-          20,
-        y: height + extraSpace - 24,
-        size: 10,
-        color: rgb(0, 0, 0),
+        page.drawText(`Revision No : ${revisionNo}`, {
+          x:
+            width -
+            helveticaFont.widthOfTextAtSize(`Revision No : ${revisionNo}`, 10) -
+            20,
+          y: height + extraSpace - 24,
+          size: 10,
+          color: rgb(0, 0, 0),
+        });
       });
-    });
 
     return Buffer.from(await pdfDoc.save());
   }
@@ -265,7 +446,9 @@ export class HaccpTeamService {
     }
 
     page.drawText(company.companyName, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(company.companyName, 25) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(company.companyName, 25) / 2,
       y: height - 420,
       color: rgb(0, 0, 0),
       size: 25,
@@ -273,7 +456,9 @@ export class HaccpTeamService {
 
     if (company.address) {
       page.drawText(company.address, {
-        x: centerTextX - helveticaFont.widthOfTextAtSize(company.address, 25) / 2,
+        x:
+          centerTextX -
+          helveticaFont.widthOfTextAtSize(company.address, 25) / 2,
         y: height - 450,
         color: rgb(0, 0, 0),
         size: 25,
@@ -281,7 +466,9 @@ export class HaccpTeamService {
     }
 
     page.drawText(`Created By : ${user.name}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Created By : ${user.name}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(`Created By : ${user.name}`, 20) / 2,
       y: height - 530,
       color: rgb(0, 0, 0),
       size: 20,
@@ -301,14 +488,18 @@ export class HaccpTeamService {
     });
 
     page.drawText(`Document ID : ${documentId}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Document ID : ${documentId}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(`Document ID : ${documentId}`, 20) / 2,
       y: height - 590,
       color: rgb(0, 0, 0),
       size: 20,
     });
 
     page.drawText(`Revision No : ${revisionNo}`, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(`Revision No : ${revisionNo}`, 20) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(`Revision No : ${revisionNo}`, 20) / 2,
       y: height - 620,
       color: rgb(0, 0, 0),
       size: 20,
@@ -348,32 +539,56 @@ export class HaccpTeamService {
         path: 'TeamMembers',
         populate: { path: 'profileId', populate: { path: 'userId' } },
       });
-    if (!team) throw new NotFoundException(`HACCP Team document with ID: ${teamId} not found`);
+    if (!team)
+      throw new NotFoundException(
+        `HACCP Team document with ID: ${teamId} not found`,
+      );
     return { status: true, data: team };
   }
 
   async deleteHaccpTeam(teamId: string) {
     const team = await this.haccpTeamModel.findById(teamId);
-    if (!team) throw new NotFoundException(`HACCP Team document with ID: ${teamId} not found`);
+    if (!team)
+      throw new NotFoundException(
+        `HACCP Team document with ID: ${teamId} not found`,
+      );
     if (!canEditRecord(team)) {
-      throw new BadRequestException('Only records in review, rejected, or disapproved can be deleted');
+      throw new BadRequestException(
+        'Only records in review, rejected, or disapproved can be deleted',
+      );
     }
 
     const deletedTeam = await this.haccpTeamModel.findByIdAndDelete(teamId);
-    if (!deletedTeam) throw new NotFoundException(`HACCP Team document with ID: ${teamId} not found`);
-    
+    if (!deletedTeam)
+      throw new NotFoundException(
+        `HACCP Team document with ID: ${teamId} not found`,
+      );
+
     // Delete team members
     for (const memberId of deletedTeam.TeamMembers) {
       await this.teamMemberModel.findByIdAndDelete(memberId);
     }
-    
-    return { status: true, message: 'HACCP Team document deleted successfully', data: deletedTeam };
+
+    return {
+      status: true,
+      message: 'HACCP Team document deleted successfully',
+      data: deletedTeam,
+    };
   }
 
-  async deleteAllHaccpTeams(): Promise<{ status: boolean; message: string; data: any }> {
+  async deleteAllHaccpTeams(): Promise<{
+    status: boolean;
+    message: string;
+    data: any;
+  }> {
     const result = await this.haccpTeamModel.deleteMany({});
-    if (result.deletedCount === 0) throw new NotFoundException('No HACCP Team documents found to delete!');
-    return { status: true, message: 'All HACCP Team documents have been deleted!', data: result };
+    if (result.deletedCount === 0)
+      throw new NotFoundException('No HACCP Team documents found to delete!');
+    return {
+      status: true,
+      message: 'All HACCP Team documents have been deleted!',
+      data: result,
+    };
   }
 
   async reviewHaccpTeam(id: string, actor: string) {
@@ -381,7 +596,11 @@ export class HaccpTeamService {
     if (!team) throw new NotFoundException('HaccpTeam not found');
     reviewRecord(team, actor);
     const updated = await team.save();
-    return { status: true, message: 'HACCP Team reviewed successfully', data: updated };
+    return {
+      status: true,
+      message: 'HACCP Team reviewed successfully',
+      data: updated,
+    };
   }
 
   async approveHaccpTeam(id: string, approvedBy: string) {
@@ -389,7 +608,11 @@ export class HaccpTeamService {
     if (!team) throw new NotFoundException('HaccpTeam not found');
     approveRecord(team, approvedBy);
     const updated = await team.save();
-    return { status: true, message: 'The HaccpTeam has been marked as approved.', data: updated };
+    return {
+      status: true,
+      message: 'The HaccpTeam has been marked as approved.',
+      data: updated,
+    };
   }
 
   async rejectHaccpTeam(id: string, actor: string, reason: string) {
@@ -405,7 +628,11 @@ export class HaccpTeamService {
     if (!team) throw new NotFoundException('HaccpTeam not found');
     disapproveRecord(team, disapprovedBy, reason);
     const updated = await team.save();
-    return { status: true, message: 'The HaccpTeam has been marked as disapproved.', data: updated };
+    return {
+      status: true,
+      message: 'The HaccpTeam has been marked as disapproved.',
+      data: updated,
+    };
   }
 
   async toggleHaccpTeamEnabled(id: string, actor: string) {

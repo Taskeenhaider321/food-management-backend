@@ -4,7 +4,10 @@ import { MRMController } from './mrm.controller';
 import { MRMService } from './mrm.service';
 import { MRM, MRMSchema } from './schemas/mrm.schema';
 import { EmailModule } from '../../email/email.module';
-import { Notification, NotificationSchema } from '../notification/schemas/notification.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from '../notification/schemas/notification.schema';
 import { Agenda, AgendaSchema } from '../notification/schemas/agenda.schema';
 import {
   MeetingParticipant,

@@ -12,7 +12,10 @@ export async function reviewTeamMemberPreSave(this: ReviewTeamMemberDocument) {
 
   let nextNumber = 1;
   if (latest?.memberCode) {
-    const numericPart = parseInt(String(latest.memberCode).replace('RT', ''), 10);
+    const numericPart = parseInt(
+      String(latest.memberCode).replace('RT', ''),
+      10,
+    );
     if (!Number.isNaN(numericPart)) nextNumber = numericPart + 1;
   }
 

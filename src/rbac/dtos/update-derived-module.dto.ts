@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsMongoId, IsObject, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsMongoId,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class UpdateDerivedModuleDto {
   @ApiPropertyOptional({ example: 'Team Control' })
@@ -9,7 +16,8 @@ export class UpdateDerivedModuleDto {
 
   @ApiPropertyOptional({
     example: { user: 'Team Members' },
-    description: 'Custom resource labels (key = resource string, value = custom label)',
+    description:
+      'Custom resource labels (key = resource string, value = custom label)',
   })
   @IsOptional()
   @IsObject()

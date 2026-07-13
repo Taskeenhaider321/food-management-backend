@@ -118,7 +118,6 @@ export class WorkRequest {
   History: WorkRequestHistoryEntry[];
 }
 
-export const WorkRequestSchema =
-  SchemaFactory.createForClass(WorkRequest);
+export const WorkRequestSchema = SchemaFactory.createForClass(WorkRequest);
 
 WorkRequestSchema.pre('save', workRequestPreSave);

@@ -30,6 +30,13 @@ import {
   Training,
   TrainingDocument,
 } from '../training/schemas/training.schema';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../../common/branded-pdf.util';
 
 @Injectable()
 export class TrainerService {
@@ -50,10 +57,16 @@ export class TrainerService {
     createTrainerDto: CreateTrainerDto,
     actor: any,
   ): Promise<{ status: boolean; message: string; data: TrainerDocument }> {
-    const { user, profile, trainer, trainerDocumentUrl, applyTrainerDocumentBranding } =
-      createTrainerDto;
+    const {
+      user,
+      profile,
+      trainer,
+      trainerDocumentUrl,
+      applyTrainerDocumentBranding,
+    } = createTrainerDto;
 
-    const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+    const companyId =
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
     const emailTaken = await this.userModel.findOne({
       email: user.email.toLowerCase(),
@@ -312,7 +325,9 @@ export class TrainerService {
     let textY = logoImage ? height - 420 : height - 280;
 
     page.drawText(companyName, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(companyName, fontSize) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(companyName, fontSize) / 2,
       y: textY,
       color: rgb(0, 0, 0),
       size: fontSize,
@@ -321,7 +336,9 @@ export class TrainerService {
     textY -= 30;
     const contactText = `Contact # ${phone}`;
     page.drawText(contactText, {
-      x: centerTextX - helveticaFont.widthOfTextAtSize(contactText, fontSize) / 2,
+      x:
+        centerTextX -
+        helveticaFont.widthOfTextAtSize(contactText, fontSize) / 2,
       y: textY,
       color: rgb(0, 0, 0),
       size: fontSize,
@@ -393,7 +410,7 @@ export class TrainerService {
   /**
    * Trainers whose user belongs to the actor's company (or all for super-admin).
    */
-  async findAllForCompany(actor: any): Promise<{
+  async findAllForCompany(_actor: any): Promise<{
     status: boolean;
     message: string;
     data: TrainerDocument[];
@@ -461,7 +478,10 @@ export class TrainerService {
       .findById(id)
       .populate({
         path: 'profileId',
-        populate: { path: 'userId', populate: ['companyId', 'departmentId', 'roleId'] },
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
       })
       .exec();
 
@@ -477,10 +497,14 @@ export class TrainerService {
       if (u.password !== undefined) updatePayload.password = u.password;
       if (u.roleId !== undefined) updatePayload.roleId = u.roleId;
       if (u.roleType !== undefined) {
-        updatePayload.roleType = normalizeRoleType(u.roleType) as UserRoleType;
+        updatePayload.roleType = normalizeRoleType(u.roleType);
       }
       if (Object.keys(updatePayload).length > 0) {
-        await this.userService.update(String(userDoc._id), updatePayload, actor);
+        await this.userService.update(
+          String(userDoc._id),
+          updatePayload,
+          actor,
+        );
       }
     }
 
@@ -509,7 +533,8 @@ export class TrainerService {
     if (dto.trainer) {
       const t = dto.trainer;
       const trainerUpdate: Record<string, unknown> = {};
-      if (t.specialities !== undefined) trainerUpdate.specialities = t.specialities;
+      if (t.specialities !== undefined)
+        trainerUpdate.specialities = t.specialities;
       if (t.trainingIds !== undefined) {
         trainerUpdate.trainings = t.trainingIds.map((tid) => ({
           training: new Types.ObjectId(tid),
@@ -524,7 +549,10 @@ export class TrainerService {
       .findById(id)
       .populate({
         path: 'profileId',
-        populate: { path: 'userId', populate: ['companyId', 'departmentId', 'roleId'] },
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
       })
       .populate('trainings.training')
       .exec();
@@ -547,5 +575,92 @@ export class TrainerService {
       throw new NotFoundException('No Trainers Found to Delete!');
     }
     return { status: true, message: 'All Trainers have been Deleted!' };
+  }
+
+  private async getOrFail(id: string): Promise<TrainerDocument> {
+    const trainer = await this.trainerModel
+      .findById(id)
+      .populate({
+        path: 'profileId',
+        populate: {
+          path: 'userId',
+          populate: ['companyId', 'departmentId', 'roleId'],
+        },
+      })
+      .populate('trainings.training')
+      .exec();
+    if (!trainer) {
+      throw new NotFoundException('This Trainer is Not found!');
+    }
+    return trainer;
+  }
+
+  private mapTrainerPdfRow(trainer: any) {
+    const profile = trainer?.profileId;
+    const user = profile?.userId;
+    const department =
+      user?.departmentId?.departmentName ||
+      user?.departmentId?.shortName ||
+      '---';
+    const designation = Array.isArray(trainer?.specialities)
+      ? trainer.specialities.filter(Boolean).join(', ')
+      : trainer?.specialities || '---';
+
+    return {
+      name: user?.name || '---',
+      email: user?.email || '---',
+      designation: asText(designation),
+      department: asText(department),
+    };
+  }
+
+  async downloadTrainersPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const { data } = await this.findAllForCompany(actor);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'Trainers Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'name', label: 'NAME', width: 2 },
+        { key: 'email', label: 'EMAIL', width: 2.5 },
+        { key: 'designation', label: 'SPECIALITIES', width: 2.5 },
+        { key: 'department', label: 'DEPARTMENT', width: 2 },
+      ],
+      rows: (data || []).map((t) => this.mapTrainerPdfRow(t)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('trainers', 'directory'),
+    };
+  }
+
+  async downloadTrainerPdf(id: string, actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const trainer = await this.getOrFail(id);
+    const row = this.mapTrainerPdfRow(trainer);
+    const profile = (trainer as any)?.profileId;
+    const avatarUrl = profile?.avatar || profile?.Avatar || '';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.name !== '---' ? row.name : 'Trainer',
+      subtitle: row.email !== '---' ? row.email : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      portraitUrl: typeof avatarUrl === 'string' ? avatarUrl.trim() : '',
+      coverRows: [
+        ['Name', row.name],
+        ['Email', row.email],
+        ['Specialities', row.designation],
+        ['Department', row.department],
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.name || 'trainer', 'trainer'),
+    };
   }
 }

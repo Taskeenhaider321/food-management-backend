@@ -4,10 +4,17 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { EquipmentController } from './equipment.controller';
 import { EquipmentService } from './equipment.service';
 import { Equipment, EquipmentSchema } from './schemas/equipment.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Equipment.name, schema: EquipmentSchema }]),
+    MongooseModule.forFeature([
+      { name: Equipment.name, schema: EquipmentSchema },
+      { name: Company.name, schema: CompanySchema },
+    ]),
   ],
   controllers: [EquipmentController],
   providers: [EquipmentService],

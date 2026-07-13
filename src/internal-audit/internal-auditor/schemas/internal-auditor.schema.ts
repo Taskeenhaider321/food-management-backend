@@ -42,4 +42,5 @@ export class InternalAuditor {
   createdBy?: string;
 }
 
-export const InternalAuditorSchema = SchemaFactory.createForClass(InternalAuditor);
+export const InternalAuditorSchema =
+  SchemaFactory.createForClass(InternalAuditor);

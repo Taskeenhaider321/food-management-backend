@@ -4,7 +4,10 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { User, UserSchema } from './schemas/user.schema';
 import { Company, CompanySchema } from '../company/schemas/company.schema';
-import { Department, DepartmentSchema } from '../department/schemas/department.schema';
+import {
+  Department,
+  DepartmentSchema,
+} from '../department/schemas/department.schema';
 import { EmailService } from '../../email/email.service';
 import { ProfileModule } from '../profile/profile.module';
 

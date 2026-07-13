@@ -1,5 +1,10 @@
 // src/auth/guards/tab-permission.guard.ts
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserDocument } from '../../admin-management/users/schemas/user.schema';
 
@@ -9,7 +14,10 @@ export class TabPermissionGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const requiredTab = this.reflector.get<string>('tab', context.getHandler());
-    const requiredPermission = this.reflector.get<string>('permission', context.getHandler());
+    const requiredPermission = this.reflector.get<string>(
+      'permission',
+      context.getHandler(),
+    );
 
     if (!requiredTab || !requiredPermission) {
       return true;
@@ -21,8 +29,21 @@ export class TabPermissionGuard implements CanActivate {
     return this.hasTabPermission(user, requiredTab, requiredPermission);
   }
 
-  private hasTabPermission(user: UserDocument, tabName: string, permission: string): boolean {
-    const u = user as UserDocument & { Tabs?: { Tab: string; Creation?: boolean; Approval?: boolean; Review?: boolean; Edit?: boolean; Authority?: boolean }[] };
+  private hasTabPermission(
+    user: UserDocument,
+    tabName: string,
+    permission: string,
+  ): boolean {
+    const u = user as UserDocument & {
+      Tabs?: {
+        Tab: string;
+        Creation?: boolean;
+        Approval?: boolean;
+        Review?: boolean;
+        Edit?: boolean;
+        Authority?: boolean;
+      }[];
+    };
     if (user.roleType === 'super-admin' || user.roleType === 'company-admin') {
       return true;
     }

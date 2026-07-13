@@ -61,6 +61,10 @@ export class YearlyTrainingPlan {
   StatusHistory: YearlyPlanStatusHistoryEntry[];
 }
 
-export const YearlyTrainingPlanSchema = SchemaFactory.createForClass(YearlyTrainingPlan);
+export const YearlyTrainingPlanSchema =
+  SchemaFactory.createForClass(YearlyTrainingPlan);
 
-YearlyTrainingPlanSchema.index({ UserDepartment: 1, Year: 1 }, { unique: true });
+YearlyTrainingPlanSchema.index(
+  { UserDepartment: 1, Year: 1 },
+  { unique: true },
+);

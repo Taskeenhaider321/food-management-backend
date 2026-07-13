@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsBoolean, IsOptional, IsEnum, IsMongoId, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsEnum,
+  IsMongoId,
+  IsNumber,
+} from 'class-validator';
 
 export class ChecklistQuestionDto {
   @ApiPropertyOptional()

@@ -7,7 +7,14 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { User, UserDocument } from '../admin-management/users/schemas/user.schema';
+import {
+  User,
+  UserDocument,
+} from '../admin-management/users/schemas/user.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../admin-management/company/schemas/company.schema';
 import { DerivedModuleService } from './company-rbac.service';
 import { AssignRoleDto } from './dtos/assign-role.dto';
 import { CreateRoleDto } from './dtos/create-role.dto';
@@ -16,20 +23,42 @@ import {
   MASTER_PERMISSION_SEED,
   MASTER_RESOURCE_GROUP_LABELS,
 } from './constants/master-access.seed';
-import { DerivedModule, DerivedModuleDocument } from './schemas/company-module.schema';
-import { MasterModule, MasterModuleDocument } from './schemas/master-module.schema';
-import { MasterPermission, MasterPermissionDocument } from './schemas/master-permission.schema';
+import {
+  DerivedModule,
+  DerivedModuleDocument,
+} from './schemas/company-module.schema';
+import {
+  MasterModule,
+  MasterModuleDocument,
+} from './schemas/master-module.schema';
+import {
+  MasterPermission,
+  MasterPermissionDocument,
+} from './schemas/master-permission.schema';
 import { Role, RoleDocument } from './schemas/role.schema';
 import { resourceDefaultDisplayName } from './utils/display-name.util';
+import {
+  asText,
+  buildBrandedDetailPdf,
+  buildBrandedListPdf,
+  formatDate,
+  resolveActorCompany,
+  safePdfFileName,
+} from '../common/branded-pdf.util';
 
 @Injectable()
 export class RbacService {
   constructor(
     @InjectModel(Role.name) private readonly roleModel: Model<RoleDocument>,
-    @InjectModel(MasterModule.name) private readonly masterModuleModel: Model<MasterModuleDocument>,
-    @InjectModel(MasterPermission.name) private readonly masterPermissionModel: Model<MasterPermissionDocument>,
-    @InjectModel(DerivedModule.name) private readonly derivedModuleModel: Model<DerivedModuleDocument>,
+    @InjectModel(MasterModule.name)
+    private readonly masterModuleModel: Model<MasterModuleDocument>,
+    @InjectModel(MasterPermission.name)
+    private readonly masterPermissionModel: Model<MasterPermissionDocument>,
+    @InjectModel(DerivedModule.name)
+    private readonly derivedModuleModel: Model<DerivedModuleDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>,
     @Inject(forwardRef(() => DerivedModuleService))
     private readonly derivedModuleService: DerivedModuleService,
   ) {}
@@ -53,7 +82,12 @@ export class RbacService {
     for (const moduleSeed of MASTER_MODULE_SEED) {
       const module = await this.masterModuleModel.findOneAndUpdate(
         { key: moduleSeed.key },
-        { name: moduleSeed.name, defaultName: moduleSeed.name, key: moduleSeed.key, isActive: true },
+        {
+          name: moduleSeed.name,
+          defaultName: moduleSeed.name,
+          key: moduleSeed.key,
+          isActive: true,
+        },
         { upsert: true, returnDocument: 'after' },
       );
       moduleMap.set(moduleSeed.key, module);
@@ -62,7 +96,9 @@ export class RbacService {
     for (const permissionSeed of MASTER_PERMISSION_SEED) {
       const module = moduleMap.get(permissionSeed.moduleKey);
       if (!module) {
-        throw new BadRequestException(`Missing module seed for ${permissionSeed.moduleKey}`);
+        throw new BadRequestException(
+          `Missing module seed for ${permissionSeed.moduleKey}`,
+        );
       }
 
       const groupKey = `${permissionSeed.moduleKey}:${permissionSeed.resource}`;
@@ -91,7 +127,8 @@ export class RbacService {
       message: 'Global modules and permissions seeded successfully',
       data: {
         masterModulesCount: await this.masterModuleModel.countDocuments(),
-        masterPermissionsCount: await this.masterPermissionModel.countDocuments(),
+        masterPermissionsCount:
+          await this.masterPermissionModel.countDocuments(),
       },
     };
   }
@@ -101,25 +138,38 @@ export class RbacService {
   }
 
   async getMasterResourcesByModule() {
-    const modules = await this.masterModuleModel.find().sort({ name: 1 }).lean();
+    const modules = await this.masterModuleModel
+      .find()
+      .sort({ name: 1 })
+      .lean();
     const permissions = await this.masterPermissionModel.find().lean();
 
     return modules.map((module) => {
-      const modPerms = permissions.filter((p) => p.moduleId.toString() === module._id.toString());
+      const modPerms = permissions.filter(
+        (p) => p.moduleId.toString() === module._id.toString(),
+      );
       const keys = new Set(modPerms.map((p) => p.resource));
       return {
         moduleId: module._id,
         moduleKey: module.key,
         resources: [...keys].sort().map((key) => {
           const first = modPerms.find((p) => p.resource === key);
-          return { key, defaultName: first?.resourceGroupLabel ?? resourceDefaultDisplayName(key) };
+          return {
+            key,
+            defaultName:
+              first?.resourceGroupLabel ?? resourceDefaultDisplayName(key),
+          };
         }),
       };
     });
   }
 
   async getMasterPermissions() {
-    return this.masterPermissionModel.find().populate('moduleId').sort({ key: 1 }).exec();
+    return this.masterPermissionModel
+      .find()
+      .populate('moduleId')
+      .sort({ key: 1 })
+      .exec();
   }
 
   async getPermissionsByModule(moduleId: string) {
@@ -132,11 +182,19 @@ export class RbacService {
   }
 
   async getPermissionTree() {
-    const modules = await this.masterModuleModel.find().sort({ name: 1 }).lean();
-    const permissions = await this.masterPermissionModel.find().sort({ key: 1 }).lean();
+    const modules = await this.masterModuleModel
+      .find()
+      .sort({ name: 1 })
+      .lean();
+    const permissions = await this.masterPermissionModel
+      .find()
+      .sort({ key: 1 })
+      .lean();
 
     return modules.map((module) => {
-      const modPerms = permissions.filter((p) => p.moduleId.toString() === module._id.toString());
+      const modPerms = permissions.filter(
+        (p) => p.moduleId.toString() === module._id.toString(),
+      );
       const resourceKeys = [...new Set(modPerms.map((p) => p.resource))].sort();
 
       return {
@@ -145,7 +203,8 @@ export class RbacService {
           const first = modPerms.find((p) => p.resource === key);
           return {
             key,
-            defaultName: first?.resourceGroupLabel ?? resourceDefaultDisplayName(key),
+            defaultName:
+              first?.resourceGroupLabel ?? resourceDefaultDisplayName(key),
             permissions: modPerms.filter((p) => p.resource === key),
           };
         }),
@@ -158,24 +217,39 @@ export class RbacService {
 
   async createRole(dto: CreateRoleDto, createdBy?: string) {
     if (!dto.moduleIds?.length && !dto.derivedModuleIds?.length) {
-      throw new BadRequestException('At least one of moduleIds or derivedModuleIds is required');
+      throw new BadRequestException(
+        'At least one of moduleIds or derivedModuleIds is required',
+      );
     }
 
     let moduleOids: Types.ObjectId[] = [];
     if (dto.moduleIds?.length) {
       moduleOids = this.uniqueObjectIds(dto.moduleIds, 'moduleIds');
-      const modules = await this.masterModuleModel.find({ _id: { $in: moduleOids }, isActive: true });
+      const modules = await this.masterModuleModel.find({
+        _id: { $in: moduleOids },
+        isActive: true,
+      });
       if (modules.length !== moduleOids.length) {
-        throw new NotFoundException('One or more master modules do not exist or are inactive');
+        throw new NotFoundException(
+          'One or more master modules do not exist or are inactive',
+        );
       }
     }
 
     let derivedOids: Types.ObjectId[] = [];
     if (dto.derivedModuleIds?.length) {
-      derivedOids = this.uniqueObjectIds(dto.derivedModuleIds, 'derivedModuleIds');
-      const dms = await this.derivedModuleModel.find({ _id: { $in: derivedOids }, isActive: true });
+      derivedOids = this.uniqueObjectIds(
+        dto.derivedModuleIds,
+        'derivedModuleIds',
+      );
+      const dms = await this.derivedModuleModel.find({
+        _id: { $in: derivedOids },
+        isActive: true,
+      });
       if (dms.length !== derivedOids.length) {
-        throw new NotFoundException('One or more derived modules do not exist or are inactive');
+        throw new NotFoundException(
+          'One or more derived modules do not exist or are inactive',
+        );
       }
     }
 
@@ -199,7 +273,9 @@ export class RbacService {
   }
 
   async createSuperAdminRole() {
-    const existing = await this.roleModel.findOne({ systemRole: 'SUPER_ADMIN' });
+    const existing = await this.roleModel.findOne({
+      systemRole: 'SUPER_ADMIN',
+    });
     if (existing) {
       return {
         status: true,
@@ -234,7 +310,8 @@ export class RbacService {
 
   async getRoles(actor?: any, companyScopedOnly = false) {
     if (companyScopedOnly) {
-      const companyId = actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+      const companyId =
+        actor?.companyId?._id?.toString() || actor?.companyId?.toString();
       if (!companyId) {
         return [];
       }
@@ -261,7 +338,10 @@ export class RbacService {
       .populate('moduleIds')
       .populate({
         path: 'derivedModuleIds',
-        populate: [{ path: 'masterModuleId' }, { path: 'selectedPermissionIds' }],
+        populate: [
+          { path: 'masterModuleId' },
+          { path: 'selectedPermissionIds' },
+        ],
       })
       .populate('createdBy')
       .sort({ created_at: -1 })
@@ -282,8 +362,13 @@ export class RbacService {
       throw new NotFoundException('Role not found or inactive');
     }
 
-    if (role.companyId && user.companyId?.toString() !== role.companyId.toString()) {
-      throw new BadRequestException('Company-scoped role does not match the user\'s company');
+    if (
+      role.companyId &&
+      user.companyId?.toString() !== role.companyId.toString()
+    ) {
+      throw new BadRequestException(
+        "Company-scoped role does not match the user's company",
+      );
     }
 
     user.roleId = role._id as any;
@@ -300,7 +385,13 @@ export class RbacService {
           path: 'roleId',
           populate: [
             { path: 'moduleIds' },
-            { path: 'derivedModuleIds', populate: [{ path: 'masterModuleId' }, { path: 'selectedPermissionIds' }] },
+            {
+              path: 'derivedModuleIds',
+              populate: [
+                { path: 'masterModuleId' },
+                { path: 'selectedPermissionIds' },
+              ],
+            },
           ],
         }),
     };
@@ -321,7 +412,10 @@ export class RbacService {
     }
 
     if (role.derivedModuleIds?.length) {
-      const derivedKeys = await this.derivedModuleService.resolvePermissionsForDerivedModules(role.derivedModuleIds);
+      const derivedKeys =
+        await this.derivedModuleService.resolvePermissionsForDerivedModules(
+          role.derivedModuleIds,
+        );
       keys.push(...derivedKeys);
     }
 
@@ -334,7 +428,10 @@ export class RbacService {
       .populate('moduleIds')
       .populate({
         path: 'derivedModuleIds',
-        populate: [{ path: 'masterModuleId' }, { path: 'selectedPermissionIds' }],
+        populate: [
+          { path: 'masterModuleId' },
+          { path: 'selectedPermissionIds' },
+        ],
       })
       .populate('createdBy')
       .lean();
@@ -343,13 +440,21 @@ export class RbacService {
 
     const masterPerms = populated.moduleIds?.length
       ? await this.masterPermissionModel
-          .find({ moduleId: { $in: (populated.moduleIds as any[]).map((m) => m._id ?? m) }, isActive: true })
+          .find({
+            moduleId: {
+              $in: (populated.moduleIds as any[]).map((m) => m._id ?? m),
+            },
+            isActive: true,
+          })
           .sort({ key: 1 })
           .lean()
       : [];
 
     const derivedPerms = ((populated.derivedModuleIds as any[]) || []).flatMap(
-      (dm) => (dm.selectedPermissionIds || []).filter((p: any) => p.isActive !== false),
+      (dm) =>
+        (dm.selectedPermissionIds || []).filter(
+          (p: any) => p.isActive !== false,
+        ),
     );
 
     return { ...populated, permissions: [...masterPerms, ...derivedPerms] };
@@ -365,5 +470,111 @@ export class RbacService {
     const uniqueValues = [...new Set(values)];
     uniqueValues.forEach((value) => this.ensureObjectId(value, fieldName));
     return uniqueValues.map((value) => new Types.ObjectId(value));
+  }
+
+  private moduleNamesFromRole(role: any): string[] {
+    const master = ((role?.moduleIds as any[]) || [])
+      .map((m) => m?.name || m?.defaultName || m?.key)
+      .filter(Boolean);
+    const derived = ((role?.derivedModuleIds as any[]) || [])
+      .map((m) => m?.name || m?.displayName || m?.masterModuleId?.name)
+      .filter(Boolean);
+    return [...master, ...derived];
+  }
+
+  private mapRolePdfRow(role: any) {
+    const modules = this.moduleNamesFromRole(role);
+    const createdBy =
+      role?.createdBy?.name ||
+      role?.createdBy?.userName ||
+      role?.createdBy?.email ||
+      '---';
+    return {
+      roleName: asText(role?.roleName),
+      description: asText(role?.description),
+      systemRole: asText(role?.systemRole),
+      isActive: role?.isActive === false ? 'No' : 'Yes',
+      modules: modules.length ? modules.join(', ') : '---',
+      moduleCount: String(modules.length),
+      createdBy: asText(createdBy),
+      created: formatDate(role?.created_at),
+    };
+  }
+
+  async downloadRolesPdf(actor: any) {
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const roles = await this.getRoles(actor, true);
+
+    const pdfBytes = await buildBrandedListPdf({
+      company,
+      title: 'RBAC Roles Directory',
+      exportedBy: actor?.name || actor?.userName || 'System',
+      columns: [
+        { key: 'roleName', label: 'ROLE', width: 1.8 },
+        { key: 'systemRole', label: 'SYSTEM', width: 1.3 },
+        { key: 'isActive', label: 'ACTIVE', width: 0.9 },
+        { key: 'moduleCount', label: 'MODULES', width: 1 },
+        { key: 'modules', label: 'MODULE NAMES', width: 2.5 },
+        { key: 'createdBy', label: 'CREATED BY', width: 1.4 },
+      ],
+      rows: (roles || []).map((r) => this.mapRolePdfRow(r)),
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName('rbac_roles', 'directory'),
+    };
+  }
+
+  async downloadRolePdf(id: string, actor: any) {
+    this.ensureObjectId(id, 'roleId');
+    const company = await resolveActorCompany(this.companyModel, actor);
+    const role = await this.populateRole(id);
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+
+    const row = this.mapRolePdfRow(role);
+    const permissions = ((role as any).permissions || [])
+      .map((p: any) => p?.key || p?.name)
+      .filter(Boolean);
+    const permissionSummary =
+      permissions.length > 0
+        ? permissions.slice(0, 40).join(', ') +
+          (permissions.length > 40
+            ? ` (+${permissions.length - 40} more)`
+            : '')
+        : '---';
+
+    const pdfBytes = await buildBrandedDetailPdf({
+      company,
+      title: row.roleName !== '---' ? row.roleName : 'Role',
+      subtitle: row.systemRole !== '---' ? row.systemRole : undefined,
+      exportedBy: actor?.name || actor?.userName || 'System',
+      coverRows: [
+        ['Role Name', row.roleName],
+        ['Description', row.description],
+        ['System Role', row.systemRole],
+        ['Active', row.isActive],
+        ['Modules', row.modules],
+        ['Module Count', row.moduleCount],
+        ['Created By', row.createdBy],
+        ['Created', row.created],
+      ],
+      sections: [
+        {
+          heading: 'Permissions Summary',
+          rows: [
+            ['Permission Count', String(permissions.length)],
+            ['Permissions', permissionSummary],
+          ],
+        },
+      ],
+    });
+
+    return {
+      buffer: Buffer.from(pdfBytes),
+      fileName: safePdfFileName(row.roleName || 'role', 'role'),
+    };
   }
 }

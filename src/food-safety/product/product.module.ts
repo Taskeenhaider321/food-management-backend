@@ -5,6 +5,10 @@ import { ProductService } from './product.service';
 import { ProductSchema } from './schemas/product.schema';
 import { UserSchema } from '../../admin-management/users/schemas/user.schema';
 import { DepartmentSchema } from '../../admin-management/department/schemas/department.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -12,6 +16,7 @@ import { DepartmentSchema } from '../../admin-management/department/schemas/depa
       { name: 'Product', schema: ProductSchema },
       { name: 'Department', schema: DepartmentSchema },
       { name: 'User', schema: UserSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [ProductController],
