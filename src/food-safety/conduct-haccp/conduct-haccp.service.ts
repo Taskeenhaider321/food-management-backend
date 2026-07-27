@@ -372,7 +372,7 @@ export class ConductHaccpService {
       throw new NotFoundException(
         `ConductHaccp with ID: ${approveConductHaccpDto.id} not found.`,
       );
-    approveRecord(conductHaccp, approveConductHaccpDto.ApprovedBy);
+    approveRecord(conductHaccp, approveConductHaccpDto.approvedBy);
     await conductHaccp.save();
     return {
       status: true,
@@ -401,7 +401,7 @@ export class ConductHaccpService {
       );
     disapproveRecord(
       conductHaccp,
-      disapproveConductHaccpDto.DisapprovedBy,
+      disapproveConductHaccpDto.disapprovedBy,
       disapproveConductHaccpDto.Reason,
     );
     await conductHaccp.save();

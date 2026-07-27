@@ -6,7 +6,6 @@ export class HazardDto {
   Process?: string;
 
   @IsString()
-  @IsEnum(['Biological', 'Chemical', 'Physical', 'Halal', 'Allergen'])
   type: string;
 
   @IsOptional()

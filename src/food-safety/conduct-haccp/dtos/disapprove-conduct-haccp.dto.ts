@@ -11,5 +11,5 @@ export class DisapproveConductHaccpDto {
 
   @IsString()
   @IsNotEmpty()
-  DisapprovedBy: string;
+  disapprovedBy: string;
 }

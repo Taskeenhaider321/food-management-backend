@@ -7,5 +7,5 @@ export class ApproveConductHaccpDto {
 
   @IsString()
   @IsNotEmpty()
-  ApprovedBy: string;
+  approvedBy: string;
 }
