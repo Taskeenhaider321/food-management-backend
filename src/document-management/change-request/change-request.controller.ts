@@ -39,6 +39,16 @@ export class ChangeRequestController {
     return this.changeRequestService.findAll(actor);
   }
 
+  @Get('controlled-documents')
+  @ApiOperation({
+    summary:
+      'List approved controlled documents with generated IDs (documents, forms, HACCP, flow diagrams, etc.)',
+  })
+  @ApiBearerAuth()
+  async getControlledDocuments(@CurrentUser() actor: any) {
+    return this.changeRequestService.getControlledDocuments(actor);
+  }
+
   /** Must be registered before `GET :id`. */
   @Get('download-pdf')
   @ApiOperation({ summary: 'Download change requests directory PDF' })

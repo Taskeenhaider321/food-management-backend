@@ -12,7 +12,16 @@ export type ChangeRequestDocument = ChangeRequest & MongooseDocument;
 export const CHANGE_REQUEST_TARGET_MODELS = [
   'Document',
   'ListOfForms',
+  'HaccpTeam',
+  'Processes',
+  'Product',
+  'ConductHaccp',
+  'DecisionTree',
+  'FoodSafety',
 ] as const;
+
+export type ChangeRequestTargetModel =
+  (typeof CHANGE_REQUEST_TARGET_MODELS)[number];
 
 @Schema({
   collection: 'dm_change_requests',

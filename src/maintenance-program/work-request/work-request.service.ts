@@ -18,7 +18,12 @@ import {
   ResubmitWorkRequestDto,
 } from './dtos/create-work-request.dto';
 import { UpdateWorkRequestDto } from './dtos/update-work-request.dto';
+import { VerifyWorkRequestDto } from './dtos/verify-work-request.dto';
 import { v2 as cloudinary } from 'cloudinary';
+import {
+  buildVerificationChecklist,
+  validateVerificationChecklist,
+} from '../common/maintenance-verification.util';
 import {
   buildBrandedDetailPdf,
   buildBrandedListPdf,
@@ -249,9 +254,9 @@ export class WorkRequestService {
     if (!mwr)
       throw new NotFoundException('Maintenance Work Request not found.');
 
-    if (mwr.Status === 'Completed') {
+    if (mwr.Status !== 'Approved') {
       throw new BadRequestException(
-        'Maintenance Work Request is already completed.',
+        'Only accepted work requests can be marked as completed.',
       );
     }
 
@@ -268,7 +273,7 @@ export class WorkRequestService {
       : [];
 
     mwr.EndTime = new Date();
-    mwr.Status = 'Completed';
+    mwr.Status = 'In Review';
     mwr.CompletedBy = completedByName;
     mwr.CompletionDate = new Date();
     mwr.CompletionRemarks = dto.CompletionRemarks || mwr.CompletionRemarks;
@@ -277,7 +282,7 @@ export class WorkRequestService {
     mwr.History = [
       ...(mwr.History || []),
       {
-        type: 'Completed',
+        type: 'Work Completed',
         user: completedByName,
         at: new Date(),
         comment: dto.CompletionRemarks,
@@ -287,7 +292,47 @@ export class WorkRequestService {
     await mwr.save();
     return {
       status: true,
-      message: 'The Maintenance Work Request has been marked as completed.',
+      message:
+        'Maintenance work submitted successfully and is now In Review for verification.',
+      data: mwr,
+    };
+  }
+
+  async verify(id: string, dto: VerifyWorkRequestDto) {
+    const mwr = await this.workRequestModel.findById(id);
+    if (!mwr)
+      throw new NotFoundException('Maintenance Work Request not found.');
+
+    if (mwr.Status !== 'In Review') {
+      throw new BadRequestException(
+        'Only work requests In Review can be verified.',
+      );
+    }
+
+    validateVerificationChecklist(dto.checklist);
+
+    const verifiedByName = await this.resolveUserName(
+      dto.verifiedBy,
+      String(dto.verifiedBy),
+    );
+
+    mwr.Status = 'Verified';
+    mwr.verificationChecklist = buildVerificationChecklist(dto.checklist);
+    mwr.VerifiedBy = verifiedByName;
+    mwr.VerificationDate = new Date();
+    mwr.History = [
+      ...(mwr.History || []),
+      {
+        type: 'Verified',
+        user: verifiedByName,
+        at: new Date(),
+      },
+    ];
+
+    await mwr.save();
+    return {
+      status: true,
+      message: 'Maintenance work request verified successfully.',
       data: mwr,
     };
   }

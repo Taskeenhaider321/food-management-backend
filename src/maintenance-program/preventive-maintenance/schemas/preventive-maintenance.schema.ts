@@ -1,6 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { preventiveMaintenancePreSave } from '../hooks/preventive-maintenance.hooks';
+import { MAINTENANCE_RECORD_STATUSES } from '../../common/maintenance-verification.constants';
+import {
+  MaintenanceVerificationChecklistItem,
+  MaintenanceVerificationChecklistItemSchema,
+} from '../../common/maintenance-verification.schema';
 
 export type PreventiveMaintenanceDocument = PreventiveMaintenance & Document;
 
@@ -53,6 +58,18 @@ export class PreventiveMaintenance {
 
   @Prop()
   SubmitDate: Date;
+
+  @Prop({ enum: MAINTENANCE_RECORD_STATUSES, default: 'In Review' })
+  Status: string;
+
+  @Prop({ type: [MaintenanceVerificationChecklistItemSchema], default: [] })
+  verificationChecklist: MaintenanceVerificationChecklistItem[];
+
+  @Prop()
+  VerifiedBy?: string;
+
+  @Prop()
+  VerificationDate?: Date;
 }
 
 export const PreventiveMaintenanceSchema = SchemaFactory.createForClass(

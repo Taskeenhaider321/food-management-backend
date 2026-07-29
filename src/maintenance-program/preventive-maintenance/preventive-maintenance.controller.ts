@@ -2,6 +2,8 @@ import {
   Controller,
   Post,
   Get,
+  Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -17,6 +19,10 @@ import {
 } from '@nestjs/swagger';
 import { PreventiveMaintenanceService } from './preventive-maintenance.service';
 import { CreatePreventiveMaintenanceDto } from './dtos/create-preventive-maintenance.dto';
+import {
+  UpdatePreventiveMaintenanceDto,
+  VerifyMaintenanceDto,
+} from './dtos/verify-preventive-maintenance.dto';
 
 @ApiTags('Preventive Maintenance')
 @Controller('preventive-maintenance')
@@ -27,7 +33,7 @@ export class PreventiveMaintenanceController {
 
   @Post(':machineId')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Add preventive maintenance record' })
+  @ApiOperation({ summary: 'Submit preventive maintenance record (In Review)' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('Image'))
   async create(
@@ -37,6 +43,26 @@ export class PreventiveMaintenanceController {
   ) {
     dto.machineId = machineId;
     return this.maintenanceService.create(dto, image);
+  }
+
+  @Put(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update maintenance record until verified' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('Image'))
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdatePreventiveMaintenanceDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.maintenanceService.update(id, dto, image);
+  }
+
+  @Patch(':id/verify')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verify maintenance record with checklist' })
+  async verify(@Param('id') id: string, @Body() dto: VerifyMaintenanceDto) {
+    return this.maintenanceService.verify(id, dto);
   }
 
   @Get('all/:departmentId')

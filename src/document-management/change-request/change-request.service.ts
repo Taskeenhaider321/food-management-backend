@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 import {
   ChangeRequest,
   ChangeRequestDocument,
+  ChangeRequestTargetModel,
 } from './schemas/change-request.schema';
 import {
   CreateChangeRequestDto,
@@ -24,11 +25,35 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import { HaccpTeam } from '../../food-safety/haccp-team/schemas/haccp-team.schema';
 
 const DOCUMENT_POPULATE = {
   path: 'document',
   select:
-    'documentId name formName documentType status creationMethod fileUrl fileName editorContent description questions',
+    'documentId name formName documentType status creationMethod fileUrl fileName editorContent description questions DocumentId TeamName ProcessName ProductDetails',
+};
+
+type TargetModelConfig = {
+  model: Model<any>;
+  idField: 'documentId' | 'DocumentId';
+  resolveName: (target: any) => string;
+  pendingStatus: string;
+  approvedStatus: string;
+  disapprovedStatus: string;
+  statusField: 'status' | 'Status';
+  hasTimeline: boolean;
+  category: string;
+};
+
+const TARGET_CATEGORY_LABELS: Record<ChangeRequestTargetModel, string> = {
+  Document: 'Document',
+  ListOfForms: 'Form',
+  HaccpTeam: 'HACCP Team',
+  Processes: 'Flow Diagram',
+  Product: 'Product',
+  ConductHaccp: 'Risk Assessment',
+  DecisionTree: 'Decision Tree',
+  FoodSafety: 'Food Safety Plan',
 };
 
 @Injectable()
@@ -38,13 +63,142 @@ export class ChangeRequestService {
     private readonly changeRequestModel: Model<ChangeRequestDocument>,
     @InjectModel('Document') private readonly documentModel: Model<any>,
     @InjectModel('ListOfForms') private readonly listOfFormsModel: Model<any>,
+    @InjectModel(HaccpTeam.name) private readonly haccpTeamModel: Model<any>,
+    @InjectModel('Processes') private readonly processesModel: Model<any>,
+    @InjectModel('Product') private readonly productModel: Model<any>,
+    @InjectModel('ConductHaccp') private readonly conductHaccpModel: Model<any>,
+    @InjectModel('DecisionTree') private readonly decisionTreeModel: Model<any>,
+    @InjectModel('FoodSafety') private readonly foodSafetyModel: Model<any>,
     @InjectModel('Company') private readonly companyModel: Model<any>,
+    @InjectModel('Department') private readonly departmentModel: Model<any>,
   ) {}
+
+  private targetConfig(documentModel: string): TargetModelConfig {
+    const configs: Record<ChangeRequestTargetModel, TargetModelConfig> = {
+      Document: {
+        model: this.documentModel,
+        idField: 'documentId',
+        resolveName: (target) => target.name || target.documentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.Document,
+      },
+      ListOfForms: {
+        model: this.listOfFormsModel,
+        idField: 'documentId',
+        resolveName: (target) => target.formName || target.documentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.ListOfForms,
+      },
+      HaccpTeam: {
+        model: this.haccpTeamModel,
+        idField: 'DocumentId',
+        resolveName: (target) => target.TeamName || target.DocumentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'Status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.HaccpTeam,
+      },
+      Processes: {
+        model: this.processesModel,
+        idField: 'DocumentId',
+        resolveName: (target) => target.ProcessName || target.DocumentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'Status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.Processes,
+      },
+      Product: {
+        model: this.productModel,
+        idField: 'DocumentId',
+        resolveName: (target) =>
+          target.ProductDetails?.Name || target.DocumentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'Status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.Product,
+      },
+      ConductHaccp: {
+        model: this.conductHaccpModel,
+        idField: 'DocumentId',
+        resolveName: (target) => target.DocumentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'Status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.ConductHaccp,
+      },
+      DecisionTree: {
+        model: this.decisionTreeModel,
+        idField: 'DocumentId',
+        resolveName: (target) => target.DocumentId,
+        pendingStatus: 'In Review',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'Status',
+        hasTimeline: true,
+        category: TARGET_CATEGORY_LABELS.DecisionTree,
+      },
+      FoodSafety: {
+        model: this.foodSafetyModel,
+        idField: 'DocumentId',
+        resolveName: (target) => target.DocumentId,
+        pendingStatus: 'Pending',
+        approvedStatus: 'Approved',
+        disapprovedStatus: 'Disapproved',
+        statusField: 'Status',
+        hasTimeline: false,
+        category: TARGET_CATEGORY_LABELS.FoodSafety,
+      },
+    };
+
+    const config = configs[documentModel as ChangeRequestTargetModel];
+    if (!config) {
+      throw new BadRequestException(`Unsupported document model: ${documentModel}`);
+    }
+    return config;
+  }
 
   private companyScopedFilter(actor: any): Record<string, unknown> {
     const companyId =
       actor?.companyId?._id?.toString() || actor?.companyId?.toString();
     return companyId ? { companyId: new Types.ObjectId(companyId) } : {};
+  }
+
+  private actorCompanyId(actor: any): string | undefined {
+    return (
+      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+    );
+  }
+
+  private async companyDepartmentIds(actor: any): Promise<Types.ObjectId[]> {
+    const companyId = this.actorCompanyId(actor);
+    if (!companyId) return [];
+    const depts = await this.departmentModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    return depts.map((d: any) => d._id);
+  }
+
+  private foodSafetyDepartmentFilter(
+    deptIds: Types.ObjectId[],
+  ): Record<string, unknown> {
+    return deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
   }
 
   private async nextRequestNumber(): Promise<string> {
@@ -61,24 +215,302 @@ export class ChangeRequestService {
   }
 
   private async resolveTarget(documentId: string, documentModel: string) {
-    const model =
-      documentModel === 'ListOfForms'
-        ? this.listOfFormsModel
-        : this.documentModel;
-    const target = await model.findById(documentId).lean();
+    const config = this.targetConfig(documentModel);
+    const target = await config.model.findById(documentId).lean();
     if (!target) {
       throw new NotFoundException('Selected document not found');
     }
-    if (!target.documentId) {
+    const ref = target[config.idField];
+    if (!ref) {
       throw new BadRequestException(
         'The selected document has no generated Document ID',
       );
     }
-    return target;
+    return { target, config, documentRef: ref as string };
+  }
+
+  private assertTargetIsApproved(
+    target: any,
+    config: TargetModelConfig,
+  ): void {
+    const currentStatus = target[config.statusField];
+    if (currentStatus !== config.approvedStatus) {
+      throw new BadRequestException(
+        'Change requests can only be created against approved documents',
+      );
+    }
+  }
+
+  private async syncTargetStatusWithChangeRequest(
+    documentId: string,
+    documentModel: string,
+    actor: any,
+    outcome: 'pending' | 'approved' | 'disapproved',
+    reason?: string,
+  ) {
+    const { target, config } = await this.resolveTarget(documentId, documentModel);
+    const userName = actorDisplayName(actor);
+
+    const statusByOutcome = {
+      pending: config.pendingStatus,
+      approved: config.approvedStatus,
+      disapproved: config.disapprovedStatus,
+    };
+    const actionByOutcome = {
+      pending: 'Change Request Created',
+      approved: 'Change Request Approved',
+      disapproved: 'Change Request Disapproved',
+    };
+
+    const newStatus = statusByOutcome[outcome];
+    const currentStatus = target[config.statusField];
+
+    if (outcome === 'pending' && currentStatus === newStatus) {
+      return;
+    }
+
+    const update: Record<string, unknown> = {
+      [config.statusField]: newStatus,
+    };
+
+    if (config.hasTimeline && Array.isArray(target.timeline)) {
+      update.timeline = [
+        ...target.timeline,
+        {
+          action: actionByOutcome[outcome],
+          status: newStatus,
+          user: userName,
+          at: new Date(),
+          ...(reason ? { reason } : {}),
+        },
+      ];
+    }
+
+    if (config.statusField === 'status') {
+      update.updatedBy = userName;
+      if (outcome === 'disapproved' && reason) {
+        update.reason = reason;
+      } else if (outcome === 'approved') {
+        update.reason = undefined;
+      }
+    } else {
+      update.UpdatedBy = userName;
+      update.UpdationDate = new Date();
+      if (outcome === 'approved') {
+        update.ApprovedBy = userName;
+        update.ApprovalDate = new Date();
+        update.DisapprovedBy = undefined;
+        update.DisapprovalDate = undefined;
+        update.Reason = undefined;
+      } else if (outcome === 'disapproved') {
+        update.Reason = reason;
+        update.DisapprovedBy = userName;
+        update.DisapprovalDate = new Date();
+        update.ApprovedBy = undefined;
+        update.ApprovalDate = undefined;
+      }
+    }
+
+    await config.model.findByIdAndUpdate(documentId, update);
+  }
+
+  private async markTargetAsPending(
+    documentId: string,
+    documentModel: string,
+    actor: any,
+    changeReason: string,
+  ) {
+    await this.syncTargetStatusWithChangeRequest(
+      documentId,
+      documentModel,
+      actor,
+      'pending',
+      changeReason,
+    );
+  }
+
+  async getControlledDocuments(actor: any) {
+    const companyFilter = this.companyScopedFilter(actor);
+    const deptIds = await this.companyDepartmentIds(actor);
+    const foodSafetyFilter = this.foodSafetyDepartmentFilter(deptIds);
+
+    const [
+      documents,
+      forms,
+      haccpTeams,
+      processes,
+      products,
+      conductHaccp,
+      decisionTrees,
+      foodSafetyPlans,
+    ] = await Promise.all([
+      this.documentModel
+        .find({
+          ...companyFilter,
+          documentId: { $exists: true, $ne: '' },
+          status: 'Approved',
+        })
+        .select('_id documentId name documentType status')
+        .lean(),
+      this.listOfFormsModel
+        .find({
+          ...companyFilter,
+          documentId: { $exists: true, $ne: '' },
+          status: 'Approved',
+        })
+        .select('_id documentId formName documentType status')
+        .lean(),
+      this.haccpTeamModel
+        .find({
+          ...foodSafetyFilter,
+          DocumentId: { $exists: true, $ne: '' },
+          Status: 'Approved',
+        })
+        .select('_id DocumentId TeamName DocumentType Status')
+        .lean(),
+      this.processesModel
+        .find({
+          ...foodSafetyFilter,
+          DocumentId: { $exists: true, $ne: '' },
+          Status: 'Approved',
+        })
+        .select('_id DocumentId ProcessName DocumentType Status')
+        .lean(),
+      this.productModel
+        .find({
+          ...foodSafetyFilter,
+          DocumentId: { $exists: true, $ne: '' },
+          Status: 'Approved',
+        })
+        .select('_id DocumentId ProductDetails DocumentType Status')
+        .lean(),
+      this.conductHaccpModel
+        .find({
+          ...foodSafetyFilter,
+          DocumentId: { $exists: true, $ne: '' },
+          Status: 'Approved',
+        })
+        .select('_id DocumentId DocumentType Status')
+        .lean(),
+      this.decisionTreeModel
+        .find({
+          ...foodSafetyFilter,
+          DocumentId: { $exists: true, $ne: '' },
+          Status: 'Approved',
+        })
+        .select('_id DocumentId DocumentType Status')
+        .lean(),
+      this.foodSafetyModel
+        .find({
+          ...foodSafetyFilter,
+          DocumentId: { $exists: true, $ne: '' },
+          Status: 'Approved',
+        })
+        .select('_id DocumentId DocumentType Status')
+        .lean(),
+    ]);
+
+    const items: Array<{
+      id: string;
+      model: ChangeRequestTargetModel;
+      documentId: string;
+      name: string;
+      category: string;
+      status?: string;
+    }> = [];
+
+    for (const doc of documents) {
+      items.push({
+        id: doc._id.toString(),
+        model: 'Document',
+        documentId: doc.documentId,
+        name: doc.name,
+        category: TARGET_CATEGORY_LABELS.Document,
+        status: doc.status,
+      });
+    }
+    for (const form of forms) {
+      items.push({
+        id: form._id.toString(),
+        model: 'ListOfForms',
+        documentId: form.documentId,
+        name: form.formName,
+        category: TARGET_CATEGORY_LABELS.ListOfForms,
+        status: form.status,
+      });
+    }
+    for (const team of haccpTeams) {
+      items.push({
+        id: team._id.toString(),
+        model: 'HaccpTeam',
+        documentId: team.DocumentId,
+        name: team.TeamName || team.DocumentId,
+        category: TARGET_CATEGORY_LABELS.HaccpTeam,
+        status: team.Status,
+      });
+    }
+    for (const process of processes) {
+      items.push({
+        id: process._id.toString(),
+        model: 'Processes',
+        documentId: process.DocumentId,
+        name: process.ProcessName || process.DocumentId,
+        category: TARGET_CATEGORY_LABELS.Processes,
+        status: process.Status,
+      });
+    }
+    for (const product of products) {
+      items.push({
+        id: product._id.toString(),
+        model: 'Product',
+        documentId: product.DocumentId,
+        name: product.ProductDetails?.Name || product.DocumentId,
+        category: TARGET_CATEGORY_LABELS.Product,
+        status: product.Status,
+      });
+    }
+    for (const record of conductHaccp) {
+      items.push({
+        id: record._id.toString(),
+        model: 'ConductHaccp',
+        documentId: record.DocumentId,
+        name: record.DocumentId,
+        category: TARGET_CATEGORY_LABELS.ConductHaccp,
+        status: record.Status,
+      });
+    }
+    for (const tree of decisionTrees) {
+      items.push({
+        id: tree._id.toString(),
+        model: 'DecisionTree',
+        documentId: tree.DocumentId,
+        name: tree.DocumentId,
+        category: TARGET_CATEGORY_LABELS.DecisionTree,
+        status: tree.Status,
+      });
+    }
+    for (const plan of foodSafetyPlans) {
+      items.push({
+        id: plan._id.toString(),
+        model: 'FoodSafety',
+        documentId: plan.DocumentId,
+        name: plan.DocumentId,
+        category: TARGET_CATEGORY_LABELS.FoodSafety,
+        status: plan.Status,
+      });
+    }
+
+    items.sort((a, b) => a.documentId.localeCompare(b.documentId));
+
+    return { status: true, data: items };
   }
 
   async create(dto: CreateChangeRequestDto, actor: any) {
-    const target = await this.resolveTarget(dto.document, dto.documentModel);
+    const { target, config, documentRef } = await this.resolveTarget(
+      dto.document,
+      dto.documentModel,
+    );
+    this.assertTargetIsApproved(target, config);
     const userName = actorDisplayName(actor);
     const companyId =
       actor?.companyId?._id?.toString() || actor?.companyId?.toString();
@@ -90,8 +522,8 @@ export class ChangeRequestService {
         : (target.companyId ?? undefined),
       document: new Types.ObjectId(dto.document),
       documentModel: dto.documentModel,
-      documentRef: target.documentId,
-      documentName: target.name || target.formName || target.documentId,
+      documentRef,
+      documentName: config.resolveName(target),
       changeReason: dto.changeReason,
       status: 'Request Pending',
       createdBy: userName,
@@ -107,6 +539,14 @@ export class ChangeRequestService {
     });
 
     const saved = await changeRequest.save();
+
+    await this.markTargetAsPending(
+      dto.document,
+      dto.documentModel,
+      actor,
+      dto.changeReason,
+    );
+
     return {
       status: true,
       message: 'Change request created successfully',
@@ -145,12 +585,20 @@ export class ChangeRequestService {
     const userName = actorDisplayName(actor);
 
     if (dto.document && dto.documentModel) {
-      const target = await this.resolveTarget(dto.document, dto.documentModel);
+      const isSameDocument =
+        dto.document === request.document.toString() &&
+        dto.documentModel === request.documentModel;
+      const { target, config, documentRef } = await this.resolveTarget(
+        dto.document,
+        dto.documentModel,
+      );
+      if (!isSameDocument) {
+        this.assertTargetIsApproved(target, config);
+      }
       request.document = new Types.ObjectId(dto.document);
       request.documentModel = dto.documentModel;
-      request.documentRef = target.documentId;
-      request.documentName =
-        target.name || target.formName || target.documentId;
+      request.documentRef = documentRef;
+      request.documentName = config.resolveName(target);
     }
     if (dto.changeReason !== undefined) {
       request.changeReason = dto.changeReason;
@@ -168,6 +616,16 @@ export class ChangeRequestService {
     } as any);
 
     const saved = await request.save();
+
+    const targetId = dto.document || request.document.toString();
+    const targetModel = dto.documentModel || request.documentModel;
+    await this.markTargetAsPending(
+      targetId,
+      targetModel,
+      actor,
+      dto.changeReason || request.changeReason,
+    );
+
     return {
       status: true,
       message: resubmitted
@@ -197,6 +655,14 @@ export class ChangeRequestService {
     } as any);
 
     await request.save();
+
+    await this.syncTargetStatusWithChangeRequest(
+      request.document.toString(),
+      request.documentModel,
+      actor,
+      'approved',
+    );
+
     return {
       status: true,
       message: 'Change request approved successfully',
@@ -226,6 +692,15 @@ export class ChangeRequestService {
     } as any);
 
     await request.save();
+
+    await this.syncTargetStatusWithChangeRequest(
+      request.document.toString(),
+      request.documentModel,
+      actor,
+      'disapproved',
+      dto.reason,
+    );
+
     return {
       status: true,
       message: 'Change request disapproved',

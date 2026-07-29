@@ -27,6 +27,7 @@ import {
   ChangePriorityDto,
   ResubmitWorkRequestDto,
 } from './dtos/create-work-request.dto';
+import { VerifyWorkRequestDto } from './dtos/verify-work-request.dto';
 import { UpdateWorkRequestDto } from './dtos/update-work-request.dto';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
@@ -72,6 +73,13 @@ export class WorkRequestController {
   @ApiOperation({ summary: 'Accept work request' })
   async accept(@Param('id') id: string, @Body() dto: AcceptWorkRequestDto) {
     return this.workRequestService.accept(id, dto);
+  }
+
+  @Patch(':id/verify')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verify completed work request with checklist' })
+  async verify(@Param('id') id: string, @Body() dto: VerifyWorkRequestDto) {
+    return this.workRequestService.verify(id, dto);
   }
 
   @Patch(':id/complete')

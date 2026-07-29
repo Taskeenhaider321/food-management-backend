@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { workRequestPreSave } from '../hooks/work-request.hooks';
+import {
+  MaintenanceVerificationChecklistItem,
+  MaintenanceVerificationChecklistItemSchema,
+} from '../../common/maintenance-verification.schema';
 
 export type WorkRequestDocument = WorkRequest & Document;
 
@@ -70,7 +74,14 @@ export class WorkRequest {
   EndTime?: Date;
 
   @Prop({
-    enum: ['Approved', 'Completed', 'Pending', 'Rejected'],
+    enum: [
+      'Approved',
+      'Completed',
+      'Pending',
+      'Rejected',
+      'In Review',
+      'Verified',
+    ],
     default: 'Pending',
   })
   Status: string;
@@ -113,6 +124,15 @@ export class WorkRequest {
 
   @Prop()
   CompletionDate?: Date;
+
+  @Prop({ type: [MaintenanceVerificationChecklistItemSchema], default: [] })
+  verificationChecklist: MaintenanceVerificationChecklistItem[];
+
+  @Prop()
+  VerifiedBy?: string;
+
+  @Prop()
+  VerificationDate?: Date;
 
   @Prop({ type: Array, default: [] })
   History: WorkRequestHistoryEntry[];
