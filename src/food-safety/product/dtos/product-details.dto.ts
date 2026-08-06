@@ -1,4 +1,13 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class ProductCustomSectionDto {
+  @IsString()
+  Heading: string;
+
+  @IsString()
+  Content: string;
+}
 
 export class ProductDetailsDto {
   @IsString()
@@ -67,4 +76,9 @@ export class ProductDetailsDto {
   @IsOptional()
   @IsString()
   TargtMarket?: string;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ProductCustomSectionDto)
+  CustomSections?: ProductCustomSectionDto[];
 }
