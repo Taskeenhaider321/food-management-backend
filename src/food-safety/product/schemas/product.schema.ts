@@ -9,6 +9,12 @@ import { VersionEntry, VersionEntrySchema } from '../../common/version.schema';
 import { ProductHooks } from '../hooks/product.hooks';
 
 @Schema({ _id: false })
+export class ProductCustomSection {
+  @Prop() Heading?: string;
+  @Prop() Content?: string;
+}
+
+@Schema({ _id: false })
 export class ProductDetails {
   @Prop({ required: true }) Name: string;
   @Prop() Origin?: string;
@@ -27,6 +33,9 @@ export class ProductDetails {
   @Prop() ShelfLife?: string;
   @Prop() Consumer?: string;
   @Prop() TargtMarket?: string;
+
+  @Prop({ type: [ProductCustomSection] })
+  CustomSections?: ProductCustomSection[];
 }
 
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
