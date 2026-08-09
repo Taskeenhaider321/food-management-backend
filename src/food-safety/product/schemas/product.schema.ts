@@ -92,5 +92,8 @@ export class Product extends Document {
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
 
+ProductSchema.index({ UserDepartment: 1, Status: 1 });
+ProductSchema.index({ UserDepartment: 1, created_at: -1 });
+
 /* 🔗 attach hook */
 ProductSchema.pre('save', ProductHooks.generateDocumentId);

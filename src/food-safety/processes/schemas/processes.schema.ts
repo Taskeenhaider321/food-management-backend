@@ -66,5 +66,8 @@ export class Processes extends Document {
 
 export const ProcessesSchema = SchemaFactory.createForClass(Processes);
 
+ProcessesSchema.index({ UserDepartment: 1, Status: 1 });
+ProcessesSchema.index({ UserDepartment: 1, created_at: -1 });
+
 /* 🔗 attach hook */
 ProcessesSchema.pre('save', ProcessesHooks.generateDocumentId);
