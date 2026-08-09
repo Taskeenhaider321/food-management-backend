@@ -60,5 +60,8 @@ export class DecisionTree extends Document {
 
 export const DecisionTreeSchema = SchemaFactory.createForClass(DecisionTree);
 
+DecisionTreeSchema.index({ UserDepartment: 1, Status: 1 });
+DecisionTreeSchema.index({ UserDepartment: 1, created_at: -1 });
+
 /* 🔗 attach hook */
 DecisionTreeSchema.pre('save', DecisionTreeHooks.generateDocumentId);

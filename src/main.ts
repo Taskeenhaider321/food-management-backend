@@ -2,10 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
   console.log('AppModule loaded successfully.');
+
+  // Rich-text product/HACCP payloads can include images; raise default 100kb limit.
+  app.use(json({ limit: '25mb' }));
+  app.use(urlencoded({ extended: true, limit: '25mb' }));
+
   // Required when the SPA runs on another origin (e.g. React :3000 → API :3006).
   // Without this, browsers send OPTIONS preflight and get 404 / blocked responses.
   app.enableCors({

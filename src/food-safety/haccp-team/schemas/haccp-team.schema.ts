@@ -77,5 +77,8 @@ export class HaccpTeam extends Document {
 
 export const HaccpTeamSchema = SchemaFactory.createForClass(HaccpTeam);
 
+HaccpTeamSchema.index({ UserDepartment: 1, Status: 1 });
+HaccpTeamSchema.index({ UserDepartment: 1, created_at: -1 });
+
 // ✅ Attach hook cleanly
 HaccpTeamSchema.pre('save', HaccpTeamHooks.generateDocumentId);

@@ -74,5 +74,8 @@ export class ConductHaccp extends Document {
 
 export const ConductHaccpSchema = SchemaFactory.createForClass(ConductHaccp);
 
+ConductHaccpSchema.index({ UserDepartment: 1, Status: 1 });
+ConductHaccpSchema.index({ UserDepartment: 1, created_at: -1 });
+
 /* 🔗 attach hook */
 ConductHaccpSchema.pre('save', ConductHaccpHooks.generateDocumentId);
