@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -18,6 +19,12 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessCompanyResource,
+  assertActorMayAccessDepartment,
+  companyScopedFilter,
+  isOwnScopeCompetencyActor,
+} from '../utils/competency-tenant.util';
 
 function actorUploadLabel(actor: any): string {
   const n = actor?.name || actor?.userName || actor?.email;
@@ -101,10 +108,11 @@ export class TrainingService {
   }
 
   async findAllForActor(
-    _actor: any,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: TrainingDocument[] }> {
+    const filter = companyScopedFilter(actor);
     const trainings = await this.trainingModel
-      .find({})
+      .find(filter)
       .populate('UserDepartment')
       .exec();
     return {
@@ -261,8 +269,16 @@ export class TrainingService {
 
   async findByDepartment(
     departmentId: string,
-    _actor?: any,
+    actor?: any,
   ): Promise<{ status: boolean; message: string; data: TrainingDocument[] }> {
+    if (actor) {
+      await assertActorMayAccessDepartment(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
+
     const department = await this.departmentModel.findById(departmentId).lean();
     if (!department) {
       throw new NotFoundException('Department not found');
@@ -292,6 +308,8 @@ export class TrainingService {
     if (!existing) {
       throw new NotFoundException('This Training is Not found!');
     }
+
+    assertActorMayAccessCompanyResource(actor, (existing as any).companyId);
 
     const companyIdStr = (existing as any).companyId?.toString?.();
     if (files?.TrainingMaterial?.[0] && !companyIdStr) {
@@ -365,19 +383,34 @@ export class TrainingService {
     };
   }
 
-  async delete(id: string): Promise<{ status: boolean; message: string }> {
-    const training = await this.trainingModel.findByIdAndDelete(id).exec();
+  async delete(
+    id: string,
+    actor?: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const training = await this.trainingModel.findById(id).exec();
     if (!training) {
       throw new NotFoundException('This Training is Not found!');
     }
+    if (actor) {
+      assertActorMayAccessCompanyResource(actor, (training as any).companyId);
+    }
+    await this.trainingModel.findByIdAndDelete(id).exec();
     return {
       status: true,
       message: 'The Following Training has been Deleted!',
     };
   }
 
-  async deleteAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.trainingModel.deleteMany({}).exec();
+  async deleteAll(actor?: any): Promise<{ status: boolean; message: string }> {
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
+    if (isOwnScopeCompetencyActor(actor)) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    const filter = companyScopedFilter(actor);
+    const result = await this.trainingModel.deleteMany(filter).exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('No Trainings Found to Delete!');
     }
@@ -440,8 +473,7 @@ export class TrainingService {
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.TrainingName !== '---' ? row.TrainingName : 'Training',
+      title: row.TrainingName !== '---' ? row.TrainingName : 'Training',
       subtitle: row.department !== '---' ? row.department : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [
@@ -455,10 +487,7 @@ export class TrainingService {
 
     return {
       buffer: Buffer.from(pdfBytes),
-      fileName: safePdfFileName(
-        row.TrainingName || 'training',
-        'training',
-      ),
+      fileName: safePdfFileName(row.TrainingName || 'training', 'training'),
     };
   }
 }

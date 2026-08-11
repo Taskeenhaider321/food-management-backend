@@ -11,6 +11,7 @@ import {
   Query,
   Header,
   StreamableFile,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -38,7 +39,20 @@ type DepartmentRequest = {
 };
 
 function requestCompanyId(req: DepartmentRequest): string {
-  return req.user.companyId._id.toString();
+  const company = req.user?.companyId as
+    | string
+    | { _id?: { toString(): string } | string }
+    | null
+    | undefined;
+  if (!company) {
+    throw new BadRequestException('Company context is required');
+  }
+  if (typeof company === 'string') return company;
+  const id = company._id;
+  if (!id) {
+    throw new BadRequestException('Company context is required');
+  }
+  return typeof id === 'string' ? id : id.toString();
 }
 
 @ApiTags('Departments')

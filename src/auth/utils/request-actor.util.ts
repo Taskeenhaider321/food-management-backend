@@ -77,6 +77,63 @@ export function assertActorMayAccessCompany(
 }
 
 /**
+ * Company admins manage users and company-scoped roles without ADMIN_MANAGEMENT /
+ * RBAC module keys — tenant isolation is enforced in services/controllers.
+ */
+export function isCompanyAdminTenantRoute(
+  method: string,
+  path: string,
+): boolean {
+  const m = String(method || 'GET').toUpperCase();
+  const p = path.split('?')[0] || '/';
+  const normalized =
+    p.length > 1 && p.endsWith('/')
+      ? p.slice(0, -1)
+      : p.startsWith('/')
+        ? p
+        : `/${p}`;
+
+  if (m === 'POST' && normalized === '/users') return true;
+  if (m === 'GET' && normalized === '/users') return true;
+  if (
+    m === 'PATCH' &&
+    /^\/users\/[^/]+\/(assign-role|reassign-access|suspend|change-password)$/.test(
+      normalized,
+    )
+  ) {
+    return true;
+  }
+  if ((m === 'PUT' || m === 'DELETE') && /^\/users\/[^/]+$/.test(normalized)) {
+    return true;
+  }
+
+  if (m === 'POST' && normalized === '/rbac/derived-modules') return true;
+  if (m === 'POST' && normalized === '/rbac/roles') return true;
+  if (m === 'GET' && normalized === '/rbac/roles') return true;
+  if (m === 'PATCH' && /^\/rbac\/roles\/[^/]+$/.test(normalized)) return true;
+  if (m === 'PATCH' && normalized === '/rbac/assign-role') return true;
+  if (m === 'GET' && normalized === '/rbac/me/access') return true;
+  if (m === 'GET' && normalized === '/rbac/me/access-version') return true;
+  if (
+    /^\/rbac\/companies\/[^/]+\/modules$/.test(normalized) &&
+    (m === 'GET' || m === 'PUT')
+  ) {
+    return true;
+  }
+
+  if (m === 'GET' && normalized === '/companies/all') return true;
+  if (
+    m === 'GET' &&
+    /^\/companies\/[^/]+$/.test(normalized) &&
+    !normalized.endsWith('/download-pdf')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Tenant isolation for user records:
  * - Super-admin: any user
  * - Company-admin: any user in the same company
@@ -87,9 +144,11 @@ export function assertActorMayAccessUserRecord(
   targetUser: any,
 ): void {
   if (!targetUser) return;
-  if (isSuperAdminActor(actor)) return;
+  if (isSuperAdminActor(actor) || isSuperStaffActor(actor)) return;
 
-  if (isCompanyUserActor(actor)) {
+  // Company-scoped users (company-user / company-trainer / company-employee)
+  // may access only their own user record.
+  if (COMPANY_SCOPED_USER_ROLE_TYPES.has(actor?.roleType)) {
     const aid = actorIdString(actor);
     const tid = targetUser._id != null ? String(targetUser._id) : null;
     if (aid && tid && aid === tid) return;

@@ -104,6 +104,17 @@ export class YearlyTrainingPlanController {
     return this.service.update(id, dto, user);
   }
 
+  @Delete('all')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete all yearly plans' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'All plans deleted successfully',
+  })
+  async deleteAll(@CurrentUser() actor: any) {
+    return this.service.deleteAll(actor);
+  }
+
   @Delete(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete yearly plan by id' })
@@ -112,18 +123,7 @@ export class YearlyTrainingPlanController {
     status: HttpStatus.OK,
     description: 'Plan deleted successfully',
   })
-  async delete(@Param('id') id: string) {
-    return this.service.delete(id);
-  }
-
-  @Delete('all')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete all yearly plans' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'All plans deleted successfully',
-  })
-  async deleteAll() {
-    return this.service.deleteAll();
+  async delete(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.delete(id, actor);
   }
 }

@@ -59,6 +59,9 @@ export class HaccpTeam extends Document {
   @Prop()
   CreatedBy: string;
 
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', index: true })
+  createdByUserId?: MongooseSchema.Types.ObjectId;
+
   @Prop({ type: Date, default: Date.now })
   CreationDate: Date;
 

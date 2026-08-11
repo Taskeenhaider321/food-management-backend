@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -37,6 +38,13 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessCompanyResource,
+  assertActorMayAccessDepartment,
+  isGlobalCompetencyActor,
+  isOwnScopeCompetencyActor,
+} from '../utils/competency-tenant.util';
+import { actorCompanyIdString } from '../../auth/utils/request-actor.util';
 
 @Injectable()
 export class TrainerService {
@@ -410,23 +418,54 @@ export class TrainerService {
   /**
    * Trainers whose user belongs to the actor's company (or all for super-admin).
    */
-  async findAllForCompany(_actor: any): Promise<{
+  async findAllForCompany(actor: any): Promise<{
     status: boolean;
     message: string;
     data: TrainerDocument[];
   }> {
+    const populateOpts = {
+      path: 'profileId',
+      populate: {
+        path: 'userId',
+        populate: ['companyId', 'departmentId', 'roleId'],
+      },
+    };
+
+    if (isGlobalCompetencyActor(actor)) {
+      const trainers = await this.trainerModel
+        .find()
+        .populate(populateOpts)
+        .populate('trainings.training')
+        .sort({ createdAt: -1 })
+        .exec();
+      return {
+        status: true,
+        message: 'The Following are the Trainers!',
+        data: trainers,
+      };
+    }
+
+    const companyId = actorCompanyIdString(actor);
+    if (!companyId) {
+      throw new ForbiddenException('Company context is required');
+    }
+
+    const users = await this.userModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    const profiles = await this.profileModel
+      .find({ userId: { $in: users.map((u) => u._id) } })
+      .select('_id')
+      .lean();
+
     const trainers = await this.trainerModel
-      .find()
-      .populate({
-        path: 'profileId',
-        populate: {
-          path: 'userId',
-          populate: ['companyId', 'departmentId', 'roleId'],
-        },
-      })
+      .find({ profileId: { $in: profiles.map((p) => p._id) } })
+      .populate(populateOpts)
       .populate('trainings.training')
       .sort({ createdAt: -1 })
       .exec();
+
     return {
       status: true,
       message: 'The Following are the Trainers!',
@@ -434,9 +473,26 @@ export class TrainerService {
     };
   }
 
+  private trainerCompanyId(trainer: any): string | undefined {
+    const user = trainer?.profileId?.userId;
+    return (
+      user?.companyId?._id?.toString() ||
+      user?.companyId?.toString() ||
+      undefined
+    );
+  }
+
   async findByDepartment(
     departmentId: string,
+    actor?: any,
   ): Promise<{ status: boolean; message: string; data: TrainerDocument[] }> {
+    if (actor) {
+      await assertActorMayAccessDepartment(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
     const users = await this.userModel
       .find({ departmentId })
       .select('_id')
@@ -484,6 +540,13 @@ export class TrainerService {
         },
       })
       .exec();
+
+    if (actor) {
+      assertActorMayAccessCompanyResource(
+        actor,
+        this.trainerCompanyId(populated),
+      );
+    }
 
     const profileDoc = populated?.profileId as ProfileDocument | undefined;
     const userDoc = profileDoc?.userId as UserDocument | undefined;
@@ -560,19 +623,52 @@ export class TrainerService {
     return { status: true, message: 'The Trainer is updated!', data: data! };
   }
 
-  async delete(id: string): Promise<{ status: boolean; message: string }> {
-    const trainer = await this.trainerModel.findById(id);
+  async delete(
+    id: string,
+    actor?: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const trainer = await this.trainerModel
+      .findById(id)
+      .populate({
+        path: 'profileId',
+        populate: { path: 'userId', populate: ['companyId'] },
+      })
+      .exec();
     if (!trainer) {
       throw new NotFoundException('This Trainer is Not found!');
+    }
+    if (actor) {
+      assertActorMayAccessCompanyResource(
+        actor,
+        this.trainerCompanyId(trainer),
+      );
     }
     await this.trainerModel.deleteOne({ _id: trainer._id });
     return { status: true, message: 'The following Trainer has been Deleted!' };
   }
 
-  async deleteAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.trainerModel.deleteMany({}).exec();
-    if (result.deletedCount === 0) {
+  async deleteAll(actor?: any): Promise<{ status: boolean; message: string }> {
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
+    if (isOwnScopeCompetencyActor(actor)) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    if (isGlobalCompetencyActor(actor)) {
+      const result = await this.trainerModel.deleteMany({}).exec();
+      if (result.deletedCount === 0) {
+        throw new NotFoundException('No Trainers Found to Delete!');
+      }
+      return { status: true, message: 'All Trainers have been Deleted!' };
+    }
+
+    const { data } = await this.findAllForCompany(actor);
+    if (!data.length) {
       throw new NotFoundException('No Trainers Found to Delete!');
+    }
+    for (const trainer of data) {
+      await this.delete(String(trainer._id), actor);
     }
     return { status: true, message: 'All Trainers have been Deleted!' };
   }

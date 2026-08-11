@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -30,6 +31,13 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartmentId,
+  assertActorMayAccessFoodSafetyRecord,
+  foodSafetyCompanyDeleteFilter,
+  isGlobalFoodSafetyActor,
+  withOwnScopeFilter,
+} from '../common/food-safety-tenant.util';
 
 type ProcessDetailInput = {
   Name: string;
@@ -60,7 +68,9 @@ export class ProcessesService {
 
   private actorCompanyId(actor: any): string | undefined {
     return (
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
     );
   }
 
@@ -106,8 +116,10 @@ export class ProcessesService {
 
   async findAllForActor(actor: any) {
     const deptIds = await this.companyDepartmentIds(actor);
-    const filter: Record<string, unknown> =
-      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const filter = withOwnScopeFilter(
+      actor,
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {},
+    );
     const processes = await this.processesModel
       .find(filter as any)
       .populate('Department')
@@ -148,7 +160,7 @@ export class ProcessesService {
 
   async downloadProcessPdf(processId: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: process } = await this.getProcess(processId);
+    const { data: process } = await this.getProcess(processId, actor);
     const row = this.mapProcessPdfRow(process);
     const details = Array.isArray((process as any)?.ProcessDetails)
       ? (process as any).ProcessDetails
@@ -207,7 +219,14 @@ export class ProcessesService {
     return doc._id;
   }
 
-  async createProcess(createProcessesDto: CreateProcessesDto) {
+  async createProcess(createProcessesDto: CreateProcessesDto, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        createProcessesDto.departmentId || createProcessesDto.Department,
+      );
+
     const processDetailsIds = await Promise.all(
       createProcessesDto.ProcessDetails.map((processObj) =>
         this.saveProcessDetailTree(processObj),
@@ -222,6 +241,9 @@ export class ProcessesService {
       UserDepartment: createProcessesDto.departmentId,
       ProcessDetails: processDetailsIds,
       CreationDate: new Date(),
+      createdByUserId: actor?._id
+        ? new Types.ObjectId(String(actor._id))
+        : undefined,
     });
     initCreatedTimeline(mainProcessDoc, createProcessesDto.createdBy);
 
@@ -234,9 +256,19 @@ export class ProcessesService {
     };
   }
 
-  async getAllProcesses(departmentId: string) {
+  async getAllProcesses(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
     const processes = await this.processesModel
-      .find({ UserDepartment: departmentId as any })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+        }) as any,
+      )
       .populate('Department')
       .populate('UserDepartment')
       .populate({
@@ -249,13 +281,23 @@ export class ProcessesService {
       throw new NotFoundException('Process documents not found');
     }
 
-    console.log('Process documents retrieved successfully');
     return { status: true, data: processes };
   }
 
-  async getApprovedProcesses(departmentId: string) {
+  async getApprovedProcesses(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
     const processes = await this.processesModel
-      .find({ UserDepartment: departmentId as any, Status: 'Approved' })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+          Status: 'Approved',
+        }) as any,
+      )
       .populate('Department')
       .populate('UserDepartment')
       .populate({
@@ -268,11 +310,10 @@ export class ProcessesService {
       throw new NotFoundException('Process documents not found');
     }
 
-    console.log('Process documents retrieved successfully');
     return { status: true, data: processes };
   }
 
-  async getProcess(processId: string) {
+  async getProcess(processId: string, actor?: any) {
     const process = await this.processesModel
       .findById(processId)
       .populate('Department')
@@ -289,35 +330,86 @@ export class ProcessesService {
       );
     }
 
-    console.log(
-      `Process document with ID: ${processId} retrieved successfully`,
-    );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        process,
+      );
     return { status: true, data: process };
   }
 
-  async getProcessDetail(processId: string) {
-    const process = await this.processDetailModel
-      .findById(processId)
+  /**
+   * ProcessDetail has no company/department fields. Resolve the owning
+   * Processes document by walking parent ProcessDetail.subProcesses links
+   * until a Processes.ProcessDetails reference is found, then assert tenant.
+   */
+  private async findParentProcessForDetail(detailId: string) {
+    let currentId = String(detailId);
+    const visited = new Set<string>();
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+
+      const parentProcess = await this.processesModel
+        .findOne({ ProcessDetails: currentId as any })
+        .populate('Department')
+        .populate('UserDepartment')
+        .exec();
+      if (parentProcess) return parentProcess;
+
+      const parentDetail = await this.processDetailModel
+        .findOne({ subProcesses: currentId as any })
+        .select('_id')
+        .lean();
+      if (!parentDetail?._id) break;
+      currentId = String(parentDetail._id);
+    }
+
+    return null;
+  }
+
+  async getProcessDetail(processDetailId: string, actor?: any) {
+    const detail = await this.processDetailModel
+      .findById(processDetailId)
       .populate(nestedSubProcessPopulate())
       .exec();
 
-    if (!process) {
+    if (!detail) {
       throw new NotFoundException(
-        `Process document with ID: ${processId} not found`,
+        `Process document with ID: ${processDetailId} not found`,
       );
     }
 
-    console.log(
-      `Process document with ID: ${processId} retrieved successfully`,
-    );
-    return { status: true, data: process };
+    if (actor) {
+      const parentProcess =
+        await this.findParentProcessForDetail(processDetailId);
+      if (!parentProcess) {
+        throw new ForbiddenException(
+          'You may only access resources for your company',
+        );
+      }
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        parentProcess,
+      );
+    }
+
+    return { status: true, data: detail };
   }
 
-  async deleteProcess(id: string) {
+  async deleteProcess(id: string, actor?: any) {
     const existing = await this.processesModel.findById(id);
     if (!existing) {
       throw new NotFoundException(`Process document with ID: ${id} not found`);
     }
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existing,
+      );
     if (!canEditRecord(existing)) {
       throw new BadRequestException(
         'Only records in review, rejected, or disapproved can be deleted',
@@ -329,7 +421,6 @@ export class ProcessesService {
       throw new NotFoundException(`Process document with ID: ${id} not found`);
     }
 
-    console.log(`Process document with ID: ${id} deleted successfully`);
     return {
       status: true,
       message: 'Process document deleted successfully',
@@ -337,21 +428,21 @@ export class ProcessesService {
     };
   }
 
-  async deleteAllProcesses(): Promise<{
+  async deleteAllProcesses(actor?: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    const result = await this.processesModel.deleteMany({});
+    let filter: Record<string, unknown> = {};
+    if (actor && !isGlobalFoodSafetyActor(actor)) {
+      const deptIds = await this.companyDepartmentIds(actor);
+      filter = foodSafetyCompanyDeleteFilter(actor, deptIds);
+    }
+    const result = await this.processesModel.deleteMany(filter);
     if (result.deletedCount === 0) {
       throw new NotFoundException('No Process documents found to delete!');
     }
 
-    console.log(
-      new Date().toLocaleString() +
-        ' ' +
-        'DELETE All Process documents Successfully!',
-    );
     return {
       status: true,
       message: 'All Process documents have been deleted!',
@@ -362,6 +453,7 @@ export class ProcessesService {
   async updateProcess(
     processId: string,
     updateProcessesDto: UpdateProcessesDto,
+    actor?: any,
   ) {
     const existingProcess = await this.processesModel.findById(processId);
     if (!existingProcess) {
@@ -369,6 +461,12 @@ export class ProcessesService {
         `Process document with ID: ${processId} not found`,
       );
     }
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existingProcess,
+      );
     if (!canEditRecord(existingProcess)) {
       throw new BadRequestException(
         'Reviewed or approved processes cannot be modified',
@@ -413,10 +511,16 @@ export class ProcessesService {
     };
   }
 
-  async reviewProcess(id: string, actor: string) {
+  async reviewProcess(id: string, actorName: string, actor?: any) {
     const process = await this.processesModel.findById(id);
     if (!process) throw new NotFoundException('Process not found');
-    reviewRecord(process, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        process,
+      );
+    reviewRecord(process, actorName);
     await process.save();
     return {
       status: true,
@@ -425,11 +529,17 @@ export class ProcessesService {
     };
   }
 
-  async approveProcess(approveProcessesDto: ApproveProcessesDto) {
+  async approveProcess(approveProcessesDto: ApproveProcessesDto, actor?: any) {
     const process = await this.processesModel.findById(approveProcessesDto.id);
     if (!process)
       throw new NotFoundException(
         `Process with ID: ${approveProcessesDto.id} not found.`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        process,
       );
     approveRecord(process, approveProcessesDto.approvedBy);
     await process.save();
@@ -440,21 +550,41 @@ export class ProcessesService {
     };
   }
 
-  async rejectProcess(id: string, actor: string, reason: string) {
+  async rejectProcess(
+    id: string,
+    actorName: string,
+    reason: string,
+    actor?: any,
+  ) {
     const process = await this.processesModel.findById(id);
     if (!process) throw new NotFoundException('Process not found');
-    rejectRecord(process, actor, reason);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        process,
+      );
+    rejectRecord(process, actorName, reason);
     await process.save();
     return { status: true, message: 'Process rejected', data: process };
   }
 
-  async disapproveProcess(disapproveProcessesDto: DisapproveProcessesDto) {
+  async disapproveProcess(
+    disapproveProcessesDto: DisapproveProcessesDto,
+    actor?: any,
+  ) {
     const process = await this.processesModel.findById(
       disapproveProcessesDto.id,
     );
     if (!process)
       throw new NotFoundException(
         `Process with ID: ${disapproveProcessesDto.id} not found.`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        process,
       );
     disapproveRecord(
       process,
@@ -469,10 +599,16 @@ export class ProcessesService {
     };
   }
 
-  async toggleProcessEnabled(id: string, actor: string) {
+  async toggleProcessEnabled(id: string, actorName: string, actor?: any) {
     const process = await this.processesModel.findById(id);
     if (!process) throw new NotFoundException('Process not found');
-    toggleEnabledRecord(process, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        process,
+      );
+    toggleEnabledRecord(process, actorName);
     await process.save();
     return {
       status: true,

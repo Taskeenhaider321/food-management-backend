@@ -19,7 +19,10 @@ import {
   Department,
   DepartmentSchema,
 } from '../../admin-management/department/schemas/department.schema';
-import { HaccpTeam, HaccpTeamSchema } from '../../food-safety/haccp-team/schemas/haccp-team.schema';
+import {
+  HaccpTeam,
+  HaccpTeamSchema,
+} from '../../food-safety/haccp-team/schemas/haccp-team.schema';
 import { ProcessesSchema } from '../../food-safety/processes/schemas/processes.schema';
 import { ProductSchema } from '../../food-safety/product/schemas/product.schema';
 import { ConductHaccpSchema } from '../../food-safety/conduct-haccp/schemas/conduct-haccp.schema';

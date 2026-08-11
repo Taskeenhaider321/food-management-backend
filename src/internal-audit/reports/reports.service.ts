@@ -207,9 +207,9 @@ export class ReportsService {
 
   async downloadReportsPdf(actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const data = await applyReportPopulate(
-      this.reportsModel.find(),
-    ).sort({ ReportDate: -1 });
+    const data = await applyReportPopulate(this.reportsModel.find()).sort({
+      ReportDate: -1,
+    });
 
     const pdfBytes = await buildBrandedListPdf({
       company,
@@ -242,8 +242,7 @@ export class ReportsService {
     const pdfBytes = await buildBrandedDetailPdf({
       company,
       title: row.id !== '---' ? `NCR ${row.id}` : 'NCR Report',
-      subtitle:
-        row.checklistTitle !== '---' ? row.checklistTitle : undefined,
+      subtitle: row.checklistTitle !== '---' ? row.checklistTitle : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [
         ['Report ID', row.id],

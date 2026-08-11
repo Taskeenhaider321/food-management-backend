@@ -32,6 +32,13 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartmentId,
+  assertActorMayAccessFoodSafetyRecord,
+  foodSafetyCompanyDeleteFilter,
+  withOwnScopeFilter,
+  isGlobalFoodSafetyActor,
+} from '../common/food-safety-tenant.util';
 
 @Injectable()
 export class HaccpTeamService {
@@ -46,7 +53,9 @@ export class HaccpTeamService {
 
   private actorCompanyId(actor: any): string | undefined {
     return (
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
     );
   }
 
@@ -70,9 +79,7 @@ export class HaccpTeamService {
     const names = members
       .map(
         (m) =>
-          m?.fullName ||
-          m?.profileId?.userId?.name ||
-          m?.profileId?.fullName,
+          m?.fullName || m?.profileId?.userId?.name || m?.profileId?.fullName,
       )
       .filter(Boolean);
     return names.length ? names.join(', ') : String(members.length);
@@ -83,7 +90,9 @@ export class HaccpTeamService {
     return {
       DocumentId: asText(team?.DocumentId),
       TeamName: asText(team?.TeamName),
-      department: this.departmentLabel(team?.Department || team?.UserDepartment),
+      department: this.departmentLabel(
+        team?.Department || team?.UserDepartment,
+      ),
       DocumentType: asText(team?.DocumentType),
       Status: asText(team?.Status),
       members: this.memberNames(members),
@@ -95,8 +104,10 @@ export class HaccpTeamService {
 
   async findAllForActor(actor: any) {
     const deptIds = await this.companyDepartmentIds(actor);
-    const filter: Record<string, unknown> =
-      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const filter = withOwnScopeFilter(
+      actor,
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {},
+    );
     const teams = await this.haccpTeamModel
       .find(filter as any)
       .populate('Department')
@@ -138,7 +149,7 @@ export class HaccpTeamService {
 
   async downloadHaccpTeamPdf(teamId: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: team } = await this.getHaccpTeam(teamId);
+    const { data: team } = await this.getHaccpTeam(teamId, actor);
     const row = this.mapHaccpTeamPdfRow(team);
     const members = Array.isArray((team as any)?.TeamMembers)
       ? (team as any).TeamMembers
@@ -216,7 +227,7 @@ export class HaccpTeamService {
     );
   }
 
-  async createHaccpTeam(createDto: CreateHaccpTeamDto) {
+  async createHaccpTeam(createDto: CreateHaccpTeamDto, actor?: any) {
     const requestUser = await this.userModel
       .findById(createDto.userId)
       .populate('companyId')
@@ -231,6 +242,13 @@ export class HaccpTeamService {
       createDto.Department,
     );
 
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        userDepartmentId.toString(),
+      );
+
     const createdTeam = new this.haccpTeamModel({
       DocumentType: createDto.DocumentType,
       TeamName: createDto.teamName,
@@ -238,6 +256,9 @@ export class HaccpTeamService {
       UserDepartment: userDepartmentId,
       CreatedBy: requestUser.name,
       CreationDate: new Date(),
+      createdByUserId: actor?._id
+        ? new Types.ObjectId(String(actor._id))
+        : undefined,
     });
     initCreatedTimeline(createdTeam, requestUser.name);
     await createdTeam.save();
@@ -506,9 +527,19 @@ export class HaccpTeamService {
     });
   }
 
-  async getAllHaccpTeams(departmentId: string) {
+  async getAllHaccpTeams(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
     const teams = await this.haccpTeamModel
-      .find({ UserDepartment: departmentId as any })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+        }) as any,
+      )
       .populate('Department')
       .populate('UserDepartment')
       .populate({
@@ -518,9 +549,20 @@ export class HaccpTeamService {
     return { status: true, data: teams };
   }
 
-  async getApprovedHaccpTeams(departmentId: string) {
+  async getApprovedHaccpTeams(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
     const teams = await this.haccpTeamModel
-      .find({ UserDepartment: departmentId as any, Status: 'Approved' })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+          Status: 'Approved',
+        }) as any,
+      )
       .populate('Department')
       .populate('UserDepartment')
       .populate({
@@ -530,7 +572,7 @@ export class HaccpTeamService {
     return { status: true, data: teams };
   }
 
-  async getHaccpTeam(teamId: string) {
+  async getHaccpTeam(teamId: string, actor?: any) {
     const team = await this.haccpTeamModel
       .findById(teamId)
       .populate('UserDepartment')
@@ -543,14 +585,26 @@ export class HaccpTeamService {
       throw new NotFoundException(
         `HACCP Team document with ID: ${teamId} not found`,
       );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
+      );
     return { status: true, data: team };
   }
 
-  async deleteHaccpTeam(teamId: string) {
+  async deleteHaccpTeam(teamId: string, actor?: any) {
     const team = await this.haccpTeamModel.findById(teamId);
     if (!team)
       throw new NotFoundException(
         `HACCP Team document with ID: ${teamId} not found`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
       );
     if (!canEditRecord(team)) {
       throw new BadRequestException(
@@ -564,7 +618,6 @@ export class HaccpTeamService {
         `HACCP Team document with ID: ${teamId} not found`,
       );
 
-    // Delete team members
     for (const memberId of deletedTeam.TeamMembers) {
       await this.teamMemberModel.findByIdAndDelete(memberId);
     }
@@ -576,12 +629,17 @@ export class HaccpTeamService {
     };
   }
 
-  async deleteAllHaccpTeams(): Promise<{
+  async deleteAllHaccpTeams(actor?: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    const result = await this.haccpTeamModel.deleteMany({});
+    let filter: Record<string, unknown> = {};
+    if (actor && !isGlobalFoodSafetyActor(actor)) {
+      const deptIds = await this.companyDepartmentIds(actor);
+      filter = foodSafetyCompanyDeleteFilter(actor, deptIds);
+    }
+    const result = await this.haccpTeamModel.deleteMany(filter);
     if (result.deletedCount === 0)
       throw new NotFoundException('No HACCP Team documents found to delete!');
     return {
@@ -591,10 +649,16 @@ export class HaccpTeamService {
     };
   }
 
-  async reviewHaccpTeam(id: string, actor: string) {
+  async reviewHaccpTeam(id: string, actorName: string, actor?: any) {
     const team = await this.haccpTeamModel.findById(id);
     if (!team) throw new NotFoundException('HaccpTeam not found');
-    reviewRecord(team, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
+      );
+    reviewRecord(team, actorName);
     const updated = await team.save();
     return {
       status: true,
@@ -603,9 +667,15 @@ export class HaccpTeamService {
     };
   }
 
-  async approveHaccpTeam(id: string, approvedBy: string) {
+  async approveHaccpTeam(id: string, approvedBy: string, actor?: any) {
     const team = await this.haccpTeamModel.findById(id);
     if (!team) throw new NotFoundException('HaccpTeam not found');
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
+      );
     approveRecord(team, approvedBy);
     const updated = await team.save();
     return {
@@ -615,17 +685,39 @@ export class HaccpTeamService {
     };
   }
 
-  async rejectHaccpTeam(id: string, actor: string, reason: string) {
+  async rejectHaccpTeam(
+    id: string,
+    actorName: string,
+    reason: string,
+    actor?: any,
+  ) {
     const team = await this.haccpTeamModel.findById(id);
     if (!team) throw new NotFoundException('HaccpTeam not found');
-    rejectRecord(team, actor, reason);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
+      );
+    rejectRecord(team, actorName, reason);
     const updated = await team.save();
     return { status: true, message: 'HACCP Team rejected', data: updated };
   }
 
-  async disapproveHaccpTeam(id: string, disapprovedBy: string, reason: string) {
+  async disapproveHaccpTeam(
+    id: string,
+    disapprovedBy: string,
+    reason: string,
+    actor?: any,
+  ) {
     const team = await this.haccpTeamModel.findById(id);
     if (!team) throw new NotFoundException('HaccpTeam not found');
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
+      );
     disapproveRecord(team, disapprovedBy, reason);
     const updated = await team.save();
     return {
@@ -635,10 +727,16 @@ export class HaccpTeamService {
     };
   }
 
-  async toggleHaccpTeamEnabled(id: string, actor: string) {
+  async toggleHaccpTeamEnabled(id: string, actorName: string, actor?: any) {
     const team = await this.haccpTeamModel.findById(id);
     if (!team) throw new NotFoundException('HaccpTeam not found');
-    toggleEnabledRecord(team, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        team,
+      );
+    toggleEnabledRecord(team, actorName);
     const updated = await team.save();
     return {
       status: true,

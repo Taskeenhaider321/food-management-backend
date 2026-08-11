@@ -1,6 +1,6 @@
-// TEST/hr/personal-requisition/personal-requisition.service.ts
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,6 +14,12 @@ import {
   CreatePersonalRequisitionDto,
   UpdatePersonStatusDto,
 } from './dtos/create-personal-requisition.dto';
+import {
+  assertActorMayAccessCompanyResource,
+  assertActorMayAccessDepartment,
+  isGlobalCompetencyActor,
+} from '../utils/competency-tenant.util';
+import { actorCompanyIdString } from '../../auth/utils/request-actor.util';
 
 @Injectable()
 export class PersonalRequisitionService {
@@ -22,6 +28,15 @@ export class PersonalRequisitionService {
     private requisitionModel: Model<PersonalRequisitionDocument>,
     @InjectModel('Department') private departmentModel: Model<any>,
   ) {}
+
+  private isOwnScopeActor(actor: any): boolean {
+    const selfOnlyRoles = new Set([
+      'company-user',
+      'company-trainer',
+      'company-employee',
+    ]);
+    return Boolean(actor?._id && selfOnlyRoles.has(actor?.roleType));
+  }
 
   async create(
     createDto: CreatePersonalRequisitionDto,
@@ -36,16 +51,24 @@ export class PersonalRequisitionService {
     }
     const { departmentId, addedBy, ...requisitionData } = createDto;
 
+    await assertActorMayAccessDepartment(
+      actor,
+      this.departmentModel,
+      departmentId,
+    );
+
     const department = await this.departmentModel.findById(departmentId).exec();
     if (!department) {
       throw new NotFoundException('Department not found');
     }
 
     const deptCompanyId = String(department.companyId);
-    const companyIdFromToken =
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
-
+    const companyIdFromToken = actorCompanyIdString(actor);
     const companyIdStr = companyIdFromToken ?? deptCompanyId;
+
+    if (!isGlobalCompetencyActor(actor) && companyIdFromToken) {
+      assertActorMayAccessCompanyResource(actor, deptCompanyId);
+    }
 
     const depLabel =
       department.departmentName ||
@@ -57,6 +80,9 @@ export class PersonalRequisitionService {
       ...requisitionData,
       DepartmentText: depLabel,
       RequestBy: addedBy,
+      createdByUserId: actor?._id
+        ? new Types.ObjectId(String(actor._id))
+        : undefined,
       departmentId: new Types.ObjectId(departmentId),
       companyId: new Types.ObjectId(companyIdStr),
       RequestDate: new Date(),
@@ -70,18 +96,38 @@ export class PersonalRequisitionService {
     };
   }
 
-  async findByDepartment(departmentId: string): Promise<{
+  async findByDepartment(
+    departmentId: string,
+    actor?: any,
+  ): Promise<{
     status: boolean;
     message: string;
     data: PersonalRequisitionDocument[];
   }> {
+    if (actor) {
+      await assertActorMayAccessDepartment(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
+
     const dId = Types.ObjectId.isValid(departmentId)
       ? new Types.ObjectId(departmentId)
       : departmentId;
+
+    const selfOnly = this.isOwnScopeActor(actor);
+
+    const requisitionFilter: Record<string, any> = { departmentId: dId };
+    if (selfOnly) {
+      requisitionFilter.createdByUserId = new Types.ObjectId(String(actor._id));
+    }
+
     const requisitions = await this.requisitionModel
-      .find({ departmentId: dId })
+      .find(requisitionFilter)
       .populate('departmentId')
       .exec();
+
     return {
       status: true,
       message: 'The following are Required Person!',
@@ -89,18 +135,34 @@ export class PersonalRequisitionService {
     };
   }
 
-  async findByCompany(companyId: string): Promise<{
+  async findByCompany(
+    companyId: string,
+    actor?: any,
+  ): Promise<{
     status: boolean;
     message: string;
     data: PersonalRequisitionDocument[];
   }> {
+    if (actor) {
+      assertActorMayAccessCompanyResource(actor, companyId);
+    }
+
     const cId = Types.ObjectId.isValid(companyId)
       ? new Types.ObjectId(companyId)
       : companyId;
+
+    const selfOnly = this.isOwnScopeActor(actor);
+
+    const requisitionFilter: Record<string, any> = { companyId: cId };
+    if (selfOnly) {
+      requisitionFilter.createdByUserId = new Types.ObjectId(String(actor._id));
+    }
+
     const requisitions = await this.requisitionModel
-      .find({ companyId: cId })
+      .find(requisitionFilter)
       .populate('departmentId')
       .exec();
+
     return {
       status: true,
       message: 'The following are Required Person!',
@@ -108,12 +170,27 @@ export class PersonalRequisitionService {
     };
   }
 
-  async updateStatus(updateDto: UpdatePersonStatusDto): Promise<string> {
+  async updateStatus(
+    updateDto: UpdatePersonStatusDto,
+    actor?: any,
+  ): Promise<string> {
     const { personId, status, updatedBy, Reason } = updateDto;
 
     const reqPerson = await this.requisitionModel.findById(personId).exec();
     if (!reqPerson) {
       throw new NotFoundException('Person requisition not found');
+    }
+
+    if (actor) {
+      assertActorMayAccessCompanyResource(actor, reqPerson.companyId);
+      if (this.isOwnScopeActor(actor)) {
+        const createdBy = reqPerson.createdByUserId
+          ? String(reqPerson.createdByUserId)
+          : null;
+        if (createdBy && String(actor._id) !== createdBy) {
+          throw new ForbiddenException('Forbidden');
+        }
+      }
     }
 
     if (status === 'Approved') {
@@ -131,19 +208,54 @@ export class PersonalRequisitionService {
     return 'Success';
   }
 
-  async delete(id: string): Promise<{ status: boolean; message: string }> {
-    const deleted = await this.requisitionModel.findByIdAndDelete(id).exec();
-    if (!deleted) {
+  async delete(
+    id: string,
+    actor?: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const target = await this.requisitionModel.findById(id).exec();
+    if (!target) {
       throw new NotFoundException('Person requisition not found');
     }
+
+    if (actor) {
+      assertActorMayAccessCompanyResource(actor, target.companyId);
+
+      if (this.isOwnScopeActor(actor)) {
+        const createdBy = target.createdByUserId
+          ? String(target.createdByUserId)
+          : null;
+        if (createdBy && String(actor._id) !== createdBy) {
+          throw new ForbiddenException('Forbidden');
+        }
+      }
+    }
+
+    await this.requisitionModel.findByIdAndDelete(id).exec();
     return {
       status: true,
       message: 'Personal requisition deleted successfully',
     };
   }
 
-  async deleteAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.requisitionModel.deleteMany({}).exec();
+  async deleteAll(actor?: any): Promise<{ status: boolean; message: string }> {
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
+
+    if (this.isOwnScopeActor(actor)) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    let filter: Record<string, unknown> = {};
+    if (!isGlobalCompetencyActor(actor)) {
+      const companyId = actorCompanyIdString(actor);
+      if (!companyId) {
+        throw new ForbiddenException('Company context is required');
+      }
+      filter = { companyId: new Types.ObjectId(companyId) };
+    }
+
+    const result = await this.requisitionModel.deleteMany(filter).exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('No PersonalRequisitions Found to Delete!');
     }

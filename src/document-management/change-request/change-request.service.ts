@@ -168,7 +168,9 @@ export class ChangeRequestService {
 
     const config = configs[documentModel as ChangeRequestTargetModel];
     if (!config) {
-      throw new BadRequestException(`Unsupported document model: ${documentModel}`);
+      throw new BadRequestException(
+        `Unsupported document model: ${documentModel}`,
+      );
     }
     return config;
   }
@@ -181,7 +183,9 @@ export class ChangeRequestService {
 
   private actorCompanyId(actor: any): string | undefined {
     return (
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
     );
   }
 
@@ -229,10 +233,7 @@ export class ChangeRequestService {
     return { target, config, documentRef: ref as string };
   }
 
-  private assertTargetIsApproved(
-    target: any,
-    config: TargetModelConfig,
-  ): void {
+  private assertTargetIsApproved(target: any, config: TargetModelConfig): void {
     const currentStatus = target[config.statusField];
     if (currentStatus !== config.approvedStatus) {
       throw new BadRequestException(
@@ -248,7 +249,10 @@ export class ChangeRequestService {
     outcome: 'pending' | 'approved' | 'disapproved',
     reason?: string,
   ) {
-    const { target, config } = await this.resolveTarget(documentId, documentModel);
+    const { target, config } = await this.resolveTarget(
+      documentId,
+      documentModel,
+    );
     const userName = actorDisplayName(actor);
 
     const statusByOutcome = {
@@ -758,10 +762,7 @@ export class ChangeRequestService {
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.requestNumber !== '---'
-          ? row.requestNumber
-          : 'Change Request',
+      title: row.requestNumber !== '---' ? row.requestNumber : 'Change Request',
       subtitle: row.documentName !== '---' ? row.documentName : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [

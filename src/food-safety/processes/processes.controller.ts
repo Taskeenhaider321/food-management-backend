@@ -24,20 +24,29 @@ export class ProcessesController {
 
   @Post()
   @ApiBearerAuth()
-  async createProcess(@Body() createProcessesDto: CreateProcessesDto) {
-    return this.processesService.createProcess(createProcessesDto);
+  async createProcess(
+    @Body() createProcessesDto: CreateProcessesDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.processesService.createProcess(createProcessesDto, actor);
   }
 
   @Get('all/:departmentId')
   @ApiBearerAuth()
-  async getAllProcesses(@Param('departmentId') departmentId: string) {
-    return this.processesService.getAllProcesses(departmentId);
+  async getAllProcesses(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.processesService.getAllProcesses(departmentId, actor);
   }
 
   @Get('approved/:departmentId')
   @ApiBearerAuth()
-  async getApprovedProcesses(@Param('departmentId') departmentId: string) {
-    return this.processesService.getApprovedProcesses(departmentId);
+  async getApprovedProcesses(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.processesService.getApprovedProcesses(departmentId, actor);
   }
 
   /** Must be registered before `GET :processId`. */
@@ -65,78 +74,113 @@ export class ProcessesController {
     @Param('processId') processId: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.processesService.downloadProcessPdf(processId, actor);
+    const { buffer, fileName } = await this.processesService.downloadProcessPdf(
+      processId,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
     });
   }
 
-  @Get(':processId')
-  @ApiBearerAuth()
-  async getProcess(@Param('processId') processId: string) {
-    return this.processesService.getProcess(processId);
-  }
-
+  /** Must be registered before `GET :processId`. */
   @Get('detail/:processId')
   @ApiBearerAuth()
-  async getProcessDetail(@Param('processId') processId: string) {
-    return this.processesService.getProcessDetail(processId);
+  async getProcessDetail(
+    @Param('processId') processId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.processesService.getProcessDetail(processId, actor);
+  }
+
+  @Get(':processId')
+  @ApiBearerAuth()
+  async getProcess(
+    @Param('processId') processId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.processesService.getProcess(processId, actor);
   }
 
   @Delete()
   @ApiBearerAuth()
-  async deleteProcess(@Body('id') id: string) {
-    return this.processesService.deleteProcess(id);
+  async deleteProcess(@Body('id') id: string, @CurrentUser() actor: any) {
+    return this.processesService.deleteProcess(id, actor);
   }
 
   @Delete('all')
   @ApiBearerAuth()
-  async deleteAllProcesses(): Promise<{
+  async deleteAllProcesses(@CurrentUser() actor: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    return this.processesService.deleteAllProcesses();
+    return this.processesService.deleteAllProcesses(actor);
   }
 
   @Patch('review')
   @ApiBearerAuth()
-  async reviewProcess(@Body() body: { id: string; actor: string }) {
-    return this.processesService.reviewProcess(body.id, body.actor);
+  async reviewProcess(
+    @Body() body: { id: string; actor: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.processesService.reviewProcess(
+      body.id,
+      body.actor,
+      currentUser,
+    );
   }
 
   @Patch('reject')
   @ApiBearerAuth()
   async rejectProcess(
     @Body() body: { id: string; actor: string; reason: string },
+    @CurrentUser() currentUser: any,
   ) {
     return this.processesService.rejectProcess(
       body.id,
       body.actor,
       body.reason,
+      currentUser,
     );
   }
 
   @Patch('toggle-enabled')
   @ApiBearerAuth()
-  async toggleProcessEnabled(@Body() body: { id: string; actor: string }) {
-    return this.processesService.toggleProcessEnabled(body.id, body.actor);
+  async toggleProcessEnabled(
+    @Body() body: { id: string; actor: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.processesService.toggleProcessEnabled(
+      body.id,
+      body.actor,
+      currentUser,
+    );
   }
 
   @Patch('approve')
   @ApiBearerAuth()
-  async approveProcess(@Body() approveProcessesDto: ApproveProcessesDto) {
-    return this.processesService.approveProcess(approveProcessesDto);
+  async approveProcess(
+    @Body() approveProcessesDto: ApproveProcessesDto,
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.processesService.approveProcess(
+      approveProcessesDto,
+      currentUser,
+    );
   }
 
   @Patch('disapprove')
   @ApiBearerAuth()
   async disapproveProcess(
     @Body() disapproveProcessesDto: DisapproveProcessesDto,
+    @CurrentUser() currentUser: any,
   ) {
-    return this.processesService.disapproveProcess(disapproveProcessesDto);
+    return this.processesService.disapproveProcess(
+      disapproveProcessesDto,
+      currentUser,
+    );
   }
 
   @Patch(':processId')
@@ -144,7 +188,12 @@ export class ProcessesController {
   async updateProcess(
     @Param('processId') processId: string,
     @Body() updateProcessesDto: UpdateProcessesDto,
+    @CurrentUser() actor: any,
   ) {
-    return this.processesService.updateProcess(processId, updateProcessesDto);
+    return this.processesService.updateProcess(
+      processId,
+      updateProcessesDto,
+      actor,
+    );
   }
 }

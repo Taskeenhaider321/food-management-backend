@@ -110,8 +110,11 @@ export class TrainerController {
   @ApiOperation({ summary: 'Get trainers by department' })
   @ApiParam({ name: 'departmentId', description: 'Department ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Trainers found' })
-  async findByDepartment(@Param('departmentId') departmentId: string) {
-    return this.trainerService.findByDepartment(departmentId);
+  async findByDepartment(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.trainerService.findByDepartment(departmentId, actor);
   }
 
   @Delete('all')
@@ -121,8 +124,8 @@ export class TrainerController {
     status: HttpStatus.OK,
     description: 'All trainers deleted successfully',
   })
-  async removeAll() {
-    return this.trainerService.deleteAll();
+  async removeAll(@CurrentUser() actor: any) {
+    return this.trainerService.deleteAll(actor);
   }
 
   @Patch(':id')
@@ -149,7 +152,7 @@ export class TrainerController {
     status: HttpStatus.OK,
     description: 'Trainer deleted successfully',
   })
-  async delete(@Param('id') id: string) {
-    return this.trainerService.delete(id);
+  async delete(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.trainerService.delete(id, actor);
   }
 }

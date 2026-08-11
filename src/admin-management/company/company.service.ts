@@ -1,23 +1,30 @@
 import {
+  BadRequestException,
   ConflictException,
   forwardRef,
   Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import { ClientSession, Connection, Model, Types } from 'mongoose';
 import { UserService } from '../users/user.service';
 import { Company, CompanyDocument } from './schemas/company.schema';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
-import { Types } from 'mongoose';
+import {
+  actorCompanyIdString,
+  assertActorMayAccessCompany,
+  isCompanyAdminActor,
+} from '../../auth/utils/request-actor.util';
 import {
   buildBrandedDetailPdf,
   buildBrandedListPdf,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import { CompanyModuleAssignmentService } from '../../rbac/company-module-assignment.service';
+import { RbacService } from '../../rbac/rbac.service';
 
 @Injectable()
 export class CompanyService {
@@ -25,80 +32,202 @@ export class CompanyService {
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel('Department') private departmentModel: Model<any>,
     @InjectModel('User') private userModel: Model<any>,
+    @InjectConnection() private readonly connection: Connection,
     private cloudinaryService: CloudinaryService,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    private readonly companyModuleAssignmentService: CompanyModuleAssignmentService,
+    private readonly rbacService: RbacService,
   ) {}
+
+  /**
+   * Multi-doc transaction when Mongo supports it (replica set / sharded).
+   * Standalone local mongod rejects transactions — fall back without a session.
+   */
+  private async withOptionalTransaction<T>(
+    fn: (session: ClientSession | null) => Promise<T>,
+  ): Promise<T> {
+    const disabled =
+      String(process.env.MONGODB_DISABLE_TRANSACTIONS || '')
+        .toLowerCase()
+        .trim() === 'true' ||
+      String(process.env.MONGODB_DISABLE_TRANSACTIONS || '').trim() === '1';
+
+    if (disabled) {
+      return fn(null);
+    }
+
+    try {
+      return await this.connection.transaction((session) => fn(session));
+    } catch (err: unknown) {
+      const anyErr = err as {
+        code?: number;
+        codeName?: string;
+        message?: string;
+        errorResponse?: { errmsg?: string; code?: number };
+      };
+      const msg = String(
+        anyErr?.message || anyErr?.errorResponse?.errmsg || '',
+      );
+      const code = anyErr?.code ?? anyErr?.errorResponse?.code;
+      const noTxn =
+        code === 20 ||
+        anyErr?.codeName === 'IllegalOperation' ||
+        /Transaction numbers are only allowed on a replica set/i.test(msg);
+
+      if (noTxn) {
+        return fn(null);
+      }
+      throw err;
+    }
+  }
+
+  private mapDuplicateKeyError(error: any): never {
+    if (error?.code === 11000) {
+      const key = Object.keys(error.keyPattern || error.keyValue || {})[0];
+      if (key === 'userName' || key === 'email') {
+        throw new ConflictException(
+          `Company admin ${key} already exists. Choose a different admin ${key}.`,
+        );
+      }
+      throw new ConflictException('Company name or short name already exists');
+    }
+    throw error;
+  }
 
   async create(
     dto: CreateCompanyDto,
     userId?: string,
   ): Promise<{ status: boolean; message: string; data: any }> {
+    if (!dto.admin?.userName?.trim() || !dto.admin?.password) {
+      throw new BadRequestException(
+        'Company admin username and password are required',
+      );
+    }
+
+    const { admin, modules, ...companyFields } = dto;
+    const adminUserName = admin.userName.trim();
+    const createdByObjectId = userId ? new Types.ObjectId(userId) : undefined;
+
+    let saved: CompanyDocument;
+    let adminUser: any;
+
     try {
-      const { admin, ...companyFields } = dto;
-      const createdByObjectId = userId ? new Types.ObjectId(userId) : undefined;
-      const company = new this.companyModel({
-        companyName: companyFields.companyName,
-        shortName: companyFields.shortName,
-        address: companyFields.address ?? '',
-        contactNo: companyFields.contactNo ?? '',
-        email: companyFields.email,
-        companyLogo: companyFields.companyLogo ?? '',
-        status: companyFields.status,
-        createdBy: createdByObjectId,
+      const result = await this.withOptionalTransaction(async (session) => {
+        let company: CompanyDocument | null = null;
+        try {
+          const companyDoc = new this.companyModel({
+            companyName: companyFields.companyName,
+            shortName: companyFields.shortName,
+            address: companyFields.address ?? '',
+            contactNo: companyFields.contactNo ?? '',
+            email: companyFields.email,
+            companyLogo: companyFields.companyLogo ?? '',
+            status: companyFields.status,
+            createdBy: createdByObjectId,
+          });
+          company =
+            session != null
+              ? await companyDoc.save({ session })
+              : await companyDoc.save();
+
+          const user = await this.userService.createUserRecord(
+            {
+              name: admin.name.trim(),
+              email: admin.email.trim(),
+              userName: adminUserName,
+              passwordPlain: admin.password,
+              roleType: 'company-admin',
+              companyId: company._id.toString(),
+              roleId: admin.roleId,
+            },
+            session,
+          );
+
+          return { company, user };
+        } catch (error) {
+          // Without a transaction, roll back the company if admin create fails.
+          if (session == null && company?._id) {
+            await this.companyModel.findByIdAndDelete(company._id).exec();
+          }
+          throw error;
+        }
       });
-      const saved = await company.save();
-      const companyId = saved._id.toString();
-
-      let adminUser: any;
-      if (admin) {
-        adminUser = await this.userService.createUserRecord({
-          name: admin.name,
-          email: admin.email,
-          userName: admin.userName,
-          passwordPlain: admin.password,
-          roleType: 'super-admin',
-          companyId,
-        });
-      }
-
-      return {
-        status: true,
-        message: 'Company created successfully',
-        data: {
-          company: saved,
-          ...(adminUser
-            ? {
-                admin: {
-                  _id: adminUser._id,
-                  userName: adminUser.userName,
-                  email: adminUser.email,
-                },
-              }
-            : {}),
-        },
-      };
+      saved = result.company;
+      adminUser = result.user;
     } catch (error: any) {
-      if (error.code === 11000) {
-        throw new ConflictException(
-          'Company name or short name already exists',
+      this.mapDuplicateKeyError(error);
+    }
+
+    const companyId = saved._id.toString();
+
+    // Modules + optional role assignment after commit (not session-bound).
+    try {
+      if (modules?.length) {
+        await this.companyModuleAssignmentService.replaceForCompany(
+          companyId,
+          modules,
+          userId,
         );
       }
-      throw error;
+      if (admin.roleId) {
+        await this.rbacService.assignRole({
+          userId: adminUser._id.toString(),
+          roleId: admin.roleId,
+        });
+      }
+    } catch (error: any) {
+      const detail =
+        error?.message ||
+        error?.response?.message ||
+        'module/role setup failed';
+      throw new BadRequestException(
+        `Company and admin were created, but ${detail}. Open Edit on the company to finish module assignment.`,
+      );
     }
+
+    return {
+      status: true,
+      message: `Company created successfully. Sign in as company admin with username "${adminUserName}".`,
+      data: {
+        company: saved,
+        modules: modules?.length
+          ? await this.companyModuleAssignmentService.listForCompany(companyId)
+          : [],
+        admin: {
+          _id: adminUser._id,
+          userName: adminUser.userName,
+          email: adminUser.email,
+          roleType: adminUser.roleType,
+        },
+      },
+    };
   }
 
   async findAll(
-    _userId?: string,
+    actor?: any,
   ): Promise<{ status: boolean; data: CompanyDocument[] }> {
+    if (isCompanyAdminActor(actor)) {
+      const companyId = actorCompanyIdString(actor);
+      if (!companyId) {
+        return { status: true, data: [] };
+      }
+      const company = await this.companyModel.findById(companyId).exec();
+      return { status: true, data: company ? [company] : [] };
+    }
+
     const companies = await this.companyModel.find().exec();
     return { status: true, data: companies };
   }
 
   async findOne(
     id: string,
-    _userId?: string,
+    actor?: any,
   ): Promise<{ status: boolean; data: CompanyDocument }> {
+    if (isCompanyAdminActor(actor)) {
+      assertActorMayAccessCompany(actor, id);
+    }
+
     const company = await this.companyModel.findById(id).exec();
     if (!company) {
       throw new NotFoundException('Company not found');
@@ -109,14 +238,24 @@ export class CompanyService {
   async update(
     id: string,
     updateCompanyDto: UpdateCompanyDto,
-    _userId?: string,
+    userId?: string,
   ): Promise<{ status: boolean; message: string; data: CompanyDocument }> {
+    const { modules, ...companyFields } = updateCompanyDto;
     const company = await this.companyModel
-      .findByIdAndUpdate(id, updateCompanyDto, { returnDocument: 'after' })
+      .findByIdAndUpdate(id, companyFields, { returnDocument: 'after' })
       .exec();
     if (!company) {
       throw new NotFoundException('Company not found');
     }
+
+    if (modules) {
+      await this.companyModuleAssignmentService.replaceForCompany(
+        id,
+        modules,
+        userId,
+      );
+    }
+
     return {
       status: true,
       message: 'Company updated successfully',

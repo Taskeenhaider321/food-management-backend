@@ -72,8 +72,13 @@ export class DerivedModuleService {
       throw new NotFoundException('Master module not found or inactive');
     }
 
-    const permOids = this.uniqueObjectIds(
+    const expandedIds = await this.expandWithImpliedViewPermissionIds(
+      masterModule._id,
       dto.selectedPermissionIds,
+    );
+
+    const permOids = this.uniqueObjectIds(
+      expandedIds,
       'selectedPermissionIds',
     );
     const validPerms = await this.masterPermissionModel.find({
@@ -123,8 +128,12 @@ export class DerivedModuleService {
     }
 
     if (dto.selectedPermissionIds) {
-      const permOids = this.uniqueObjectIds(
+      const expandedIds = await this.expandWithImpliedViewPermissionIds(
+        existing.masterModuleId,
         dto.selectedPermissionIds,
+      );
+      const permOids = this.uniqueObjectIds(
+        expandedIds,
         'selectedPermissionIds',
       );
       const validPerms = await this.masterPermissionModel.find({
@@ -147,6 +156,69 @@ export class DerivedModuleService {
       message: 'Derived module updated',
       data: await this.populateDerivedModule(existing._id),
     };
+  }
+
+  /**
+   * Create/Edit/Delete without View leaves users unable to see records they
+   * just created. Auto-include view/read for the same module+resource.
+   */
+  private async expandWithImpliedViewPermissionIds(
+    masterModuleId: Types.ObjectId | string,
+    selectedPermissionIds: string[],
+  ): Promise<string[]> {
+    const MUTATING = new Set([
+      'create',
+      'edit',
+      'update',
+      'delete',
+      'approve',
+      'reject',
+      'disapprove',
+      'review',
+    ]);
+    const VIEW = new Set(['view', 'read']);
+
+    const selected = [...new Set(selectedPermissionIds.map(String))];
+    if (!selected.length) return selected;
+
+    const oids = selected
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+
+    const selectedPerms = await this.masterPermissionModel
+      .find({
+        _id: { $in: oids },
+        moduleId: new Types.ObjectId(String(masterModuleId)),
+        isActive: true,
+      })
+      .select('_id resource action')
+      .lean();
+
+    const resourcesNeedingView = new Set<string>();
+    for (const p of selectedPerms) {
+      const action = String(p.action || '').toLowerCase();
+      if (MUTATING.has(action) && p.resource) {
+        resourcesNeedingView.add(String(p.resource));
+      }
+    }
+    if (!resourcesNeedingView.size) return selected;
+
+    const viewPerms = await this.masterPermissionModel
+      .find({
+        moduleId: new Types.ObjectId(String(masterModuleId)),
+        resource: { $in: [...resourcesNeedingView] },
+        isActive: true,
+      })
+      .select('_id action')
+      .lean();
+
+    const next = new Set(selected);
+    for (const p of viewPerms) {
+      if (VIEW.has(String(p.action || '').toLowerCase())) {
+        next.add(String(p._id));
+      }
+    }
+    return [...next];
   }
 
   async findAll() {

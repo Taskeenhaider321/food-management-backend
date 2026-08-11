@@ -532,8 +532,7 @@ export class ConductAuditsService {
   async downloadConductAuditsPdf(actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
     const departmentId =
-      actor?.departmentId?._id?.toString() ||
-      actor?.departmentId?.toString();
+      actor?.departmentId?._id?.toString() || actor?.departmentId?.toString();
 
     let data: any[];
     if (departmentId) {
@@ -582,8 +581,7 @@ export class ConductAuditsService {
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.checklistName !== '---' ? row.checklistName : 'Conduct Audit',
+      title: row.checklistName !== '---' ? row.checklistName : 'Conduct Audit',
       subtitle: row.AuditDate !== '---' ? row.AuditDate : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [

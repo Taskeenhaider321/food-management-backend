@@ -1,5 +1,9 @@
 // TEST/hr/yearly-training-plan/yearly-training-plan.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, type PopulateOptions } from 'mongoose';
 import {
@@ -28,6 +32,12 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartment,
+  departmentScopedFilter,
+  isGlobalCompetencyActor,
+  isOwnScopeCompetencyActor,
+} from '../utils/competency-tenant.util';
 
 /** Dot-path populate is unreliable on nested subdoc arrays; use explicit nesting. */
 const YEARLY_PLAN_POPULATE: PopulateOptions[] = [
@@ -199,6 +209,10 @@ export class YearlyTrainingPlanService {
       throw new NotFoundException('This YearlyPlan is Not found!');
     }
 
+    if (actor) {
+      await this.assertActorMayAccessPlan(actor, yearlyPlan);
+    }
+
     if (dto.departmentId !== undefined) {
       const department = await this.departmentModel
         .findById(dto.departmentId)
@@ -248,11 +262,26 @@ export class YearlyTrainingPlanService {
     };
   }
 
-  async findByDepartment(departmentId: string): Promise<{
+  /**
+   * Legacy department-scoped list. Not exposed by the current controller
+   * (controller uses `findForActor`). When an actor is provided, enforces
+   * department tenant access.
+   */
+  async findByDepartment(
+    departmentId: string,
+    actor?: any,
+  ): Promise<{
     status: boolean;
     message: string;
     data: YearlyTrainingPlanDocument[];
   }> {
+    if (actor) {
+      await assertActorMayAccessDepartment(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
     const plans = await this.yearlyPlanModel
       .find({ UserDepartment: departmentId })
       .populate(YEARLY_PLAN_POPULATE)
@@ -268,13 +297,14 @@ export class YearlyTrainingPlanService {
    * List yearly plans for the authenticated user's company (all departments in that company).
    * Super-admin and super-staff: all plans.
    */
-  async findForActor(_actor: any): Promise<{
+  async findForActor(actor: any): Promise<{
     status: boolean;
     message: string;
     data: YearlyTrainingPlanDocument[];
   }> {
+    const filter = await departmentScopedFilter(actor, this.departmentModel);
     const plans = await this.yearlyPlanModel
-      .find({})
+      .find(filter)
       .populate(YEARLY_PLAN_POPULATE)
       .exec();
     return {
@@ -284,19 +314,55 @@ export class YearlyTrainingPlanService {
     };
   }
 
-  async delete(id: string): Promise<{ status: boolean; message: string }> {
-    const plan = await this.yearlyPlanModel.findByIdAndDelete(id).exec();
+  private async assertActorMayAccessPlan(
+    actor: any,
+    plan: { UserDepartment?: unknown },
+  ) {
+    if (!actor || isGlobalCompetencyActor(actor)) return;
+    const deptId =
+      plan.UserDepartment != null
+        ? String(
+            typeof plan.UserDepartment === 'object' &&
+              plan.UserDepartment !== null &&
+              '_id' in plan.UserDepartment
+              ? (plan.UserDepartment as { _id: unknown })._id
+              : plan.UserDepartment,
+          )
+        : '';
+    if (!deptId) {
+      throw new NotFoundException('Plan department not found');
+    }
+    await assertActorMayAccessDepartment(actor, this.departmentModel, deptId);
+  }
+
+  async delete(
+    id: string,
+    actor?: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const plan = await this.yearlyPlanModel.findById(id).exec();
     if (!plan) {
       throw new NotFoundException('This YearlyPlan is Not found!');
     }
+    if (actor) {
+      await this.assertActorMayAccessPlan(actor, plan);
+    }
+    await this.yearlyPlanModel.findByIdAndDelete(id).exec();
     return {
       status: true,
       message: 'The Following YearlyPlan has been Deleted!',
     };
   }
 
-  async deleteAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.yearlyPlanModel.deleteMany({}).exec();
+  async deleteAll(actor?: any): Promise<{ status: boolean; message: string }> {
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
+    if (isOwnScopeCompetencyActor(actor)) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    const filter = await departmentScopedFilter(actor, this.departmentModel);
+    const result = await this.yearlyPlanModel.deleteMany(filter).exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('No YearlyPlans Found to Delete!');
     }

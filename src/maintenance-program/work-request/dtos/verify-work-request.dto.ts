@@ -3,7 +3,6 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
-  IsOptional,
   IsString,
   ValidateIf,
   ValidateNested,
@@ -15,7 +14,9 @@ import {
 } from '../../common/maintenance-verification.constants';
 
 export class VerificationChecklistItemDto {
-  @ApiProperty({ enum: MAINTENANCE_VERIFICATION_CHECKLIST.map((item) => item.key) })
+  @ApiProperty({
+    enum: MAINTENANCE_VERIFICATION_CHECKLIST.map((item) => item.key),
+  })
   @IsString()
   key: string;
 

@@ -7,10 +7,14 @@ import {
   User,
   UserDocument,
 } from '../admin-management/users/schemas/user.schema';
+import { AuthorizationService } from '../rbac/authorization.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly authorizationService: AuthorizationService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -24,12 +28,32 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       .findById(userId)
       .populate('departmentId')
       .populate('companyId')
+      .populate({
+        path: 'roleId',
+        populate: [
+          { path: 'moduleIds' },
+          {
+            path: 'derivedModuleIds',
+            populate: [
+              { path: 'masterModuleId' },
+              { path: 'selectedPermissionIds' },
+            ],
+          },
+        ],
+      })
       .exec();
 
     if (!user || user.isSuspended) {
       throw new UnauthorizedException();
     }
 
-    return user.toObject();
+    const plain = user.toObject();
+    const resolvedPermissions =
+      await this.authorizationService.resolvePermissionKeysForUser(plain);
+
+    return {
+      ...plain,
+      resolvedPermissions,
+    };
   }
 }

@@ -28,6 +28,7 @@ export class HaccpTeamController {
   async createHaccpTeam(
     @Body() body: any,
     @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser() actor: any,
   ) {
     const data = JSON.parse(body.Data);
     const memberFiles = (files || []).filter((file) =>
@@ -41,19 +42,25 @@ export class HaccpTeamController {
       TeamMembers: data.TeamMembers,
       files: memberFiles,
     };
-    return this.haccpTeamService.createHaccpTeam(createDto);
+    return this.haccpTeamService.createHaccpTeam(createDto, actor);
   }
 
   @Get('all/:departmentId')
   @ApiBearerAuth()
-  async getAllHaccpTeams(@Param('departmentId') departmentId: string) {
-    return this.haccpTeamService.getAllHaccpTeams(departmentId);
+  async getAllHaccpTeams(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.haccpTeamService.getAllHaccpTeams(departmentId, actor);
   }
 
   @Get('approved/:departmentId')
   @ApiBearerAuth()
-  async getApprovedHaccpTeams(@Param('departmentId') departmentId: string) {
-    return this.haccpTeamService.getApprovedHaccpTeams(departmentId);
+  async getApprovedHaccpTeams(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.haccpTeamService.getApprovedHaccpTeams(departmentId, actor);
   }
 
   /** Must be registered before `GET :teamId`. */
@@ -91,65 +98,96 @@ export class HaccpTeamController {
 
   @Get(':teamId')
   @ApiBearerAuth()
-  async getHaccpTeam(@Param('teamId') teamId: string) {
-    return this.haccpTeamService.getHaccpTeam(teamId);
+  async getHaccpTeam(
+    @Param('teamId') teamId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.haccpTeamService.getHaccpTeam(teamId, actor);
   }
 
   @Delete(':teamId')
   @ApiBearerAuth()
-  async deleteHaccpTeam(@Param('teamId') teamId: string) {
-    return this.haccpTeamService.deleteHaccpTeam(teamId);
+  async deleteHaccpTeam(
+    @Param('teamId') teamId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.haccpTeamService.deleteHaccpTeam(teamId, actor);
   }
 
   @Delete('all')
   @ApiBearerAuth()
-  async deleteAllHaccpTeams(): Promise<{
+  async deleteAllHaccpTeams(@CurrentUser() actor: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    return this.haccpTeamService.deleteAllHaccpTeams();
+    return this.haccpTeamService.deleteAllHaccpTeams(actor);
   }
 
   @Patch('review')
   @ApiBearerAuth()
-  async reviewHaccpTeam(@Body() body: { id: string; actor: string }) {
-    return this.haccpTeamService.reviewHaccpTeam(body.id, body.actor);
+  async reviewHaccpTeam(
+    @Body() body: { id: string; actor: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.haccpTeamService.reviewHaccpTeam(
+      body.id,
+      body.actor,
+      currentUser,
+    );
   }
 
   @Patch('reject')
   @ApiBearerAuth()
   async rejectHaccpTeam(
     @Body() body: { id: string; actor: string; reason: string },
+    @CurrentUser() currentUser: any,
   ) {
     return this.haccpTeamService.rejectHaccpTeam(
       body.id,
       body.actor,
       body.reason,
+      currentUser,
     );
   }
 
   @Patch('toggle-enabled')
   @ApiBearerAuth()
-  async toggleHaccpTeamEnabled(@Body() body: { id: string; actor: string }) {
-    return this.haccpTeamService.toggleHaccpTeamEnabled(body.id, body.actor);
+  async toggleHaccpTeamEnabled(
+    @Body() body: { id: string; actor: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.haccpTeamService.toggleHaccpTeamEnabled(
+      body.id,
+      body.actor,
+      currentUser,
+    );
   }
 
   @Patch('approve')
   @ApiBearerAuth()
-  async approveHaccpTeam(@Body() body: { id: string; approvedBy: string }) {
-    return this.haccpTeamService.approveHaccpTeam(body.id, body.approvedBy);
+  async approveHaccpTeam(
+    @Body() body: { id: string; approvedBy: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.haccpTeamService.approveHaccpTeam(
+      body.id,
+      body.approvedBy,
+      currentUser,
+    );
   }
 
   @Patch('disapprove')
   @ApiBearerAuth()
   async disapproveHaccpTeam(
     @Body() body: { id: string; disapprovedBy: string; Reason: string },
+    @CurrentUser() currentUser: any,
   ) {
     return this.haccpTeamService.disapproveHaccpTeam(
       body.id,
       body.disapprovedBy,
       body.Reason,
+      currentUser,
     );
   }
 }

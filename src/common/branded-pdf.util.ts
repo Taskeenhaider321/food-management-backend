@@ -118,7 +118,9 @@ function toCloudinaryCandidates(url: string): string[] {
   const urls = [url];
   if (/res\.cloudinary\.com/i.test(url) && /\/upload\//i.test(url)) {
     // Prefer raster formats pdf-lib can embed reliably.
-    urls.unshift(url.replace(/\/upload\//i, '/upload/f_png,q_auto,fl_sanitize/'));
+    urls.unshift(
+      url.replace(/\/upload\//i, '/upload/f_png,q_auto,fl_sanitize/'),
+    );
     urls.unshift(url.replace(/\/upload\//i, '/upload/f_jpg,q_auto/'));
     urls.unshift(url.replace(/\/upload\//i, '/upload/f_png/'));
   }
@@ -841,10 +843,7 @@ export async function resolveActorCompany(
   };
 
   const pickName = (source: any): string =>
-    source?.companyName ||
-    source?.CompanyName ||
-    source?.name ||
-    '';
+    source?.companyName || source?.CompanyName || source?.name || '';
 
   const pickAddress = (source: any): string =>
     source?.address || source?.Address || '';
