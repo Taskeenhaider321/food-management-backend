@@ -152,4 +152,50 @@ describe('UserService.createUser — company + department isolation', () => {
       ),
     ).resolves.toMatchObject({ status: true });
   });
+
+  it('creates global System Staff without inheriting Super Admin companyId', async () => {
+    const roleId = '507f1f77bcf86cd799439099';
+    let savedDoc: any;
+
+    userModel.mockImplementation((doc) => {
+      savedDoc = doc;
+      return {
+        ...doc,
+        save: jest.fn().mockResolvedValue({ _id: new Types.ObjectId() }),
+      };
+    });
+
+    await expect(
+      service.createUser(
+        {
+          users: [
+            {
+              name: 'Test Staff',
+              email: 'test@gmail.com',
+              userName: 'teststaffadmin',
+              password: 'secret',
+              roleId,
+              // no companyId — System Staff / global user
+            },
+          ],
+        } as any,
+        {
+          roleType: 'super-admin',
+          companyId: companyA, // actor has a company, must NOT be copied
+          _id: '607f1f77bcf86cd799439011',
+        },
+      ),
+    ).resolves.toMatchObject({ status: true });
+
+    expect(savedDoc.companyId).toBeUndefined();
+    expect(savedDoc.roleType).toBe('super-staff');
+    expect(rbacService.assertRoleAssignmentAllowed).toHaveBeenCalledWith(
+      expect.objectContaining({ roleType: 'super-admin' }),
+      expect.objectContaining({
+        companyId: undefined,
+        roleType: 'super-staff',
+      }),
+      roleId,
+    );
+  });
 });

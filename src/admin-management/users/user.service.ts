@@ -133,13 +133,10 @@ export class UserService {
         }
         companyOid = new Types.ObjectId(mine);
       } else if (u.companyId) {
+        // Super Admin / Super Staff may create company users only when the
+        // payload explicitly includes companyId. Do NOT inherit actor.companyId
+        // — that incorrectly makes System Staff users company-scoped.
         companyOid = new Types.ObjectId(u.companyId);
-      } else if (actor?.companyId) {
-        const cid =
-          typeof actor.companyId === 'object'
-            ? actor.companyId._id
-            : actor.companyId;
-        if (cid) companyOid = new Types.ObjectId(String(cid));
       }
 
       let deptId: Types.ObjectId | undefined;
@@ -165,12 +162,13 @@ export class UserService {
         deptId = dept._id as Types.ObjectId;
       }
 
+      // No companyId => global System Staff (super-staff). Explicit companyId
+      // => company-scoped user. Never infer company from the actor.
       const provisionalUser = {
         companyId: companyOid,
-        roleType:
-          actor?.roleType === 'super-admin' && !companyOid
-            ? UserRoleType.SUPER_STAFF
-            : UserRoleType.COMPANY_USER,
+        roleType: companyOid
+          ? UserRoleType.COMPANY_USER
+          : UserRoleType.SUPER_STAFF,
       };
 
       if (u.roleId && actor) {
