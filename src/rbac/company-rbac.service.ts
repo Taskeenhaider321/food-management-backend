@@ -77,10 +77,7 @@ export class DerivedModuleService {
       dto.selectedPermissionIds,
     );
 
-    const permOids = this.uniqueObjectIds(
-      expandedIds,
-      'selectedPermissionIds',
-    );
+    const permOids = this.uniqueObjectIds(expandedIds, 'selectedPermissionIds');
     const validPerms = await this.masterPermissionModel.find({
       _id: { $in: permOids },
       moduleId: masterModule._id,

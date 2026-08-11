@@ -365,8 +365,11 @@ export class ProductService {
       );
     }
 
-    const { DocumentType: _dt, Department: _dept, ...productUpdates } =
-      updateProductDto;
+    const {
+      DocumentType: _dt,
+      Department: _dept,
+      ...productUpdates
+    } = updateProductDto;
     const updates = {
       ...productUpdates,
       UpdatedBy: updateProductDto.updatedBy,

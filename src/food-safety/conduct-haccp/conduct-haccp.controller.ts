@@ -91,27 +91,24 @@ export class ConductHaccpController {
 
   @Get(':haccpId')
   @ApiBearerAuth()
-  async getConductHaccp(
-    @Param('haccpId') haccpId: string,
-    @CurrentUser() actor: any,
-  ) {
-    return this.conductHaccpService.getConductHaccp(haccpId, actor);
+  async getConductHaccp(@Param('haccpId') haccpId: string) {
+    return this.conductHaccpService.getConductHaccp(haccpId);
   }
 
   @Delete()
   @ApiBearerAuth()
-  async deleteConductHaccp(@Body('id') id: string, @CurrentUser() actor: any) {
-    return this.conductHaccpService.deleteConductHaccp(id, actor);
+  async deleteConductHaccp(@Body('id') id: string) {
+    return this.conductHaccpService.deleteConductHaccp(id);
   }
 
   @Delete('all')
   @ApiBearerAuth()
-  async deleteAllConductHaccp(@CurrentUser() actor: any): Promise<{
+  async deleteAllConductHaccp(): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    return this.conductHaccpService.deleteAllConductHaccp(actor);
+    return this.conductHaccpService.deleteAllConductHaccp();
   }
 
   @Put(':haccpId')
@@ -119,52 +116,37 @@ export class ConductHaccpController {
   async updateConductHaccp(
     @Param('haccpId') haccpId: string,
     @Body() updateConductHaccpDto: UpdateConductHaccpDto,
-    @CurrentUser() actor: any,
   ) {
     return this.conductHaccpService.updateConductHaccp(
       haccpId,
       updateConductHaccpDto,
-      actor,
     );
   }
 
   @Patch('review')
   @ApiBearerAuth()
-  async reviewConductHaccp(
-    @Body() body: { id: string; actor: string },
-    @CurrentUser() currentUser: any,
-  ) {
-    return this.conductHaccpService.reviewConductHaccp(
-      body.id,
-      body.actor,
-      currentUser,
-    );
+  async reviewConductHaccp(@Body() body: { id: string; actor: string }) {
+    return this.conductHaccpService.reviewConductHaccp(body.id, body.actor);
   }
 
   @Patch('reject')
   @ApiBearerAuth()
   async rejectConductHaccp(
     @Body() body: { id: string; actor: string; reason: string },
-    @CurrentUser() currentUser: any,
   ) {
     return this.conductHaccpService.rejectConductHaccp(
       body.id,
       body.actor,
       body.reason,
-      currentUser,
     );
   }
 
   @Patch('toggle-enabled')
   @ApiBearerAuth()
-  async toggleConductHaccpEnabled(
-    @Body() body: { id: string; actor: string },
-    @CurrentUser() currentUser: any,
-  ) {
+  async toggleConductHaccpEnabled(@Body() body: { id: string; actor: string }) {
     return this.conductHaccpService.toggleConductHaccpEnabled(
       body.id,
       body.actor,
-      currentUser,
     );
   }
 
@@ -172,23 +154,17 @@ export class ConductHaccpController {
   @ApiBearerAuth()
   async approveConductHaccp(
     @Body() approveConductHaccpDto: ApproveConductHaccpDto,
-    @CurrentUser() currentUser: any,
   ) {
-    return this.conductHaccpService.approveConductHaccp(
-      approveConductHaccpDto,
-      currentUser,
-    );
+    return this.conductHaccpService.approveConductHaccp(approveConductHaccpDto);
   }
 
   @Patch('disapprove')
   @ApiBearerAuth()
   async disapproveConductHaccp(
     @Body() disapproveConductHaccpDto: DisapproveConductHaccpDto,
-    @CurrentUser() currentUser: any,
   ) {
     return this.conductHaccpService.disapproveConductHaccp(
       disapproveConductHaccpDto,
-      currentUser,
     );
   }
 }
