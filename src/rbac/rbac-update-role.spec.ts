@@ -137,4 +137,30 @@ describe('RbacService.updateRole — ceiling + cross-company', () => {
     expect(role.roleName).toBe('New');
     expect(accessVersion.bumpCompany).toHaveBeenCalledWith(companyA);
   });
+
+  it('allows Super Admin to update global role grants even if actor has a companyId', async () => {
+    const role = {
+      _id: roleId,
+      companyId: null,
+      systemRole: null,
+      moduleIds: [],
+      derivedModuleIds: [],
+      roleName: 'System Staff',
+      save: jest.fn().mockResolvedValue(undefined),
+    };
+    roleModel.findById.mockResolvedValue(role);
+    derivedModuleModel.find.mockResolvedValue([
+      { _id: derivedId, isActive: true },
+    ]);
+
+    await service.updateRole(
+      roleId,
+      { derivedModuleIds: [derivedId], moduleIds: [] },
+      { roleType: 'super-admin', companyId: companyA },
+    );
+
+    expect(companyModules.getCompanyPermissionCeiling).not.toHaveBeenCalled();
+    expect(accessVersion.bumpGlobal).toHaveBeenCalled();
+    expect(role.save).toHaveBeenCalled();
+  });
 });

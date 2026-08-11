@@ -412,10 +412,11 @@ export class RbacService {
       }
       uniqueProvisional = [...new Set(provisionalKeys)];
 
-      const scopeCompanyId =
-        roleCompanyId(role) ||
-        dto.companyId ||
-        (actor ? actorCompanyIdString(actor) : null);
+      // Ceiling applies only to company-scoped roles. Do NOT fall back to the
+      // actor's companyId — Super Admin editing a global System Staff role must
+      // not be blocked by an unrelated company with no modules assigned.
+      // Company actors already have dto.companyId forced in assertActorMayUpdateRole.
+      const scopeCompanyId = roleCompanyId(role) || dto.companyId || null;
 
       if (scopeCompanyId) {
         const ceiling =
