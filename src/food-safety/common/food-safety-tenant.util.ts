@@ -108,9 +108,7 @@ export async function assertActorMayAccessFoodSafetyRecord(
       record.createdByUserId != null ? String(record.createdByUserId) : null;
     const actorId = actor._id != null ? String(actor._id) : null;
     if (!actorId || !ownerId || ownerId !== actorId) {
-      throw new ForbiddenException(
-        'You may only access records you created',
-      );
+      throw new ForbiddenException('You may only access records you created');
     }
   }
 }
