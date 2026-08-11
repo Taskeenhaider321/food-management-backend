@@ -5,7 +5,11 @@ export type RoleDocument = Role & Document;
 export type SystemRoleKind = 'SUPER_ADMIN' | 'COMPANY_ADMIN';
 
 /**
- * Bridge between users and access. Roles are global — any role can be assigned to any company's users.
+ * Bridge between users and access.
+ *
+ * Roles may be global (no companyId) or company-scoped (companyId set).
+ * Assignment pairing is enforced by RbacService.assertRoleAssignmentAllowed:
+ * global roles ↔ global/system users; company roles ↔ same-company users.
  *
  * A role carries two kinds of module references:
  * - **moduleIds** (MasterModule) — grants ALL permissions for those seeded modules.

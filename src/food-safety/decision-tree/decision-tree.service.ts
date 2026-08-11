@@ -30,6 +30,13 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartmentId,
+  assertActorMayAccessFoodSafetyRecord,
+  foodSafetyCompanyDeleteFilter,
+  isGlobalFoodSafetyActor,
+  withOwnScopeFilter,
+} from '../common/food-safety-tenant.util';
 
 @Injectable()
 export class DecisionTreeService {
@@ -42,7 +49,9 @@ export class DecisionTreeService {
 
   private actorCompanyId(actor: any): string | undefined {
     return (
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
     );
   }
 
@@ -65,8 +74,7 @@ export class DecisionTreeService {
   private linkedLabel(tree: any): string {
     const conduct = tree?.ConductHaccp;
     if (!conduct || typeof conduct !== 'object') return '---';
-    const processName =
-      conduct?.Process?.ProcessName || conduct?.Process?.Name;
+    const processName = conduct?.Process?.ProcessName || conduct?.Process?.Name;
     const parts = [conduct?.DocumentId, processName].filter(Boolean);
     return parts.length ? parts.join(' / ') : '---';
   }
@@ -84,8 +92,10 @@ export class DecisionTreeService {
 
   async findAllForActor(actor: any) {
     const deptIds = await this.companyDepartmentIds(actor);
-    const filter: Record<string, unknown> =
-      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const filter = withOwnScopeFilter(
+      actor,
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {},
+    );
     const decisionTrees = await this.decisionTreeModel
       .find(filter as any)
       .populate('Department UserDepartment')
@@ -139,7 +149,7 @@ export class DecisionTreeService {
 
   async downloadDecisionTreePdf(treeId: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: tree } = await this.getDecisionTree(treeId);
+    const { data: tree } = await this.getDecisionTree(treeId, actor);
     const row = this.mapDecisionTreePdfRow(tree);
     const decisions = Array.isArray((tree as any)?.Decisions)
       ? (tree as any).Decisions
@@ -147,8 +157,7 @@ export class DecisionTreeService {
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.DocumentId !== '---' ? row.DocumentId : 'CCP/OPRP Assessment',
+      title: row.DocumentId !== '---' ? row.DocumentId : 'CCP/OPRP Assessment',
       subtitle: row.linked !== '---' ? row.linked : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [
@@ -179,14 +188,22 @@ export class DecisionTreeService {
 
     return {
       buffer: Buffer.from(pdfBytes),
-      fileName: safePdfFileName(
-        row.DocumentId || 'ccp-oprp',
-        'ccp-oprp',
-      ),
+      fileName: safePdfFileName(row.DocumentId || 'ccp-oprp', 'ccp-oprp'),
     };
   }
 
-  async createDecisionTree(createDecisionTreeDto: CreateDecisionTreeDto) {
+  async createDecisionTree(
+    createDecisionTreeDto: CreateDecisionTreeDto,
+    actor?: any,
+  ) {
+    if (actor) {
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        createDecisionTreeDto.departmentId || createDecisionTreeDto.Department,
+      );
+    }
+
     const createdDecisions = await this.decisionModel.create(
       createDecisionTreeDto.Decisions as any,
     );
@@ -201,6 +218,9 @@ export class DecisionTreeService {
       CreatedBy: createDecisionTreeDto.createdBy,
       CreationDate: new Date(),
       UserDepartment: createDecisionTreeDto.departmentId,
+      createdByUserId: actor?._id
+        ? new Types.ObjectId(String(actor._id))
+        : undefined,
     });
     initCreatedTimeline(createdDecisionTree, createDecisionTreeDto.createdBy);
 
@@ -213,9 +233,20 @@ export class DecisionTreeService {
     };
   }
 
-  async getAllDecisionTrees(departmentId: string) {
+  async getAllDecisionTrees(departmentId: string, actor?: any) {
+    if (actor) {
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
     const decisionTrees = await this.decisionTreeModel
-      .find({ UserDepartment: departmentId as any })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+        }) as any,
+      )
       .populate('Department UserDepartment')
       .populate({
         path: 'ConductHaccp',
@@ -248,9 +279,21 @@ export class DecisionTreeService {
     return { status: true, data: decisionTrees };
   }
 
-  async getApprovedDecisionTrees(departmentId: string) {
+  async getApprovedDecisionTrees(departmentId: string, actor?: any) {
+    if (actor) {
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
     const decisionTrees = await this.decisionTreeModel
-      .find({ UserDepartment: departmentId as any, Status: 'Approved' })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+          Status: 'Approved',
+        }) as any,
+      )
       .populate('Department UserDepartment')
       .populate({
         path: 'ConductHaccp',
@@ -283,7 +326,7 @@ export class DecisionTreeService {
     return { status: true, data: decisionTrees };
   }
 
-  async getDecisionTree(treeId: string) {
+  async getDecisionTree(treeId: string, actor?: any) {
     const decisionTree = await this.decisionTreeModel
       .findById(treeId)
       .populate('Department UserDepartment')
@@ -316,17 +359,32 @@ export class DecisionTreeService {
       );
     }
 
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        decisionTree,
+      );
+    }
+
     console.log(
       `DecisionTree document with ID: ${treeId} retrieved successfully`,
     );
     return { status: true, data: decisionTree };
   }
 
-  async deleteDecisionTree(id: string) {
+  async deleteDecisionTree(id: string, actor?: any) {
     const existing = await this.decisionTreeModel.findById(id);
     if (!existing) {
       throw new NotFoundException(
         `DecisionTree document with ID: ${id} not found`,
+      );
+    }
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existing,
       );
     }
     if (!canEditRecord(existing)) {
@@ -351,12 +409,17 @@ export class DecisionTreeService {
     };
   }
 
-  async deleteAllDecisionTrees(): Promise<{
+  async deleteAllDecisionTrees(actor?: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    const result = await this.decisionTreeModel.deleteMany({});
+    let filter: Record<string, unknown> = {};
+    if (actor && !isGlobalFoodSafetyActor(actor)) {
+      const deptIds = await this.companyDepartmentIds(actor);
+      filter = foodSafetyCompanyDeleteFilter(actor, deptIds);
+    }
+    const result = await this.decisionTreeModel.deleteMany(filter);
     if (result.deletedCount === 0) {
       throw new NotFoundException('No DecisionTree documents found to delete!');
     }
@@ -376,11 +439,19 @@ export class DecisionTreeService {
   async updateDecisionTree(
     treeId: string,
     updateDecisionTreeDto: UpdateDecisionTreeDto,
+    actor?: any,
   ) {
     const existingDecisionTree = await this.decisionTreeModel.findById(treeId);
     if (!existingDecisionTree) {
       throw new NotFoundException(
         `DecisionTree document with ID: ${treeId} not found`,
+      );
+    }
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existingDecisionTree,
       );
     }
     if (!canEditRecord(existingDecisionTree)) {
@@ -419,10 +490,17 @@ export class DecisionTreeService {
     };
   }
 
-  async reviewDecisionTree(id: string, actor: string) {
+  async reviewDecisionTree(id: string, actorName: string, actor?: any) {
     const record = await this.decisionTreeModel.findById(id);
     if (!record) throw new NotFoundException('DecisionTree not found');
-    reviewRecord(record, actor);
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        record,
+      );
+    }
+    reviewRecord(record, actorName);
     await record.save();
     return {
       status: true,
@@ -431,7 +509,10 @@ export class DecisionTreeService {
     };
   }
 
-  async approveDecisionTree(approveDecisionTreeDto: ApproveDecisionTreeDto) {
+  async approveDecisionTree(
+    approveDecisionTreeDto: ApproveDecisionTreeDto,
+    actor?: any,
+  ) {
     const decisionTree = await this.decisionTreeModel.findById(
       approveDecisionTreeDto.id,
     );
@@ -439,6 +520,13 @@ export class DecisionTreeService {
       throw new NotFoundException(
         `DecisionTree with ID: ${approveDecisionTreeDto.id} not found.`,
       );
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        decisionTree,
+      );
+    }
     approveRecord(decisionTree, approveDecisionTreeDto.approvedBy);
     await decisionTree.save();
     return {
@@ -448,10 +536,22 @@ export class DecisionTreeService {
     };
   }
 
-  async rejectDecisionTree(id: string, actor: string, reason: string) {
+  async rejectDecisionTree(
+    id: string,
+    actorName: string,
+    reason: string,
+    actor?: any,
+  ) {
     const record = await this.decisionTreeModel.findById(id);
     if (!record) throw new NotFoundException('DecisionTree not found');
-    rejectRecord(record, actor, reason);
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        record,
+      );
+    }
+    rejectRecord(record, actorName, reason);
     await record.save();
     return {
       status: true,
@@ -462,6 +562,7 @@ export class DecisionTreeService {
 
   async disapproveDecisionTree(
     disapproveDecisionTreeDto: DisapproveDecisionTreeDto,
+    actor?: any,
   ) {
     const decisionTree = await this.decisionTreeModel.findById(
       disapproveDecisionTreeDto.id,
@@ -470,6 +571,13 @@ export class DecisionTreeService {
       throw new NotFoundException(
         `DecisionTree with ID: ${disapproveDecisionTreeDto.id} not found.`,
       );
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        decisionTree,
+      );
+    }
     disapproveRecord(
       decisionTree,
       disapproveDecisionTreeDto.disapprovedBy,
@@ -483,10 +591,17 @@ export class DecisionTreeService {
     };
   }
 
-  async toggleDecisionTreeEnabled(id: string, actor: string) {
+  async toggleDecisionTreeEnabled(id: string, actorName: string, actor?: any) {
     const record = await this.decisionTreeModel.findById(id);
     if (!record) throw new NotFoundException('DecisionTree not found');
-    toggleEnabledRecord(record, actor);
+    if (actor) {
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        record,
+      );
+    }
+    toggleEnabledRecord(record, actorName);
     await record.save();
     return {
       status: true,

@@ -405,8 +405,7 @@ Best regards`;
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.processCode !== '---' ? row.processCode : 'Process',
+      title: row.processCode !== '---' ? row.processCode : 'Process',
       subtitle: row.processName !== '---' ? row.processName : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [

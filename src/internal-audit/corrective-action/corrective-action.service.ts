@@ -368,9 +368,7 @@ export class CorrectiveActionService {
     const answers = Array.isArray(action?.Answers) ? action.Answers : [];
     return {
       CorrectionBy: asText(action?.CorrectionBy),
-      CorrectionDate: formatDate(
-        action?.CorrectionDate || action?.created_at,
-      ),
+      CorrectionDate: formatDate(action?.CorrectionDate || action?.created_at),
       findingsCount: String(answers.length),
     };
   }
@@ -453,11 +451,8 @@ export class CorrectiveActionService {
     const pdfBytes = await buildBrandedDetailPdf({
       company,
       title:
-        row.CorrectionBy !== '---'
-          ? row.CorrectionBy
-          : 'Corrective Action',
-      subtitle:
-        row.CorrectionDate !== '---' ? row.CorrectionDate : undefined,
+        row.CorrectionBy !== '---' ? row.CorrectionBy : 'Corrective Action',
+      subtitle: row.CorrectionDate !== '---' ? row.CorrectionDate : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [
         ['Correction By', row.CorrectionBy],

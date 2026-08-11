@@ -30,9 +30,7 @@ export class ReportsController {
   @ApiOperation({ summary: 'Download NCR reports directory PDF' })
   @ApiBearerAuth()
   @Header('Content-Type', 'application/pdf')
-  async downloadReportsPdf(
-    @CurrentUser() actor: any,
-  ): Promise<StreamableFile> {
+  async downloadReportsPdf(@CurrentUser() actor: any): Promise<StreamableFile> {
     const { buffer, fileName } =
       await this.reportsService.downloadReportsPdf(actor);
     return new StreamableFile(buffer, {
@@ -50,8 +48,10 @@ export class ReportsController {
     @Param('id') id: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.reportsService.downloadReportPdf(id, actor);
+    const { buffer, fileName } = await this.reportsService.downloadReportPdf(
+      id,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,

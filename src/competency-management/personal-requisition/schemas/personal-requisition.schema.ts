@@ -14,6 +14,11 @@ export class PersonalRequisition {
   @Prop({ type: Types.ObjectId, ref: 'Company' })
   companyId: Types.ObjectId;
 
+  // Row-level isolation:
+  // company-scoped users may see only records they created.
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  createdByUserId?: Types.ObjectId;
+
   @Prop()
   Reason?: string;
 

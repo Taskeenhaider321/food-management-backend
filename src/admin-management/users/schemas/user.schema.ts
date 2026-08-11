@@ -29,7 +29,7 @@ export class User {
   @Prop({ required: true, unique: true, trim: true })
   userName: string;
 
-  @Prop({ required: true, minlength: 7, trim: true })
+  @Prop({ required: true, minlength: 7 })
   password: string;
 
   @Prop({ type: Types.ObjectId, ref: 'Role' })

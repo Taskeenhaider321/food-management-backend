@@ -2,10 +2,7 @@ export const MAINTENANCE_VERIFICATION_ANSWERS = ['Yes', 'No', 'N/A'] as const;
 export type MaintenanceVerificationAnswer =
   (typeof MAINTENANCE_VERIFICATION_ANSWERS)[number];
 
-export const MAINTENANCE_RECORD_STATUSES = [
-  'In Review',
-  'Verified',
-] as const;
+export const MAINTENANCE_RECORD_STATUSES = ['In Review', 'Verified'] as const;
 export type MaintenanceRecordStatus =
   (typeof MAINTENANCE_RECORD_STATUSES)[number];
 
@@ -40,8 +37,7 @@ export const MAINTENANCE_VERIFICATION_CHECKLIST: MaintenanceVerificationItemDefi
     },
     {
       key: 'cleaningCompleted',
-      label:
-        'Cleaning completed and equipment visually verified as hygienic.',
+      label: 'Cleaning completed and equipment visually verified as hygienic.',
       mandatory: true,
     },
     {
@@ -67,8 +63,7 @@ export const MAINTENANCE_VERIFICATION_CHECKLIST: MaintenanceVerificationItemDefi
     },
     {
       key: 'workOrderDocumented',
-      label:
-        'Work order and maintenance changes documented and traceable.',
+      label: 'Work order and maintenance changes documented and traceable.',
       mandatory: false,
     },
     {

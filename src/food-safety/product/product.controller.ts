@@ -24,14 +24,20 @@ export class ProductController {
 
   @Post()
   @ApiBearerAuth()
-  async createProduct(@Body() createProductDto: CreateProductDto) {
-    return this.productService.createProduct(createProductDto);
+  async createProduct(
+    @Body() createProductDto: CreateProductDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.productService.createProduct(createProductDto, actor);
   }
 
   @Get('all/:departmentId')
   @ApiBearerAuth()
-  async getAllProducts(@Param('departmentId') departmentId: string) {
-    return this.productService.getAllProducts(departmentId);
+  async getAllProducts(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.productService.getAllProducts(departmentId, actor);
   }
 
   /** Must be registered before `GET :productId`. */
@@ -59,8 +65,10 @@ export class ProductController {
     @Param('productId') productId: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.productService.downloadProductPdf(productId, actor);
+    const { buffer, fileName } = await this.productService.downloadProductPdf(
+      productId,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
@@ -69,56 +77,87 @@ export class ProductController {
 
   @Get(':productId')
   @ApiBearerAuth()
-  async getProduct(@Param('productId') productId: string) {
-    return this.productService.getProduct(productId);
+  async getProduct(
+    @Param('productId') productId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.productService.getProduct(productId, actor);
   }
 
   @Delete(':productId')
   @ApiBearerAuth()
-  async deleteProduct(@Param('productId') productId: string) {
-    return this.productService.deleteProduct(productId);
+  async deleteProduct(
+    @Param('productId') productId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.productService.deleteProduct(productId, actor);
   }
 
   @Delete('all')
   @ApiBearerAuth()
-  async deleteAllProducts(): Promise<{
+  async deleteAllProducts(@CurrentUser() actor: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    return this.productService.deleteAllProducts();
+    return this.productService.deleteAllProducts(actor);
   }
 
   @Patch('review')
   @ApiBearerAuth()
-  async reviewProduct(@Body() body: { id: string; actor: string }) {
-    return this.productService.reviewProduct(body.id, body.actor);
+  async reviewProduct(
+    @Body() body: { id: string; actor: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.productService.reviewProduct(body.id, body.actor, currentUser);
   }
 
   @Patch('reject')
   @ApiBearerAuth()
   async rejectProduct(
     @Body() body: { id: string; actor: string; reason: string },
+    @CurrentUser() currentUser: any,
   ) {
-    return this.productService.rejectProduct(body.id, body.actor, body.reason);
+    return this.productService.rejectProduct(
+      body.id,
+      body.actor,
+      body.reason,
+      currentUser,
+    );
   }
 
   @Patch('toggle-enabled')
   @ApiBearerAuth()
-  async toggleProductEnabled(@Body() body: { id: string; actor: string }) {
-    return this.productService.toggleProductEnabled(body.id, body.actor);
+  async toggleProductEnabled(
+    @Body() body: { id: string; actor: string },
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.productService.toggleProductEnabled(
+      body.id,
+      body.actor,
+      currentUser,
+    );
   }
 
   @Patch('approve')
   @ApiBearerAuth()
-  async approveProduct(@Body() approveProductDto: ApproveProductDto) {
-    return this.productService.approveProduct(approveProductDto);
+  async approveProduct(
+    @Body() approveProductDto: ApproveProductDto,
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.productService.approveProduct(approveProductDto, currentUser);
   }
 
   @Patch('disapprove')
   @ApiBearerAuth()
-  async disapproveProduct(@Body() disapproveProductDto: DisapproveProductDto) {
-    return this.productService.disapproveProduct(disapproveProductDto);
+  async disapproveProduct(
+    @Body() disapproveProductDto: DisapproveProductDto,
+    @CurrentUser() currentUser: any,
+  ) {
+    return this.productService.disapproveProduct(
+      disapproveProductDto,
+      currentUser,
+    );
   }
 
   @Patch(':productId')
@@ -126,7 +165,12 @@ export class ProductController {
   async updateProduct(
     @Param('productId') productId: string,
     @Body() updateProductDto: UpdateProductDto,
+    @CurrentUser() actor: any,
   ) {
-    return this.productService.updateProduct(productId, updateProductDto);
+    return this.productService.updateProduct(
+      productId,
+      updateProductDto,
+      actor,
+    );
   }
 }

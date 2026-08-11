@@ -30,6 +30,13 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartmentId,
+  assertActorMayAccessFoodSafetyRecord,
+  foodSafetyCompanyDeleteFilter,
+  isGlobalFoodSafetyActor,
+  withOwnScopeFilter,
+} from '../common/food-safety-tenant.util';
 
 @Injectable()
 export class ConductHaccpService {
@@ -42,7 +49,9 @@ export class ConductHaccpService {
 
   private actorCompanyId(actor: any): string | undefined {
     return (
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
     );
   }
 
@@ -76,8 +85,10 @@ export class ConductHaccpService {
 
   async findAllForActor(actor: any) {
     const deptIds = await this.companyDepartmentIds(actor);
-    const filter: Record<string, unknown> =
-      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const filter = withOwnScopeFilter(
+      actor,
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {},
+    );
     const conductHaccps = await this.conductHaccpModel
       .find(filter as any)
       .populate('Department Process UserDepartment')
@@ -116,7 +127,7 @@ export class ConductHaccpService {
 
   async downloadConductHaccpPdf(haccpId: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: record } = await this.getConductHaccp(haccpId);
+    const { data: record } = await this.getConductHaccp(haccpId, actor);
     const row = this.mapConductHaccpPdfRow(record);
     const hazards = Array.isArray((record as any)?.Hazards)
       ? (record as any).Hazards
@@ -124,8 +135,7 @@ export class ConductHaccpService {
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.DocumentId !== '---' ? row.DocumentId : 'Risk Assessment',
+      title: row.DocumentId !== '---' ? row.DocumentId : 'Risk Assessment',
       subtitle: row.processName !== '---' ? row.processName : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [
@@ -160,7 +170,17 @@ export class ConductHaccpService {
     };
   }
 
-  async createConductHaccp(createConductHaccpDto: CreateConductHaccpDto) {
+  async createConductHaccp(
+    createConductHaccpDto: CreateConductHaccpDto,
+    actor?: any,
+  ) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        createConductHaccpDto.departmentId || createConductHaccpDto.Department,
+      );
+
     const createdHazards = await this.hazardModel.create(
       createConductHaccpDto.Hazards as any,
     );
@@ -176,6 +196,9 @@ export class ConductHaccpService {
       Hazards: hazardsIds,
       UserDepartment: createConductHaccpDto.departmentId,
       CreationDate: new Date(),
+      createdByUserId: actor?._id
+        ? new Types.ObjectId(String(actor._id))
+        : undefined,
     });
     initCreatedTimeline(createdConductHaccp, createConductHaccpDto.createdBy);
 
@@ -188,9 +211,19 @@ export class ConductHaccpService {
     };
   }
 
-  async getAllConductHaccp(departmentId: string) {
+  async getAllConductHaccp(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
     const conductHaccps = await this.conductHaccpModel
-      .find({ UserDepartment: departmentId as any })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+        }) as any,
+      )
       .populate('Department Process UserDepartment')
       .populate({
         path: 'Hazards',
@@ -203,13 +236,23 @@ export class ConductHaccpService {
       throw new NotFoundException('ConductHaccp documents not found');
     }
 
-    console.log('ConductHaccp documents retrieved successfully');
     return { status: true, data: conductHaccps };
   }
 
-  async getApprovedConductHaccp(departmentId: string) {
+  async getApprovedConductHaccp(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
     const conductHaccps = await this.conductHaccpModel
-      .find({ UserDepartment: departmentId as any, Status: 'Approved' })
+      .find(
+        withOwnScopeFilter(actor, {
+          UserDepartment: departmentId as any,
+          Status: 'Approved',
+        }) as any,
+      )
       .populate('Department Process UserDepartment')
       .populate({
         path: 'Hazards',
@@ -222,11 +265,10 @@ export class ConductHaccpService {
       throw new NotFoundException('ConductHaccp documents not found');
     }
 
-    console.log('ConductHaccp documents retrieved successfully');
     return { status: true, data: conductHaccps };
   }
 
-  async getConductHaccp(haccpId: string) {
+  async getConductHaccp(haccpId: string, actor?: any) {
     const conductHaccp = await this.conductHaccpModel
       .findById(haccpId)
       .populate('Department Process UserDepartment')
@@ -243,19 +285,28 @@ export class ConductHaccpService {
       );
     }
 
-    console.log(
-      `ConductHaccp document with ID: ${haccpId} retrieved successfully`,
-    );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        conductHaccp,
+      );
     return { status: true, data: conductHaccp };
   }
 
-  async deleteConductHaccp(id: string) {
+  async deleteConductHaccp(id: string, actor?: any) {
     const existing = await this.conductHaccpModel.findById(id);
     if (!existing) {
       throw new NotFoundException(
         `ConductHaccp document with ID: ${id} not found`,
       );
     }
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existing,
+      );
     if (!canEditRecord(existing)) {
       throw new BadRequestException(
         'Only records in review, rejected, or disapproved can be deleted',
@@ -270,7 +321,6 @@ export class ConductHaccpService {
       );
     }
 
-    console.log(`ConductHaccp document with ID: ${id} deleted successfully`);
     return {
       status: true,
       message: 'ConductHaccp document deleted successfully',
@@ -278,21 +328,21 @@ export class ConductHaccpService {
     };
   }
 
-  async deleteAllConductHaccp(): Promise<{
+  async deleteAllConductHaccp(actor?: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    const result = await this.conductHaccpModel.deleteMany({});
+    let filter: Record<string, unknown> = {};
+    if (actor && !isGlobalFoodSafetyActor(actor)) {
+      const deptIds = await this.companyDepartmentIds(actor);
+      filter = foodSafetyCompanyDeleteFilter(actor, deptIds);
+    }
+    const result = await this.conductHaccpModel.deleteMany(filter);
     if (result.deletedCount === 0) {
       throw new NotFoundException('No ConductHaccp documents found to delete!');
     }
 
-    console.log(
-      new Date().toLocaleString() +
-        ' ' +
-        'DELETE All ConductHaccp documents Successfully!',
-    );
     return {
       status: true,
       message: 'All ConductHaccp documents have been deleted!',
@@ -303,6 +353,7 @@ export class ConductHaccpService {
   async updateConductHaccp(
     haccpId: string,
     updateConductHaccpDto: UpdateConductHaccpDto,
+    actor?: any,
   ) {
     const existingConductHaccp = await this.conductHaccpModel.findById(haccpId);
     if (!existingConductHaccp) {
@@ -310,6 +361,12 @@ export class ConductHaccpService {
         `ConductHaccp document with ID: ${haccpId} not found`,
       );
     }
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existingConductHaccp,
+      );
     if (!canEditRecord(existingConductHaccp)) {
       throw new BadRequestException(
         'Reviewed or approved risk assessments cannot be modified',
@@ -352,10 +409,16 @@ export class ConductHaccpService {
     };
   }
 
-  async reviewConductHaccp(id: string, actor: string) {
+  async reviewConductHaccp(id: string, actorName: string, actor?: any) {
     const record = await this.conductHaccpModel.findById(id);
     if (!record) throw new NotFoundException('ConductHaccp not found');
-    reviewRecord(record, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        record,
+      );
+    reviewRecord(record, actorName);
     await record.save();
     return {
       status: true,
@@ -364,13 +427,22 @@ export class ConductHaccpService {
     };
   }
 
-  async approveConductHaccp(approveConductHaccpDto: ApproveConductHaccpDto) {
+  async approveConductHaccp(
+    approveConductHaccpDto: ApproveConductHaccpDto,
+    actor?: any,
+  ) {
     const conductHaccp = await this.conductHaccpModel.findById(
       approveConductHaccpDto.id,
     );
     if (!conductHaccp)
       throw new NotFoundException(
         `ConductHaccp with ID: ${approveConductHaccpDto.id} not found.`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        conductHaccp,
       );
     approveRecord(conductHaccp, approveConductHaccpDto.approvedBy);
     await conductHaccp.save();
@@ -381,16 +453,28 @@ export class ConductHaccpService {
     };
   }
 
-  async rejectConductHaccp(id: string, actor: string, reason: string) {
+  async rejectConductHaccp(
+    id: string,
+    actorName: string,
+    reason: string,
+    actor?: any,
+  ) {
     const record = await this.conductHaccpModel.findById(id);
     if (!record) throw new NotFoundException('ConductHaccp not found');
-    rejectRecord(record, actor, reason);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        record,
+      );
+    rejectRecord(record, actorName, reason);
     await record.save();
     return { status: true, message: 'Risk assessment rejected', data: record };
   }
 
   async disapproveConductHaccp(
     disapproveConductHaccpDto: DisapproveConductHaccpDto,
+    actor?: any,
   ) {
     const conductHaccp = await this.conductHaccpModel.findById(
       disapproveConductHaccpDto.id,
@@ -398,6 +482,12 @@ export class ConductHaccpService {
     if (!conductHaccp)
       throw new NotFoundException(
         `ConductHaccp with ID: ${disapproveConductHaccpDto.id} not found.`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        conductHaccp,
       );
     disapproveRecord(
       conductHaccp,
@@ -412,10 +502,16 @@ export class ConductHaccpService {
     };
   }
 
-  async toggleConductHaccpEnabled(id: string, actor: string) {
+  async toggleConductHaccpEnabled(id: string, actorName: string, actor?: any) {
     const record = await this.conductHaccpModel.findById(id);
     if (!record) throw new NotFoundException('ConductHaccp not found');
-    toggleEnabledRecord(record, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        record,
+      );
+    toggleEnabledRecord(record, actorName);
     await record.save();
     return {
       status: true,

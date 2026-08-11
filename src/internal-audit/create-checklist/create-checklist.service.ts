@@ -521,12 +521,12 @@ export class CreateChecklistService {
       Status: asText(checklist?.Status),
       RevisionNo: asText(checklist?.RevisionNo ?? 0),
       CreatedBy: asText(checklist?.CreatedBy),
-      CreationDate: formatDate(checklist?.CreationDate || checklist?.created_at),
+      CreationDate: formatDate(
+        checklist?.CreationDate || checklist?.created_at,
+      ),
       questionCount: String(questions.length),
       questionTitles: asText(
-        questions
-          .map((q: any) => q?.questionText)
-          .filter(Boolean),
+        questions.map((q: any) => q?.questionText).filter(Boolean),
       ),
       description: asText(checklist?.description),
     };
@@ -582,8 +582,7 @@ export class CreateChecklistService {
 
     const pdfBytes = await buildBrandedDetailPdf({
       company,
-      title:
-        row.ChecklistId !== '---' ? row.ChecklistId : 'Checklist',
+      title: row.ChecklistId !== '---' ? row.ChecklistId : 'Checklist',
       subtitle: row.title !== '---' ? row.title : undefined,
       exportedBy: actor?.name || actor?.userName || 'System',
       coverRows: [
@@ -597,14 +596,15 @@ export class CreateChecklistService {
         ['Description', row.description],
         ['Question Count', row.questionCount],
       ],
-      sections: row.questionTitles !== '---'
-        ? [
-            {
-              heading: 'Questions',
-              rows: [['Titles', row.questionTitles]],
-            },
-          ]
-        : [],
+      sections:
+        row.questionTitles !== '---'
+          ? [
+              {
+                heading: 'Questions',
+                rows: [['Titles', row.questionTitles]],
+              },
+            ]
+          : [],
     });
 
     return {

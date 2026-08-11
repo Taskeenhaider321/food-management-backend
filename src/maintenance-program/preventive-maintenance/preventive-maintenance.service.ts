@@ -136,7 +136,8 @@ export class PreventiveMaintenanceService {
     const record = await this.getEditableRecord(id);
 
     if (dto.dateType) record.dateType = dto.dateType;
-    if (dto.natureOfFault !== undefined) record.natureOfFault = dto.natureOfFault;
+    if (dto.natureOfFault !== undefined)
+      record.natureOfFault = dto.natureOfFault;
     if (dto.rootCause !== undefined) record.rootCause = dto.rootCause;
     if (dto.detailOfWork !== undefined) record.detailOfWork = dto.detailOfWork;
     if (dto.replacement !== undefined) record.replacement = dto.replacement;

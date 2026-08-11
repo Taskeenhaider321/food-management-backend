@@ -29,6 +29,13 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartmentId,
+  assertActorMayAccessFoodSafetyRecord,
+  foodSafetyCompanyDeleteFilter,
+  isGlobalFoodSafetyActor,
+  withOwnScopeFilter,
+} from '../common/food-safety-tenant.util';
 
 @Injectable()
 export class ProductService {
@@ -41,7 +48,9 @@ export class ProductService {
 
   private actorCompanyId(actor: any): string | undefined {
     return (
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString() || undefined
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString() ||
+      undefined
     );
   }
 
@@ -76,8 +85,10 @@ export class ProductService {
 
   async findAllForActor(actor: any) {
     const deptIds = await this.companyDepartmentIds(actor);
-    const filter: Record<string, unknown> =
-      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {};
+    const filter = withOwnScopeFilter(
+      actor,
+      deptIds.length > 0 ? { UserDepartment: { $in: deptIds } } : {},
+    );
     const products = await this.productModel
       .find(filter as any)
       .populate('Department')
@@ -113,7 +124,7 @@ export class ProductService {
 
   async downloadProductPdf(productId: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: product } = await this.getProduct(productId);
+    const { data: product } = await this.getProduct(productId, actor);
     const row = this.mapProductPdfRow(product);
     const details = (product as any)?.ProductDetails || {};
 
@@ -158,7 +169,7 @@ export class ProductService {
     };
   }
 
-  async createProduct(createProductDto: CreateProductDto) {
+  async createProduct(createProductDto: CreateProductDto, actor?: any) {
     const user = await this.userModel
       .findById(createProductDto.userId)
       .populate('companyId departmentId');
@@ -173,6 +184,13 @@ export class ProductService {
       throw new NotFoundException('Department not found');
     }
 
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        createProductDto.departmentId || createProductDto.Department,
+      );
+
     const createdProduct = new this.productModel({
       Department: createProductDto.Department,
       DocumentType: createProductDto.DocumentType,
@@ -181,6 +199,9 @@ export class ProductService {
       CreationDate: new Date(),
       UserDepartment: createProductDto.departmentId,
       User: user,
+      createdByUserId: actor?._id
+        ? new Types.ObjectId(String(actor._id))
+        : undefined,
     });
     initCreatedTimeline(createdProduct, createProductDto.createdBy);
 
@@ -192,9 +213,18 @@ export class ProductService {
     };
   }
 
-  async getAllProducts(departmentId: string) {
+  async getAllProducts(departmentId: string, actor?: any) {
+    if (actor)
+      await assertActorMayAccessDepartmentId(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    const filter = withOwnScopeFilter(actor, {
+      UserDepartment: departmentId as any,
+    });
     const products = await this.productModel
-      .find({ UserDepartment: departmentId as any })
+      .find(filter as any)
       .populate('Department')
       .populate({ path: 'UserDepartment', model: 'Department' })
       .exec();
@@ -203,11 +233,10 @@ export class ProductService {
       throw new NotFoundException('Product documents not found');
     }
 
-    console.log('Product documents retrieved successfully');
     return { status: true, data: products };
   }
 
-  async getProduct(productId: string) {
+  async getProduct(productId: string, actor?: any) {
     const product = await this.productModel
       .findById(productId)
       .populate('Department')
@@ -220,19 +249,28 @@ export class ProductService {
       );
     }
 
-    console.log(
-      `Product document with ID: ${productId} retrieved successfully`,
-    );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        product,
+      );
     return { status: true, data: product };
   }
 
-  async deleteProduct(productId: string) {
+  async deleteProduct(productId: string, actor?: any) {
     const existing = await this.productModel.findById(productId);
     if (!existing) {
       throw new NotFoundException(
         `Product document with ID: ${productId} not found`,
       );
     }
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existing,
+      );
     if (!canEditRecord(existing)) {
       throw new BadRequestException(
         'Only records in review, rejected, or disapproved can be deleted',
@@ -246,7 +284,6 @@ export class ProductService {
       );
     }
 
-    console.log(`Product document with ID: ${productId} deleted successfully`);
     return {
       status: true,
       message: 'Product document deleted successfully',
@@ -254,21 +291,21 @@ export class ProductService {
     };
   }
 
-  async deleteAllProducts(): Promise<{
+  async deleteAllProducts(actor?: any): Promise<{
     status: boolean;
     message: string;
     data: any;
   }> {
-    const result = await this.productModel.deleteMany({});
+    let filter: Record<string, unknown> = {};
+    if (actor && !isGlobalFoodSafetyActor(actor)) {
+      const deptIds = await this.companyDepartmentIds(actor);
+      filter = foodSafetyCompanyDeleteFilter(actor, deptIds);
+    }
+    const result = await this.productModel.deleteMany(filter);
     if (result.deletedCount === 0) {
       throw new NotFoundException('No Product documents found to delete!');
     }
 
-    console.log(
-      new Date().toLocaleString() +
-        ' ' +
-        'DELETE All Product documents Successfully!',
-    );
     return {
       status: true,
       message: 'All Product documents have been deleted!',
@@ -276,13 +313,23 @@ export class ProductService {
     };
   }
 
-  async updateProduct(productId: string, updateProductDto: UpdateProductDto) {
+  async updateProduct(
+    productId: string,
+    updateProductDto: UpdateProductDto,
+    actor?: any,
+  ) {
     const existingProduct = await this.productModel.findById(productId);
     if (!existingProduct) {
       throw new NotFoundException(
         `Product document with ID: ${productId} not found`,
       );
     }
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        existingProduct,
+      );
     if (!canEditRecord(existingProduct)) {
       throw new BadRequestException(
         'Reviewed or approved products cannot be modified',
@@ -332,10 +379,16 @@ export class ProductService {
     };
   }
 
-  async reviewProduct(id: string, actor: string) {
+  async reviewProduct(id: string, actorName: string, actor?: any) {
     const product = await this.productModel.findById(id);
     if (!product) throw new NotFoundException('Product not found');
-    reviewRecord(product, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        product,
+      );
+    reviewRecord(product, actorName);
     await product.save();
     return {
       status: true,
@@ -344,11 +397,17 @@ export class ProductService {
     };
   }
 
-  async approveProduct(approveProductDto: ApproveProductDto) {
+  async approveProduct(approveProductDto: ApproveProductDto, actor?: any) {
     const product = await this.productModel.findById(approveProductDto.id);
     if (!product)
       throw new NotFoundException(
         `Product with ID: ${approveProductDto.id} not found.`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        product,
       );
     approveRecord(product, approveProductDto.approvedBy);
     await product.save();
@@ -359,19 +418,39 @@ export class ProductService {
     };
   }
 
-  async rejectProduct(id: string, actor: string, reason: string) {
+  async rejectProduct(
+    id: string,
+    actorName: string,
+    reason: string,
+    actor?: any,
+  ) {
     const product = await this.productModel.findById(id);
     if (!product) throw new NotFoundException('Product not found');
-    rejectRecord(product, actor, reason);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        product,
+      );
+    rejectRecord(product, actorName, reason);
     await product.save();
     return { status: true, message: 'Product rejected', data: product };
   }
 
-  async disapproveProduct(disapproveProductDto: DisapproveProductDto) {
+  async disapproveProduct(
+    disapproveProductDto: DisapproveProductDto,
+    actor?: any,
+  ) {
     const product = await this.productModel.findById(disapproveProductDto.id);
     if (!product)
       throw new NotFoundException(
         `Product with ID: ${disapproveProductDto.id} not found.`,
+      );
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        product,
       );
     disapproveRecord(
       product,
@@ -386,10 +465,16 @@ export class ProductService {
     };
   }
 
-  async toggleProductEnabled(id: string, actor: string) {
+  async toggleProductEnabled(id: string, actorName: string, actor?: any) {
     const product = await this.productModel.findById(id);
     if (!product) throw new NotFoundException('Product not found');
-    toggleEnabledRecord(product, actor);
+    if (actor)
+      await assertActorMayAccessFoodSafetyRecord(
+        actor,
+        this.departmentModel,
+        product,
+      );
+    toggleEnabledRecord(product, actorName);
     await product.save();
     return {
       status: true,

@@ -81,6 +81,8 @@ export class Product extends Document {
 
   @Prop() Reason?: string;
   @Prop() CreatedBy?: string;
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', index: true })
+  createdByUserId?: MongooseSchema.Types.ObjectId;
   @Prop({ default: Date.now }) CreationDate: Date;
   @Prop() UpdatedBy?: string;
   @Prop() UpdationDate?: Date;

@@ -81,8 +81,11 @@ export class EmployeeController {
   @ApiOperation({ summary: 'Get employees by department' })
   @ApiParam({ name: 'departmentId', description: 'Department ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Employees found' })
-  async findByDepartment(@Param('departmentId') departmentId: string) {
-    return this.employeeService.findByDepartment(departmentId);
+  async findByDepartment(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.employeeService.findByDepartment(departmentId, actor);
   }
 
   @Delete('all')
@@ -92,8 +95,8 @@ export class EmployeeController {
     status: HttpStatus.OK,
     description: 'All employees deleted successfully',
   })
-  async deleteAll() {
-    return this.employeeService.deleteAll();
+  async deleteAll(@CurrentUser() actor: any) {
+    return this.employeeService.deleteAll(actor);
   }
 
   @Patch(':id')
@@ -163,7 +166,7 @@ export class EmployeeController {
     status: HttpStatus.OK,
     description: 'Employee deleted successfully',
   })
-  async delete(@Param('id') id: string) {
-    return this.employeeService.delete(id);
+  async delete(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.employeeService.delete(id, actor);
   }
 }

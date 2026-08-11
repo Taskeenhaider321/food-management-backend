@@ -10,6 +10,7 @@ import {
 } from '../department/schemas/department.schema';
 import { User, UserSchema } from '../users/schemas/user.schema';
 import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
+import { RbacModule } from '../../rbac/rbac.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CloudinaryModule } from '../../cloudinary/cloudinary.module';
     ]),
     CloudinaryModule,
     forwardRef(() => UserModule),
+    forwardRef(() => RbacModule),
   ],
   controllers: [CompanyController],
   providers: [CompanyService],

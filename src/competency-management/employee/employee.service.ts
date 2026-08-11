@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ConflictException,
@@ -28,6 +29,10 @@ import {
   TrainingDocument,
 } from '../training/schemas/training.schema';
 import {
+  Department,
+  DepartmentDocument,
+} from '../../admin-management/department/schemas/department.schema';
+import {
   Company,
   CompanyDocument,
 } from '../../admin-management/company/schemas/company.schema';
@@ -37,6 +42,13 @@ import {
   buildBrandedDetailPdf,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessCompanyResource,
+  assertActorMayAccessDepartment,
+  isGlobalCompetencyActor,
+  isOwnScopeCompetencyActor,
+} from '../utils/competency-tenant.util';
+import { actorCompanyIdString } from '../../auth/utils/request-actor.util';
 
 @Injectable()
 export class EmployeeService {
@@ -46,6 +58,8 @@ export class EmployeeService {
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(Training.name) private trainingModel: Model<TrainingDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(Department.name)
+    private departmentModel: Model<DepartmentDocument>,
     private readonly profileService: ProfileService,
     private readonly userService: UserService,
     private cloudinaryService: CloudinaryService,
@@ -202,7 +216,15 @@ export class EmployeeService {
 
   async findByDepartment(
     departmentId: string,
+    actor?: any,
   ): Promise<{ status: boolean; message: string; data: EmployeeDocument[] }> {
+    if (actor) {
+      await assertActorMayAccessDepartment(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
     const users = await this.userModel
       .find({ departmentId })
       .select('_id')
@@ -232,22 +254,50 @@ export class EmployeeService {
   /**
    * Employees whose user belongs to the actor's company (or all employees for super-admin).
    */
-  async findAllForCompany(_actor: any): Promise<{
+  async findAllForCompany(actor: any): Promise<{
     status: boolean;
     message: string;
     data: EmployeeDocument[];
   }> {
+    const populateOpts = {
+      path: 'profileId',
+      populate: {
+        path: 'userId',
+        populate: ['companyId', 'departmentId'],
+      },
+    };
+
+    if (isGlobalCompetencyActor(actor)) {
+      const employees = await this.employeeModel
+        .find()
+        .populate(populateOpts)
+        .sort({ created_at: -1 })
+        .exec();
+      return { status: true, message: 'Employees', data: employees };
+    }
+
+    const companyId = actorCompanyIdString(actor);
+    if (!companyId) {
+      throw new ForbiddenException('Company context is required');
+    }
+
+    const users = await this.userModel
+      .find({ companyId: new Types.ObjectId(companyId) })
+      .select('_id')
+      .lean();
+    const userIds = users.map((u) => u._id);
+    const profiles = await this.profileModel
+      .find({ userId: { $in: userIds } })
+      .select('_id')
+      .lean();
+    const profileIds = profiles.map((p) => p._id);
+
     const employees = await this.employeeModel
-      .find()
-      .populate({
-        path: 'profileId',
-        populate: {
-          path: 'userId',
-          populate: ['companyId', 'departmentId'],
-        },
-      })
+      .find({ profileId: { $in: profileIds } })
+      .populate(populateOpts)
       .sort({ created_at: -1 })
       .exec();
+
     return {
       status: true,
       message: 'Employees',
@@ -255,7 +305,7 @@ export class EmployeeService {
     };
   }
 
-  async findOne(id: string, _actor?: any): Promise<EmployeeDocument> {
+  async findOne(id: string, actor?: any): Promise<EmployeeDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid employee id');
     }
@@ -275,6 +325,13 @@ export class EmployeeService {
       .exec();
     if (!employee) {
       throw new NotFoundException('Employee not found');
+    }
+
+    if (actor) {
+      assertActorMayAccessCompanyResource(
+        actor,
+        this.employeeCompanyId(employee),
+      );
     }
 
     return employee;
@@ -460,6 +517,20 @@ export class EmployeeService {
       throw new NotFoundException('Employee not found');
     }
 
+    const populatedForScope = await this.employeeModel
+      .findById(id)
+      .populate({
+        path: 'profileId',
+        populate: { path: 'userId', populate: ['companyId'] },
+      })
+      .exec();
+    if (actor) {
+      assertActorMayAccessCompanyResource(
+        actor,
+        this.employeeCompanyId(populatedForScope),
+      );
+    }
+
     const populated = await this.employeeModel
       .findById(id)
       .populate({
@@ -544,10 +615,26 @@ export class EmployeeService {
     return { status: true, message: 'Employee updated', data: data! };
   }
 
-  async delete(id: string): Promise<{ status: boolean; message: string }> {
-    const employee = await this.employeeModel.findById(id);
+  async delete(
+    id: string,
+    actor?: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const employee = await this.employeeModel
+      .findById(id)
+      .populate({
+        path: 'profileId',
+        populate: { path: 'userId', populate: ['companyId'] },
+      })
+      .exec();
     if (!employee) {
       throw new NotFoundException('This Employee is Not found!');
+    }
+
+    if (actor) {
+      assertActorMayAccessCompanyResource(
+        actor,
+        this.employeeCompanyId(employee),
+      );
     }
 
     await this.profileService.withTransaction(async (session) => {
@@ -573,11 +660,32 @@ export class EmployeeService {
     };
   }
 
-  async deleteAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.employeeModel.deleteMany({}).exec();
-    if (result.deletedCount === 0) {
+  async deleteAll(actor?: any): Promise<{ status: boolean; message: string }> {
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
+    if (isOwnScopeCompetencyActor(actor)) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    if (isGlobalCompetencyActor(actor)) {
+      const result = await this.employeeModel.deleteMany({}).exec();
+      if (result.deletedCount === 0) {
+        throw new NotFoundException('No Employees Found to Delete!');
+      }
+      return { status: true, message: 'All employees have been deleted!' };
+    }
+
+    const { data } = await this.findAllForCompany(actor);
+    const ids = (data || []).map((e) => e._id);
+    if (!ids.length) {
       throw new NotFoundException('No Employees Found to Delete!');
     }
+
+    for (const emp of data) {
+      await this.delete(String(emp._id), actor);
+    }
+
     return { status: true, message: 'All employees have been deleted!' };
   }
 }

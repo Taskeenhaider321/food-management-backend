@@ -94,8 +94,10 @@ export class InternalAuditorController {
     @Param('id') id: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.auditorService.downloadAuditorPdf(id, actor);
+    const { buffer, fileName } = await this.auditorService.downloadAuditorPdf(
+      id,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,

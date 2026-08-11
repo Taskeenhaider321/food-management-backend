@@ -111,8 +111,8 @@ export class MonthlyTrainingPlanController {
     summary: 'Get training record details with per-employee evaluations',
   })
   @ApiParam({ name: 'id', description: 'Monthly plan ID' })
-  async getRecordDetails(@Param('id') id: string) {
-    return this.service.getRecordDetails(id);
+  async getRecordDetails(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.getRecordDetails(id, actor);
   }
 
   /** Must be registered before other parameterized `:id` routes. */
@@ -176,8 +176,11 @@ export class MonthlyTrainingPlanController {
     status: HttpStatus.OK,
     description: 'Status updated successfully',
   })
-  async updateTrainingStatus(@Body() updateDto: UpdateTrainingStatusDto[]) {
-    return this.service.updateTrainingStatus(updateDto);
+  async updateTrainingStatus(
+    @Body() updateDto: UpdateTrainingStatusDto[],
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.updateTrainingStatus(updateDto, actor);
   }
 
   @Patch('images')
@@ -192,8 +195,9 @@ export class MonthlyTrainingPlanController {
   async uploadImages(
     @Body() body: UploadImagesDto,
     @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser() actor: any,
   ) {
-    return this.service.uploadImages(body.planId, files);
+    return this.service.uploadImages(body.planId, files, actor);
   }
 
   @Patch(':id')
@@ -219,8 +223,8 @@ export class MonthlyTrainingPlanController {
     status: HttpStatus.OK,
     description: 'All plans deleted successfully',
   })
-  async removeAll() {
-    return this.service.deleteAll();
+  async removeAll(@CurrentUser() actor: any) {
+    return this.service.deleteAll(actor);
   }
 
   @Delete(':id')
@@ -231,7 +235,7 @@ export class MonthlyTrainingPlanController {
     status: HttpStatus.OK,
     description: 'Plan deleted successfully',
   })
-  async remove(@Param('id') id: string) {
-    return this.service.delete(id);
+  async remove(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.delete(id, actor);
   }
 }

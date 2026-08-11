@@ -85,8 +85,10 @@ export class TrainingController {
     @Param('id') id: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.trainingService.downloadTrainingPdf(id, actor);
+    const { buffer, fileName } = await this.trainingService.downloadTrainingPdf(
+      id,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
@@ -133,8 +135,8 @@ export class TrainingController {
     status: HttpStatus.OK,
     description: 'All trainings deleted successfully',
   })
-  async deleteAll() {
-    return this.trainingService.deleteAll();
+  async deleteAll(@CurrentUser() actor: any) {
+    return this.trainingService.deleteAll(actor);
   }
 
   @Delete(':id')
@@ -145,7 +147,7 @@ export class TrainingController {
     status: HttpStatus.OK,
     description: 'Training deleted successfully',
   })
-  async delete(@Param('id') id: string) {
-    return this.trainingService.delete(id);
+  async delete(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.trainingService.delete(id, actor);
   }
 }

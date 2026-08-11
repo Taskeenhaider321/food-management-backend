@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   StreamableFile,
@@ -23,10 +24,24 @@ import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AssignRoleDto } from './dtos/assign-role.dto';
 import { CreateRoleDto } from './dtos/create-role.dto';
+import { UpdateRoleDto } from './dtos/update-role.dto';
 import { CreateDerivedModuleDto } from './dtos/create-derived-module.dto';
 import { UpdateDerivedModuleDto } from './dtos/update-derived-module.dto';
+import {
+  AssignCompanyModulesBulkDto,
+  UpdateCompanyModuleAssignmentDto,
+} from './dtos/company-module-assignment.dto';
 import { DerivedModuleService } from './company-rbac.service';
+import { CompanyModuleAssignmentService } from './company-module-assignment.service';
+import { AuthorizationService } from './authorization.service';
+import { AccessVersionService } from './access-version.service';
 import { RbacService } from './rbac.service';
+import {
+  isSuperAdminActor,
+  isCompanyAdminActor,
+  actorCompanyIdString,
+} from '../auth/utils/request-actor.util';
+import { assertActorMayCreateRolePayload } from './utils/role-assignment.util';
 
 @ApiTags('RBAC')
 @Controller('rbac')
@@ -34,6 +49,9 @@ export class RbacController {
   constructor(
     private readonly rbacService: RbacService,
     private readonly derivedModuleService: DerivedModuleService,
+    private readonly companyModuleAssignmentService: CompanyModuleAssignmentService,
+    private readonly authorizationService: AuthorizationService,
+    private readonly accessVersionService: AccessVersionService,
   ) {}
 
   @Public()
@@ -114,6 +132,17 @@ export class RbacController {
     @Body() dto: CreateDerivedModuleDto,
     @Req() req: any,
   ) {
+    const user = req.user;
+    if (isCompanyAdminActor(user)) {
+      const companyId = actorCompanyIdString(user);
+      if (!companyId) {
+        throw new ForbiddenException('Company admin has no company scope');
+      }
+      await this.companyModuleAssignmentService.assertPermissionIdsWithinCompanyCeiling(
+        companyId,
+        dto.selectedPermissionIds,
+      );
+    }
     return this.derivedModuleService.create(dto, req.user?._id?.toString());
   }
 
@@ -142,7 +171,19 @@ export class RbacController {
   async updateDerivedModule(
     @Param('derivedModuleId') id: string,
     @Body() dto: UpdateDerivedModuleDto,
+    @CurrentUser() actor: any,
   ) {
+    if (isCompanyAdminActor(actor) && dto.selectedPermissionIds?.length) {
+      const companyId = actorCompanyIdString(actor);
+      if (!companyId) {
+        throw new ForbiddenException('Company admin has no company scope');
+      }
+
+      await this.companyModuleAssignmentService.assertPermissionIdsWithinCompanyCeiling(
+        companyId,
+        dto.selectedPermissionIds,
+      );
+    }
     return this.derivedModuleService.update(id, dto);
   }
 
@@ -164,7 +205,26 @@ export class RbacController {
     if (user?.isSuspended) {
       throw new ForbiddenException('Your account is suspended');
     }
-    return this.rbacService.createRole(dto, user?._id?.toString());
+    assertActorMayCreateRolePayload(user, dto);
+    return this.rbacService.createRole(dto, user?._id?.toString(), user);
+  }
+
+  @Patch('roles/:id')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update a role (name, active flag, and/or permission grants)',
+  })
+  @ApiParam({ name: 'id', description: 'Role ID' })
+  async updateRole(
+    @Param('id') id: string,
+    @Body() dto: UpdateRoleDto,
+    @Req() req: any,
+  ) {
+    const user = req.user;
+    if (user?.isSuspended) {
+      throw new ForbiddenException('Your account is suspended');
+    }
+    return this.rbacService.updateRole(id, dto, user);
   }
 
   /** Must be registered before any `roles/:id` routes. */
@@ -172,11 +232,8 @@ export class RbacController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Download company-scoped RBAC roles directory PDF' })
   @Header('Content-Type', 'application/pdf')
-  async downloadRolesPdf(
-    @CurrentUser() actor: any,
-  ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.rbacService.downloadRolesPdf(actor);
+  async downloadRolesPdf(@CurrentUser() actor: any): Promise<StreamableFile> {
+    const { buffer, fileName } = await this.rbacService.downloadRolesPdf(actor);
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
@@ -193,8 +250,10 @@ export class RbacController {
     @Param('id') id: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.rbacService.downloadRolePdf(id, actor);
+    const { buffer, fileName } = await this.rbacService.downloadRolePdf(
+      id,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
@@ -224,7 +283,105 @@ export class RbacController {
   @Patch('assign-role')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Assign a role to a user (RBAC service)' })
-  async assignRole(@Body() dto: AssignRoleDto) {
-    return this.rbacService.assignRole(dto);
+  async assignRole(@Body() dto: AssignRoleDto, @Req() req: any) {
+    return this.rbacService.assignRole(dto, req.user);
+  }
+
+  // ─── Company module assignments (Super Admin → Company ceiling) ───
+
+  @Get('companies/:companyId/modules')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'List modules/permissions assigned to a company',
+  })
+  @ApiParam({ name: 'companyId' })
+  async listCompanyModules(@Param('companyId') companyId: string) {
+    return this.companyModuleAssignmentService.listForCompany(companyId);
+  }
+
+  @Put('companies/:companyId/modules')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Replace company module assignments (custom names + permission subsets)',
+  })
+  @ApiParam({ name: 'companyId' })
+  async replaceCompanyModules(
+    @Param('companyId') companyId: string,
+    @Body() dto: AssignCompanyModulesBulkDto,
+    @CurrentUser() actor: any,
+  ) {
+    if (!isSuperAdminActor(actor)) {
+      throw new ForbiddenException(
+        'Only Super Admin can assign company modules',
+      );
+    }
+    return this.companyModuleAssignmentService.replaceForCompany(
+      companyId,
+      dto.modules ?? [],
+      actor?._id?.toString(),
+    );
+  }
+
+  @Patch('companies/:companyId/modules/:masterModuleId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update one company module assignment' })
+  @ApiParam({ name: 'companyId' })
+  @ApiParam({ name: 'masterModuleId' })
+  async updateCompanyModule(
+    @Param('companyId') companyId: string,
+    @Param('masterModuleId') masterModuleId: string,
+    @Body() dto: UpdateCompanyModuleAssignmentDto,
+    @CurrentUser() actor: any,
+  ) {
+    if (!isSuperAdminActor(actor)) {
+      throw new ForbiddenException(
+        'Only Super Admin can update company modules',
+      );
+    }
+    return this.companyModuleAssignmentService.updateOne(
+      companyId,
+      masterModuleId,
+      dto,
+    );
+  }
+
+  @Delete('companies/:companyId/modules/:masterModuleId')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remove a module from a company' })
+  @ApiParam({ name: 'companyId' })
+  @ApiParam({ name: 'masterModuleId' })
+  async removeCompanyModule(
+    @Param('companyId') companyId: string,
+    @Param('masterModuleId') masterModuleId: string,
+    @CurrentUser() actor: any,
+  ) {
+    if (!isSuperAdminActor(actor)) {
+      throw new ForbiddenException(
+        'Only Super Admin can remove company modules',
+      );
+    }
+    return this.companyModuleAssignmentService.removeOne(
+      companyId,
+      masterModuleId,
+    );
+  }
+
+  @Get('me/access')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Effective access tree for the signed-in user' })
+  async myAccess(@CurrentUser() actor: any) {
+    return this.authorizationService.buildAccessForUser(actor);
+  }
+
+  @Get('me/access-version')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Lightweight access version for polling — FE refreshes me/access when this changes',
+  })
+  async myAccessVersion(@CurrentUser() actor: any) {
+    const accessVersion = await this.accessVersionService.versionForUser(actor);
+    return { accessVersion };
   }
 }

@@ -17,9 +17,12 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { AuthenticatedOnly } from '../auth/decorators/authenticated-only.decorator';
 import { CloudinaryService } from './cloudinary.service';
 
 @ApiTags('Upload')
+@AuthenticatedOnly()
+@ApiBearerAuth()
 @Controller('upload')
 export class CloudinaryUploadController {
   constructor(private readonly cloudinaryService: CloudinaryService) {}

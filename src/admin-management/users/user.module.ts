@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
@@ -10,6 +10,7 @@ import {
 } from '../department/schemas/department.schema';
 import { EmailService } from '../../email/email.service';
 import { ProfileModule } from '../profile/profile.module';
+import { RbacModule } from '../../rbac/rbac.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ProfileModule } from '../profile/profile.module';
       { name: Company.name, schema: CompanySchema },
       { name: Department.name, schema: DepartmentSchema },
     ]),
+    forwardRef(() => RbacModule),
   ],
   controllers: [UserController],
   providers: [UserService, EmailService],

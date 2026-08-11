@@ -317,9 +317,7 @@ export class CalibrationRecordService {
   private actorDepartmentId(actor: any): string | undefined {
     return (
       actor?.departmentId?._id?.toString() ||
-      (typeof actor?.departmentId === 'string'
-        ? actor.departmentId
-        : undefined)
+      (typeof actor?.departmentId === 'string' ? actor.departmentId : undefined)
     );
   }
 
@@ -327,9 +325,7 @@ export class CalibrationRecordService {
     const equipment = r?.Equipment;
     return {
       code: asText(r?.callibrationCode || r?.CR),
-      equipment: asText(
-        equipment?.equipmentName || equipment?.equipmentCode,
-      ),
+      equipment: asText(equipment?.equipmentName || equipment?.equipmentCode),
       type: asText(r?.callibrationType),
       dateType: asText(r?.dateType),
       lastDate: formatDate(r?.lastCallibrationDate),
@@ -383,9 +379,7 @@ export class CalibrationRecordService {
     const { data } = await this.findByEquipmentId(equipmentId, departmentId);
     const equipment = data?.[0]?.Equipment as any;
     const equipmentLabel =
-      equipment?.equipmentName ||
-      equipment?.equipmentCode ||
-      equipmentId;
+      equipment?.equipmentName || equipment?.equipmentCode || equipmentId;
 
     const pdfBytes = await buildBrandedListPdf({
       company,

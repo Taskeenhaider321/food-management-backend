@@ -217,9 +217,7 @@ export class YearlyAuditingPlanService {
     const selected = Array.isArray(plan?.Selected) ? plan.Selected : [];
     return selected.map((item: any, index: number) => {
       const processName =
-        item?.Process?.processName ||
-        item?.Process?.processCode ||
-        '---';
+        item?.Process?.processName || item?.Process?.processCode || '---';
       const auditorName =
         item?.AssignedAuditor?.profileId?.userId?.name ||
         item?.AssignedAuditor?.profileId?.name ||

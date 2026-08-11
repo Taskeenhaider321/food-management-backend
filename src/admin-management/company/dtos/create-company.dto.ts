@@ -1,8 +1,10 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
   IsEnum,
   IsMongoId,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
@@ -10,19 +12,23 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CompanyStatus } from '../schemas/company.schema';
+import { AssignCompanyModuleDto } from '../../../rbac/dtos/company-module-assignment.dto';
 
 /** Initial company-admin user created alongside the company. */
 export class CompanyAdminDto {
   @ApiProperty({ example: 'John Doe' })
   @IsString()
+  @IsNotEmpty()
   name: string;
 
   @ApiProperty({ example: 'admin@abc.com' })
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @ApiProperty({ example: 'john.admin' })
   @IsString()
+  @IsNotEmpty()
   userName: string;
 
   @ApiProperty({ example: 'SecurePass1', minLength: 7 })
@@ -39,10 +45,12 @@ export class CompanyAdminDto {
 export class CreateCompanyDto {
   @ApiProperty({ example: 'ABC Corporation' })
   @IsString()
+  @IsNotEmpty()
   companyName: string;
 
   @ApiProperty({ example: 'ABC' })
   @IsString()
+  @IsNotEmpty()
   shortName: string;
 
   @ApiPropertyOptional({ example: '123 Business St' })
@@ -57,6 +65,7 @@ export class CreateCompanyDto {
 
   @ApiProperty({ example: 'info@abc.com' })
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
   @ApiPropertyOptional({ example: 'https://example.com/logo.png' })
@@ -69,11 +78,22 @@ export class CreateCompanyDto {
   @IsEnum(CompanyStatus)
   status?: CompanyStatus;
 
-  @ApiPropertyOptional({
-    description: 'Bootstrap a company-admin user during company creation',
+  @ApiProperty({
+    description:
+      'Required company-admin user provisioned with the company (login credentials)',
   })
-  @IsOptional()
   @ValidateNested()
   @Type(() => CompanyAdminDto)
-  admin?: CompanyAdminDto;
+  admin: CompanyAdminDto;
+
+  @ApiPropertyOptional({
+    type: [AssignCompanyModuleDto],
+    description:
+      'Modules + permission subsets to assign to this company (Super Admin)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AssignCompanyModuleDto)
+  modules?: AssignCompanyModuleDto[];
 }

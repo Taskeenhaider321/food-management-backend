@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -53,6 +54,12 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessDepartment,
+  departmentScopedFilter,
+  isGlobalCompetencyActor,
+  isOwnScopeCompetencyActor,
+} from '../utils/competency-tenant.util';
 
 const MONTHLY_PLAN_POPULATE = [
   { path: 'Training' },
@@ -446,11 +453,26 @@ export class MonthlyTrainingPlanService {
     return { Status: true, message: 'The MonthlyPlan is added!', data: saved };
   }
 
-  async findByDepartment(departmentId: string): Promise<{
+  /**
+   * Legacy department-scoped list. Not exposed by the current controller
+   * (controller uses `findForActor`). Kept for internal/service callers;
+   * when an actor is provided, enforces department tenant access.
+   */
+  async findByDepartment(
+    departmentId: string,
+    actor?: any,
+  ): Promise<{
     status: boolean;
     message: string;
     data: MonthlyTrainingPlanDocument[];
   }> {
+    if (actor) {
+      await assertActorMayAccessDepartment(
+        actor,
+        this.departmentModel,
+        departmentId,
+      );
+    }
     const plans = await this.monthlyPlanModel
       .find({ UserDepartment: departmentId })
       .populate(
@@ -468,13 +490,14 @@ export class MonthlyTrainingPlanService {
    * List monthly plans for the authenticated user's company (all departments).
    * Super-admin and super-staff: all plans.
    */
-  async findForActor(_actor: any): Promise<{
+  async findForActor(actor: any): Promise<{
     status: boolean;
     message: string;
     data: MonthlyTrainingPlanDocument[];
   }> {
+    const filter = await departmentScopedFilter(actor, this.departmentModel);
     const plans = await this.monthlyPlanModel
-      .find({})
+      .find(filter)
       .populate(
         'Training Trainer Trainers Employee YearlyTrainingPlan UserDepartment',
       )
@@ -484,6 +507,18 @@ export class MonthlyTrainingPlanService {
       message: 'The Following are Monthlyplans!',
       data: plans,
     };
+  }
+
+  private async assertActorMayAccessPlan(
+    actor: any,
+    plan: { UserDepartment?: unknown },
+  ) {
+    if (!actor || isGlobalCompetencyActor(actor)) return;
+    const deptId = this.refIdString(plan.UserDepartment);
+    if (!deptId) {
+      throw new NotFoundException('Plan department not found');
+    }
+    await assertActorMayAccessDepartment(actor, this.departmentModel, deptId);
   }
 
   async update(
@@ -498,6 +533,10 @@ export class MonthlyTrainingPlanService {
     const plan = await this.monthlyPlanModel.findById(id).exec();
     if (!plan) {
       throw new NotFoundException('This MonthlyPlan is Not found!');
+    }
+
+    if (actor) {
+      await this.assertActorMayAccessPlan(actor, plan);
     }
 
     if (dto.departmentId !== undefined) {
@@ -847,10 +886,20 @@ export class MonthlyTrainingPlanService {
   }
 
   private async assertTrainerOnPlan(
-    _actor: any,
-    _plan: MonthlyTrainingPlanDocument,
+    actor: any,
+    plan: MonthlyTrainingPlanDocument,
   ): Promise<void> {
-    return;
+    // Super-admin / super-staff / company-admin may evaluate/conduct for oversight.
+    if (isGlobalCompetencyActor(actor) || actor?.roleType === 'company-admin') {
+      return;
+    }
+
+    const matchIds = await this.resolveTrainerMatchIds(actor);
+    if (!matchIds.size || !this.planMatchesTrainer(plan, matchIds)) {
+      throw new ForbiddenException(
+        'You may only evaluate or conduct trainings assigned to you as trainer',
+      );
+    }
   }
 
   private assertEmployeeOnPlan(
@@ -988,6 +1037,7 @@ export class MonthlyTrainingPlanService {
       );
     }
 
+    await this.assertActorMayAccessPlan(actor, plan);
     await this.assertTrainerOnPlan(actor, plan);
     this.assertEmployeeOnPlan(plan, dto.employeeId);
 
@@ -1050,6 +1100,7 @@ export class MonthlyTrainingPlanService {
       );
     }
 
+    await this.assertActorMayAccessPlan(actor, plan);
     await this.assertTrainerOnPlan(actor, plan);
     this.assertEmployeeOnPlan(plan, dto.employeeId);
 
@@ -1092,7 +1143,10 @@ export class MonthlyTrainingPlanService {
     };
   }
 
-  async getRecordDetails(planId: string): Promise<{
+  async getRecordDetails(
+    planId: string,
+    actor?: any,
+  ): Promise<{
     status: boolean;
     message: string;
     data: MonthlyTrainingPlanDocument;
@@ -1104,6 +1158,9 @@ export class MonthlyTrainingPlanService {
     if (!data) {
       throw new NotFoundException('Monthly training plan not found');
     }
+    if (actor) {
+      await this.assertActorMayAccessPlan(actor, data);
+    }
     await this.enrichPlansWithEmployeeDetails([data]);
     return {
       status: true,
@@ -1114,6 +1171,7 @@ export class MonthlyTrainingPlanService {
 
   async updateTrainingStatus(
     updateDto: UpdateTrainingStatusDto[],
+    actor?: any,
   ): Promise<{ status: boolean; message: string }> {
     for (const data of updateDto) {
       const employee = await this.employeeModel
@@ -1128,6 +1186,10 @@ export class MonthlyTrainingPlanService {
         .exec();
       if (!monthlyPlan) {
         throw new NotFoundException('MonthlyPlan ID not found');
+      }
+
+      if (actor) {
+        await this.assertActorMayAccessPlan(actor, monthlyPlan);
       }
 
       if (monthlyPlan.ScheduleStatus === 'Cancelled') {
@@ -1172,10 +1234,15 @@ export class MonthlyTrainingPlanService {
   async uploadImages(
     planId: string,
     files: Express.Multer.File[],
+    actor?: any,
   ): Promise<{ status: boolean; message: string }> {
     const monthlyPlan = await this.monthlyPlanModel.findById(planId).exec();
     if (!monthlyPlan) {
       throw new NotFoundException('MonthlyPlan ID not found');
+    }
+
+    if (actor) {
+      await this.assertActorMayAccessPlan(actor, monthlyPlan);
     }
 
     const imageLinks = await Promise.all(
@@ -1187,19 +1254,34 @@ export class MonthlyTrainingPlanService {
     return { status: true, message: 'Success' };
   }
 
-  async delete(id: string): Promise<{ status: boolean; message: string }> {
-    const plan = await this.monthlyPlanModel.findByIdAndDelete(id).exec();
+  async delete(
+    id: string,
+    actor?: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const plan = await this.monthlyPlanModel.findById(id).exec();
     if (!plan) {
       throw new NotFoundException('This MonthlyPlan is Not found!');
     }
+    if (actor) {
+      await this.assertActorMayAccessPlan(actor, plan);
+    }
+    await this.monthlyPlanModel.findByIdAndDelete(id).exec();
     return {
       status: true,
       message: 'The Following MonthlyPlan has been Deleted!',
     };
   }
 
-  async deleteAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.monthlyPlanModel.deleteMany({}).exec();
+  async deleteAll(actor?: any): Promise<{ status: boolean; message: string }> {
+    if (!actor) {
+      throw new ForbiddenException('Authentication required');
+    }
+    if (isOwnScopeCompetencyActor(actor)) {
+      throw new ForbiddenException('Forbidden');
+    }
+
+    const filter = await departmentScopedFilter(actor, this.departmentModel);
+    const result = await this.monthlyPlanModel.deleteMany(filter).exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('No MonthlyPlans Found to Delete!');
     }
@@ -1289,10 +1371,7 @@ export class MonthlyTrainingPlanService {
       ['Created By', asText(plan?.CreatedBy)],
       ['Creation Date', formatDate(plan?.CreationDate || plan?.created_at)],
       ['Actual Date', formatDate(plan?.ActualDate)],
-      [
-        'Evaluations',
-        evaluationSummary || '---',
-      ],
+      ['Evaluations', evaluationSummary || '---'],
     ];
   }
 

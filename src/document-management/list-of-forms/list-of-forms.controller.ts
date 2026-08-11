@@ -42,9 +42,7 @@ export class ListOfFormsController {
   @ApiOperation({ summary: 'Download forms directory PDF' })
   @ApiBearerAuth()
   @Header('Content-Type', 'application/pdf')
-  async downloadFormsPdf(
-    @CurrentUser() actor: any,
-  ): Promise<StreamableFile> {
+  async downloadFormsPdf(@CurrentUser() actor: any): Promise<StreamableFile> {
     const { buffer, fileName } =
       await this.listOfFormsService.downloadFormsPdf(actor);
     return new StreamableFile(buffer, {
@@ -62,8 +60,10 @@ export class ListOfFormsController {
     @Param('id') id: string,
     @CurrentUser() actor: any,
   ): Promise<StreamableFile> {
-    const { buffer, fileName } =
-      await this.listOfFormsService.downloadFormPdf(id, actor);
+    const { buffer, fileName } = await this.listOfFormsService.downloadFormPdf(
+      id,
+      actor,
+    );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,

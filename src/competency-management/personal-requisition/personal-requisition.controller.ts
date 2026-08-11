@@ -50,8 +50,11 @@ export class PersonalRequisitionController {
   @ApiOperation({ summary: 'Get all requisitions by company' })
   @ApiParam({ name: 'companyId', description: 'Company ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Requisitions found' })
-  async findByCompany(@Param('companyId') companyId: string) {
-    return this.personalRequisitionService.findByCompany(companyId);
+  async findByCompany(
+    @Param('companyId') companyId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.personalRequisitionService.findByCompany(companyId, actor);
   }
 
   @Get(':departmentId')
@@ -59,8 +62,14 @@ export class PersonalRequisitionController {
   @ApiOperation({ summary: 'Get requisitions by department' })
   @ApiParam({ name: 'departmentId', description: 'Department ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Requisitions found' })
-  async findByDepartment(@Param('departmentId') departmentId: string) {
-    return this.personalRequisitionService.findByDepartment(departmentId);
+  async findByDepartment(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.personalRequisitionService.findByDepartment(
+      departmentId,
+      actor,
+    );
   }
 
   @Patch()
@@ -70,8 +79,22 @@ export class PersonalRequisitionController {
     status: HttpStatus.OK,
     description: 'Status updated successfully',
   })
-  async updateStatus(@Body() updateDto: UpdatePersonStatusDto) {
-    return this.personalRequisitionService.updateStatus(updateDto);
+  async updateStatus(
+    @Body() updateDto: UpdatePersonStatusDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.personalRequisitionService.updateStatus(updateDto, actor);
+  }
+
+  @Delete('all')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete all requisitions' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'All requisitions deleted successfully',
+  })
+  async deleteAll(@CurrentUser() actor: any) {
+    return this.personalRequisitionService.deleteAll(actor);
   }
 
   @Delete(':id')
@@ -82,18 +105,7 @@ export class PersonalRequisitionController {
     status: HttpStatus.OK,
     description: 'Requisition deleted successfully',
   })
-  async delete(@Param('id') id: string) {
-    return this.personalRequisitionService.delete(id);
-  }
-
-  @Delete('all')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete all requisitions' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'All requisitions deleted successfully',
-  })
-  async deleteAll() {
-    return this.personalRequisitionService.deleteAll();
+  async delete(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.personalRequisitionService.delete(id, actor);
   }
 }
