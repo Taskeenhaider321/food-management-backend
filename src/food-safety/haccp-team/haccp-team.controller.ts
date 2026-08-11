@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Put,
   Delete,
   Patch,
   Body,
@@ -43,6 +44,30 @@ export class HaccpTeamController {
       files: memberFiles,
     };
     return this.haccpTeamService.createHaccpTeam(createDto, actor);
+  }
+
+  @Put(':teamId')
+  @ApiBearerAuth()
+  @UseInterceptors(AnyFilesInterceptor())
+  async updateHaccpTeam(
+    @Param('teamId') teamId: string,
+    @Body() body: any,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const data = JSON.parse(body.Data);
+    const memberFiles = (files || []).filter((file) =>
+      /^files-\d+$/.test(file.fieldname),
+    );
+    const updateDto = {
+      userId: body.userId,
+      teamName: data.teamName,
+      Department: data.Department,
+      DocumentType: data.DocumentType,
+      TeamMembers: data.TeamMembers,
+      files: memberFiles,
+      updatedBy: body.updatedBy,
+    };
+    return this.haccpTeamService.updateHaccpTeam(teamId, updateDto);
   }
 
   @Get('all/:departmentId')

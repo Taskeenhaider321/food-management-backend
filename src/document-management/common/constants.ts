@@ -11,6 +11,7 @@ export const DOCUMENT_TYPE_CODES: Record<DocumentType, number> = {
 
 export const DOCUMENT_STATUSES = [
   'In Review',
+  'Change Request',
   'Reviewed',
   'Approved',
   'Rejected',

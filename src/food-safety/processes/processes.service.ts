@@ -17,6 +17,7 @@ import {
   canEditRecord,
   disapproveRecord,
   initCreatedTimeline,
+  promoteChangeRequestToReview,
   rejectRecord,
   resubmitRecord,
   reviewRecord,
@@ -496,17 +497,30 @@ export class ProcessesService {
     existingProcess.ProcessDetails = processDetailsIds as any;
     if (updateProcessesDto.ProcessName)
       existingProcess.ProcessName = updateProcessesDto.ProcessName;
-    if (updateProcessesDto.DocumentType)
-      existingProcess.DocumentType = updateProcessesDto.DocumentType;
+    if (
+      updateProcessesDto.DocumentType &&
+      updateProcessesDto.DocumentType !== existingProcess.DocumentType
+    ) {
+      throw new BadRequestException(
+        'Document type cannot be changed after creation',
+      );
+    }
     existingProcess.UpdatedBy = updateProcessesDto.updatedBy;
     existingProcess.UpdationDate = new Date();
+
+    const promoted = promoteChangeRequestToReview(
+      existingProcess,
+      updateProcessesDto.updatedBy || 'System',
+    );
 
     const updatedProcess = await existingProcess.save();
     return {
       status: true,
       message: trackChanges
         ? 'Process updated and resubmitted'
-        : 'Process document updated successfully',
+        : promoted
+          ? 'Process updated and submitted for review'
+          : 'Process document updated successfully',
       data: updatedProcess,
     };
   }

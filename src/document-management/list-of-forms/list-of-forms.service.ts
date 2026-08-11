@@ -129,6 +129,7 @@ export class ListOfFormsService {
 
     const trackChanges =
       form.status === 'Rejected' || form.status === 'Disapproved';
+    const wasChangeRequest = form.status === 'Change Request';
     const userName = actorDisplayName(actor);
 
     const previous = {
@@ -153,17 +154,17 @@ export class ListOfFormsService {
       dto.documentType !== undefined &&
       dto.documentType !== form.documentType
     ) {
-      form.documentType = dto.documentType;
-      changedFields.push('Document Type');
+      throw new BadRequestException(
+        'Document type cannot be changed after creation',
+      );
     }
     if (dto.departments !== undefined) {
       const next = dto.departments.map(String).sort().join(',');
       const current = form.departments.map(String).sort().join(',');
       if (next !== current) {
-        form.departments = dto.departments.map(
-          (deptId) => new Types.ObjectId(deptId),
+        throw new BadRequestException(
+          'Departments cannot be changed after creation',
         );
-        changedFields.push('Departments');
       }
     }
     if (
@@ -201,6 +202,14 @@ export class ListOfFormsService {
         user: userName,
         at: new Date(),
       } as any);
+    } else if (wasChangeRequest) {
+      form.status = 'In Review';
+      form.timeline.push({
+        action: 'Updated',
+        status: 'In Review',
+        user: userName,
+        at: new Date(),
+      } as any);
     }
 
     const saved = await form.save();
@@ -209,7 +218,9 @@ export class ListOfFormsService {
       status: true,
       message: trackChanges
         ? 'Form updated and resubmitted for review'
-        : 'Form updated successfully',
+        : wasChangeRequest
+          ? 'Form updated and submitted for review'
+          : 'Form updated successfully',
       data: populated,
     };
   }

@@ -15,6 +15,7 @@ import {
   canEditRecord,
   disapproveRecord,
   initCreatedTimeline,
+  promoteChangeRequestToReview,
   rejectRecord,
   resubmitRecord,
   reviewRecord,
@@ -350,11 +351,24 @@ export class ProductService {
       updateProductDto.DocumentType &&
       updateProductDto.DocumentType !== existingProduct.DocumentType
     ) {
-      changedFields.push('Document Type');
+      throw new BadRequestException(
+        'Document type cannot be changed after creation',
+      );
+    }
+    if (
+      updateProductDto.Department &&
+      updateProductDto.Department.toString() !==
+        existingProduct.Department?.toString()
+    ) {
+      throw new BadRequestException(
+        'Department cannot be changed after creation',
+      );
     }
 
+    const { DocumentType: _dt, Department: _dept, ...productUpdates } =
+      updateProductDto;
     const updates = {
-      ...updateProductDto,
+      ...productUpdates,
       UpdatedBy: updateProductDto.updatedBy,
       UpdationDate: new Date(),
     };
@@ -369,12 +383,18 @@ export class ProductService {
     }
 
     Object.assign(existingProduct, updates);
+    const promoted = promoteChangeRequestToReview(
+      existingProduct,
+      updateProductDto.updatedBy || 'System',
+    );
     const updatedProduct = await existingProduct.save();
     return {
       status: true,
       message: trackChanges
         ? 'Product updated and resubmitted'
-        : 'Product document updated successfully',
+        : promoted
+          ? 'Product updated and submitted for review'
+          : 'Product document updated successfully',
       data: updatedProduct,
     };
   }

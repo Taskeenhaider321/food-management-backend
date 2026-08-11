@@ -178,6 +178,7 @@ export class DocumentService {
 
     const trackChanges =
       document.status === 'Rejected' || document.status === 'Disapproved';
+    const wasChangeRequest = document.status === 'Change Request';
     const userName = actorDisplayName(actor);
 
     const previous = {
@@ -200,21 +201,18 @@ export class DocumentService {
       dto.documentType !== undefined &&
       dto.documentType !== document.documentType
     ) {
-      document.documentType = dto.documentType;
-      changedFields.push('Document Type');
+      throw new BadRequestException(
+        'Document type cannot be changed after creation',
+      );
     }
     if (dto.departments !== undefined) {
       const departmentIds = parseDepartmentIds(dto.departments);
-      if (departmentIds.length === 0) {
-        throw new BadRequestException('Select at least one department');
-      }
       const next = departmentIds.map(String).sort().join(',');
       const current = document.departments.map(String).sort().join(',');
       if (next !== current) {
-        document.departments = departmentIds.map(
-          (deptId) => new Types.ObjectId(deptId),
+        throw new BadRequestException(
+          'Departments cannot be changed after creation',
         );
-        changedFields.push('Departments');
       }
     }
     if (
@@ -250,6 +248,14 @@ export class DocumentService {
         user: userName,
         at: new Date(),
       } as any);
+    } else if (wasChangeRequest) {
+      document.status = 'In Review';
+      document.timeline.push({
+        action: 'Updated',
+        status: 'In Review',
+        user: userName,
+        at: new Date(),
+      } as any);
     }
 
     const saved = await document.save();
@@ -258,7 +264,9 @@ export class DocumentService {
       status: true,
       message: trackChanges
         ? 'Document updated and resubmitted for review'
-        : 'Document updated successfully',
+        : wasChangeRequest
+          ? 'Document updated and submitted for review'
+          : 'Document updated successfully',
       data: populated,
     };
   }

@@ -288,13 +288,15 @@ export class FoodSafetyPlanService {
     const plansArr = Object.values(createdPlans);
     const plansIds = plansArr.map((planObj: any) => planObj._id);
 
+    const wasChangeRequest = existingFoodSafety.Status === 'Change Request';
+
     const updates = {
       ...updateFoodSafetyPlanDto,
       RevisionNo: existingFoodSafety.RevisionNo + 1,
       UpdatedBy: updateFoodSafetyPlanDto.updatedBy,
       Plans: plansIds,
       UpdationDate: new Date(),
-      Status: 'Pending',
+      Status: wasChangeRequest ? 'In Review' : 'Pending',
       ApprovalDate: undefined,
       ApprovedBy: undefined,
       DisapprovalDate: undefined,

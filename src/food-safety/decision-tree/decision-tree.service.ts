@@ -16,6 +16,7 @@ import {
   canEditRecord,
   disapproveRecord,
   initCreatedTimeline,
+  promoteChangeRequestToReview,
   rejectRecord,
   resubmitRecord,
   reviewRecord,
@@ -480,12 +481,20 @@ export class DecisionTreeService {
     }
 
     existingDecisionTree.Decisions = decisionIds;
+
+    const promoted = promoteChangeRequestToReview(
+      existingDecisionTree,
+      updateDecisionTreeDto.updatedBy || 'System',
+    );
+
     const updatedDecisionTree = await existingDecisionTree.save();
     return {
       status: true,
       message: trackChanges
         ? 'CCP/OPRP updated and resubmitted'
-        : 'DecisionTree document updated successfully',
+        : promoted
+          ? 'CCP/OPRP updated and submitted for review'
+          : 'DecisionTree document updated successfully',
       data: updatedDecisionTree,
     };
   }

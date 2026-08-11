@@ -16,6 +16,7 @@ import {
   canEditRecord,
   disapproveRecord,
   initCreatedTimeline,
+  promoteChangeRequestToReview,
   rejectRecord,
   resubmitRecord,
   reviewRecord,
@@ -399,12 +400,19 @@ export class ConductHaccpService {
     existingConductHaccp.UpdatedBy = updateConductHaccpDto.updatedBy;
     existingConductHaccp.UpdationDate = new Date();
 
+    const promoted = promoteChangeRequestToReview(
+      existingConductHaccp,
+      updateConductHaccpDto.updatedBy || 'System',
+    );
+
     const updatedConductHaccp = await existingConductHaccp.save();
     return {
       status: true,
       message: trackChanges
         ? 'Risk assessment updated and resubmitted'
-        : 'ConductHaccp document updated successfully',
+        : promoted
+          ? 'Risk assessment updated and submitted for review'
+          : 'ConductHaccp document updated successfully',
       data: updatedConductHaccp,
     };
   }

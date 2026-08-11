@@ -38,6 +38,7 @@ type TargetModelConfig = {
   idField: 'documentId' | 'DocumentId';
   resolveName: (target: any) => string;
   pendingStatus: string;
+  changeRequestStatus: string;
   approvedStatus: string;
   disapprovedStatus: string;
   statusField: 'status' | 'Status';
@@ -80,6 +81,7 @@ export class ChangeRequestService {
         idField: 'documentId',
         resolveName: (target) => target.name || target.documentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'status',
@@ -91,6 +93,7 @@ export class ChangeRequestService {
         idField: 'documentId',
         resolveName: (target) => target.formName || target.documentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'status',
@@ -102,6 +105,7 @@ export class ChangeRequestService {
         idField: 'DocumentId',
         resolveName: (target) => target.TeamName || target.DocumentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'Status',
@@ -113,6 +117,7 @@ export class ChangeRequestService {
         idField: 'DocumentId',
         resolveName: (target) => target.ProcessName || target.DocumentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'Status',
@@ -125,6 +130,7 @@ export class ChangeRequestService {
         resolveName: (target) =>
           target.ProductDetails?.Name || target.DocumentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'Status',
@@ -136,6 +142,7 @@ export class ChangeRequestService {
         idField: 'DocumentId',
         resolveName: (target) => target.DocumentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'Status',
@@ -147,6 +154,7 @@ export class ChangeRequestService {
         idField: 'DocumentId',
         resolveName: (target) => target.DocumentId,
         pendingStatus: 'In Review',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'Status',
@@ -158,6 +166,7 @@ export class ChangeRequestService {
         idField: 'DocumentId',
         resolveName: (target) => target.DocumentId,
         pendingStatus: 'Pending',
+        changeRequestStatus: 'Change Request',
         approvedStatus: 'Approved',
         disapprovedStatus: 'Disapproved',
         statusField: 'Status',
@@ -257,7 +266,7 @@ export class ChangeRequestService {
 
     const statusByOutcome = {
       pending: config.pendingStatus,
-      approved: config.approvedStatus,
+      approved: config.changeRequestStatus,
       disapproved: config.disapprovedStatus,
     };
     const actionByOutcome = {
@@ -300,13 +309,7 @@ export class ChangeRequestService {
     } else {
       update.UpdatedBy = userName;
       update.UpdationDate = new Date();
-      if (outcome === 'approved') {
-        update.ApprovedBy = userName;
-        update.ApprovalDate = new Date();
-        update.DisapprovedBy = undefined;
-        update.DisapprovalDate = undefined;
-        update.Reason = undefined;
-      } else if (outcome === 'disapproved') {
+      if (outcome === 'disapproved') {
         update.Reason = reason;
         update.DisapprovedBy = userName;
         update.DisapprovalDate = new Date();
@@ -543,13 +546,6 @@ export class ChangeRequestService {
     });
 
     const saved = await changeRequest.save();
-
-    await this.markTargetAsPending(
-      dto.document,
-      dto.documentModel,
-      actor,
-      dto.changeReason,
-    );
 
     return {
       status: true,

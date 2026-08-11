@@ -12,6 +12,7 @@ import {
 import { HaccpTeam } from './schemas/haccp-team.schema';
 import { TeamMember } from './schemas/team-member.schema';
 import { CreateHaccpTeamDto } from './dtos/create-haccp-team.dto';
+import { UpdateHaccpTeamDto } from './dtos/update-haccp-team.dto';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import axios from 'axios';
@@ -20,8 +21,11 @@ import {
   canEditRecord,
   disapproveRecord,
   initCreatedTimeline,
+  promoteChangeRequestToReview,
   rejectRecord,
+  resubmitRecord,
   reviewRecord,
+  shouldTrackChanges,
   toggleEnabledRecord,
 } from '../common/haccp-workflow.util';
 import {
@@ -305,6 +309,122 @@ export class HaccpTeamService {
       status: true,
       message: 'HACCP Team document created successfully',
       data: createdTeam,
+    };
+  }
+
+  async updateHaccpTeam(teamId: string, updateDto: UpdateHaccpTeamDto) {
+    const existingTeam = await this.haccpTeamModel.findById(teamId);
+    if (!existingTeam) {
+      throw new NotFoundException(
+        `HACCP Team document with ID: ${teamId} not found`,
+      );
+    }
+    if (!canEditRecord(existingTeam)) {
+      throw new BadRequestException(
+        'Reviewed or approved HACCP teams cannot be modified',
+      );
+    }
+
+    const requestUser = await this.userModel
+      .findById(updateDto.userId)
+      .populate('companyId')
+      .populate('departmentId')
+      .exec();
+    if (!requestUser) {
+      throw new NotFoundException('User not found');
+    }
+
+    const trackChanges = shouldTrackChanges(existingTeam);
+    const changedFields: string[] = [];
+
+    if (updateDto.teamName && updateDto.teamName !== existingTeam.TeamName) {
+      changedFields.push('Team Name');
+    }
+    if (
+      updateDto.DocumentType &&
+      updateDto.DocumentType !== existingTeam.DocumentType
+    ) {
+      changedFields.push('Document Type');
+    }
+    if (
+      updateDto.Department &&
+      updateDto.Department !== existingTeam.Department?.toString()
+    ) {
+      changedFields.push('Department');
+    }
+    if (
+      updateDto.TeamMembers.length !== (existingTeam.TeamMembers?.length ?? 0)
+    ) {
+      changedFields.push('Team Members');
+    }
+
+    const revisionNo = existingTeam.RevisionNo ?? 0;
+
+    if (updateDto.files?.length > 0) {
+      for (const fileData of updateDto.files) {
+        const index = parseInt(fileData.fieldname.split('-')[1], 10);
+        const outputBuffer = await this.prepareMemberDocument(
+          fileData.buffer,
+          fileData.mimetype,
+          requestUser,
+          existingTeam,
+          revisionNo,
+        );
+        const uploadResult =
+          await this.cloudinaryService.uploadBuffer(outputBuffer);
+        updateDto.TeamMembers[index].documentUrl = uploadResult;
+      }
+    }
+
+    for (const memberId of existingTeam.TeamMembers || []) {
+      await this.teamMemberModel.findByIdAndDelete(memberId);
+    }
+
+    const membersIds = await Promise.all(
+      updateDto.TeamMembers.map(async (member) => {
+        const addedUser = new this.teamMemberModel({
+          fullName: member.fullName,
+          profileId: member.profileId || undefined,
+          designation: member.designation,
+          roleInTeam: member.roleInTeam,
+          trainingAttended: member.trainingAttended ?? [],
+          documentUrl: member.documentUrl,
+        });
+        await addedUser.save();
+        return addedUser._id;
+      }),
+    );
+
+    if (trackChanges) {
+      resubmitRecord(
+        existingTeam,
+        updateDto.updatedBy || requestUser.name,
+        changedFields,
+        {
+          TeamName: existingTeam.TeamName,
+          DocumentType: existingTeam.DocumentType,
+          Department: existingTeam.Department,
+        },
+      );
+    }
+
+    existingTeam.TeamName = updateDto.teamName;
+    existingTeam.TeamMembers = membersIds as any;
+
+    const promoted = promoteChangeRequestToReview(
+      existingTeam,
+      updateDto.updatedBy || requestUser.name,
+    );
+
+    const updatedTeam = await existingTeam.save();
+    return {
+      status: true,
+      message: trackChanges
+        ? 'HACCP Team updated and resubmitted'
+        : promoted
+          ? 'HACCP Team updated and submitted for review'
+          : 'HACCP Team updated successfully',
+      data: updatedTeam,
     };
   }
 

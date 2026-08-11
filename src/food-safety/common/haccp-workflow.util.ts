@@ -15,12 +15,19 @@ export interface HaccpWorkflowRecord {
   DisapprovalDate?: Date;
 }
 
+export const CHANGE_REQUEST_DOCUMENT_STATUS = 'Change Request';
+
 export function normalizeStatus(status?: string): string {
   if (!status || status === 'Pending') return 'In Review';
   return status;
 }
 
+export function isChangeRequestStatus(status?: string): boolean {
+  return status === CHANGE_REQUEST_DOCUMENT_STATUS;
+}
+
 export function canEditRecord(record: HaccpWorkflowRecord): boolean {
+  if (isChangeRequestStatus(record.Status)) return true;
   const status = normalizeStatus(record.Status);
   return (
     status === 'In Review' || status === 'Rejected' || status === 'Disapproved'
@@ -185,4 +192,18 @@ export function resubmitRecord(
     status: 'In Review',
     user: userName,
   });
+}
+
+export function promoteChangeRequestToReview(
+  record: HaccpWorkflowRecord,
+  userName: string,
+): boolean {
+  if (!isChangeRequestStatus(record.Status)) return false;
+  record.Status = 'In Review';
+  pushTimeline(record, {
+    action: 'Updated',
+    status: 'In Review',
+    user: userName,
+  });
+  return true;
 }

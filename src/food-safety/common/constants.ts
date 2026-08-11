@@ -25,6 +25,7 @@ export type HaccpStatus = (typeof HACCP_STATUSES)[number];
 
 export const ACTIVE_HACCP_STATUSES = [
   'In Review',
+  'Change Request',
   'Reviewed',
   'Approved',
   'Rejected',
