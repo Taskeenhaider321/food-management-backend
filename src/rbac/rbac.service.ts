@@ -468,38 +468,99 @@ export class RbacService {
     };
   }
 
-  async createSuperAdminRole() {
-    const existing = await this.roleModel.findOne({
-      systemRole: 'SUPER_ADMIN',
-    });
-    if (existing) {
-      return {
-        status: true,
-        message: 'Super admin role already exists',
-        data: await this.populateRole(existing._id),
-      };
+  /**
+   * Idempotent startup/bootstrap: upsert all master modules/permissions from seed,
+   * ensure SUPER_ADMIN role exists and includes every active master module.
+   */
+  async bootstrapRbac(): Promise<{
+    masterModulesCount: number;
+    masterPermissionsCount: number;
+    superAdminRoleSynced: boolean;
+  }> {
+    const beforeModules = await this.masterModuleModel.countDocuments();
+    const beforePerms = await this.masterPermissionModel.countDocuments();
+
+    await this.seedMasterData();
+    const { synced: superAdminRoleSynced } = await this.ensureSuperAdminRole();
+
+    const masterModulesCount = await this.masterModuleModel.countDocuments();
+    const masterPermissionsCount =
+      await this.masterPermissionModel.countDocuments();
+
+    if (
+      beforeModules !== masterModulesCount ||
+      beforePerms !== masterPermissionsCount ||
+      superAdminRoleSynced
+    ) {
+      await this.accessVersionService.bumpGlobal();
     }
 
-    const modulesCount = await this.masterModuleModel.countDocuments();
-    if (modulesCount === 0) {
-      await this.seedMasterData();
-    }
+    return {
+      masterModulesCount,
+      masterPermissionsCount,
+      superAdminRoleSynced,
+    };
+  }
 
+  /**
+   * Create or refresh the system SUPER_ADMIN role so it always references
+   * every active master module (handles newly added modules in seed).
+   */
+  async ensureSuperAdminRole(): Promise<{
+    role: RoleDocument;
+    synced: boolean;
+    created: boolean;
+  }> {
     const allModules = await this.masterModuleModel.find({ isActive: true });
+    const allModuleIds = allModules.map((m) => m._id);
 
-    const role = new this.roleModel({
+    let existing = await this.roleModel.findOne({ systemRole: 'SUPER_ADMIN' });
+
+    if (existing) {
+      const currentIds = new Set(
+        (existing.moduleIds ?? []).map((id) => String(id)),
+      );
+      const targetIds = allModuleIds.map((id) => String(id));
+      const needsSync =
+        targetIds.length !== currentIds.size ||
+        targetIds.some((id) => !currentIds.has(id));
+
+      if (needsSync) {
+        existing.moduleIds = allModuleIds as any;
+        await existing.save();
+        return { role: existing, synced: true, created: false };
+      }
+
+      return { role: existing, synced: false, created: false };
+    }
+
+    existing = await this.roleModel.create({
       roleName: 'Super Admin',
       description: 'Full global access to all modules',
       systemRole: 'SUPER_ADMIN',
-      moduleIds: allModules.map((m) => m._id),
+      moduleIds: allModuleIds,
       isActive: true,
     });
 
-    await role.save();
+    return { role: existing, synced: true, created: true };
+  }
+
+  async getSuperAdminRole(): Promise<RoleDocument | null> {
+    return this.roleModel.findOne({ systemRole: 'SUPER_ADMIN' });
+  }
+
+  async createSuperAdminRole() {
+    const result = await this.bootstrapRbac();
+    const role = await this.getSuperAdminRole();
+    if (!role) {
+      throw new BadRequestException('Failed to initialize SUPER_ADMIN role');
+    }
 
     return {
       status: true,
-      message: 'Super admin role created successfully',
+      message: result.superAdminRoleSynced
+        ? 'Super admin role initialized successfully'
+        : 'Super admin role already exists',
       data: await this.populateRole(role._id),
     };
   }

@@ -25,6 +25,14 @@ describe('UserService.createUser — company + department isolation', () => {
 
     rbacService = {
       assertRoleAssignmentAllowed: jest.fn().mockResolvedValue(undefined),
+      bootstrapRbac: jest.fn().mockResolvedValue({
+        masterModulesCount: 11,
+        masterPermissionsCount: 300,
+        superAdminRoleSynced: true,
+      }),
+      getSuperAdminRole: jest.fn().mockResolvedValue({
+        _id: new Types.ObjectId('607f1f77bcf86cd799439099'),
+      }),
     };
 
     service = new UserService(
@@ -151,5 +159,131 @@ describe('UserService.createUser — company + department isolation', () => {
         },
       ),
     ).resolves.toMatchObject({ status: true });
+  });
+
+  it('creates global System Staff without inheriting Super Admin companyId', async () => {
+    const roleId = '507f1f77bcf86cd799439099';
+    let savedDoc: any;
+
+    userModel.mockImplementation((doc) => {
+      savedDoc = doc;
+      return {
+        ...doc,
+        save: jest.fn().mockResolvedValue({ _id: new Types.ObjectId() }),
+      };
+    });
+
+    await expect(
+      service.createUser(
+        {
+          users: [
+            {
+              name: 'Test Staff',
+              email: 'test@gmail.com',
+              userName: 'teststaffadmin',
+              password: 'secret',
+              roleId,
+            },
+          ],
+        } as any,
+        {
+          roleType: 'super-admin',
+          companyId: companyA,
+          _id: '607f1f77bcf86cd799439011',
+        },
+      ),
+    ).resolves.toMatchObject({ status: true });
+
+    expect(savedDoc.companyId).toBeUndefined();
+    expect(savedDoc.roleType).toBe('super-staff');
+  });
+
+  it('findAll returns only global users for System Staff', async () => {
+    const globalUsers = [{ _id: 'g1', companyId: null }];
+    const userModel = {
+      find: jest.fn().mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          populate: jest.fn().mockReturnValue({
+            exec: jest.fn().mockResolvedValue(globalUsers),
+          }),
+        }),
+      }),
+    };
+
+    const service = new UserService(
+      userModel as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const result = await service.findAll({
+      roleType: 'super-staff',
+      companyId: null,
+      _id: 'staff1',
+    });
+
+    expect(result).toEqual(globalUsers);
+    expect(userModel.find).toHaveBeenCalledWith({
+      $or: [{ companyId: null }, { companyId: { $exists: false } }],
+    });
+  });
+});
+
+describe('UserService.createSuperAdmin — RBAC bootstrap', () => {
+  let service: UserService;
+  let userModel: any;
+  let rbacService: any;
+  let savedDoc: any;
+
+  beforeEach(() => {
+    userModel = jest.fn().mockImplementation((doc) => {
+      savedDoc = doc;
+      return {
+        ...doc,
+        save: jest.fn().mockResolvedValue({ _id: new Types.ObjectId() }),
+      };
+    });
+    userModel.findOne = jest.fn().mockResolvedValue(null);
+
+    const superAdminRoleId = new Types.ObjectId('607f1f77bcf86cd799439099');
+    rbacService = {
+      bootstrapRbac: jest.fn().mockResolvedValue({
+        masterModulesCount: 11,
+        masterPermissionsCount: 300,
+        superAdminRoleSynced: true,
+      }),
+      getSuperAdminRole: jest.fn().mockResolvedValue({ _id: superAdminRoleId }),
+    };
+
+    service = new UserService(
+      userModel,
+      {} as any,
+      {} as any,
+      { sendRegistrationEmail: jest.fn() } as any,
+      {} as any,
+      rbacService as any,
+    );
+
+    jest.spyOn(service as any, 'encryptPassword').mockReturnValue('encrypted');
+    jest
+      .spyOn(service as any, 'requirePopulatedUser')
+      .mockResolvedValue({ _id: 'u1', roleType: 'super-admin' });
+  });
+
+  it('bootstraps RBAC, assigns SUPER_ADMIN roleId, no companyId', async () => {
+    await service.createSuperAdmin({
+      name: 'Platform Admin',
+      email: 'admin@example.com',
+      userName: 'superadmin',
+      password: 'secret123',
+    });
+
+    expect(rbacService.bootstrapRbac).toHaveBeenCalled();
+    expect(savedDoc.roleType).toBe('super-admin');
+    expect(savedDoc.companyId).toBeUndefined();
+    expect(String(savedDoc.roleId)).toBe('607f1f77bcf86cd799439099');
   });
 });

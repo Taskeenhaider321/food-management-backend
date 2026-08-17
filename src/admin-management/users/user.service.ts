@@ -54,28 +54,21 @@ export class UserService {
       throw new ConflictException(`User ${userName} already exists`);
     }
 
-    let company = await this.companyModel
-      .findOne()
-      .sort({ created_at: 1 })
-      .exec();
-    if (!company) {
-      company = await new this.companyModel({
-        companyName: 'Default Company',
-        shortName: 'DEFAULT',
-        email,
-        status: 'active',
-      }).save();
-    }
+    // Ensure master RBAC exists before first Super Admin login (fresh DB safety).
+    await this.rbacService.bootstrapRbac();
+    const superAdminRole = await this.rbacService.getSuperAdminRole();
 
     const encryptedPassword = this.encryptPassword(password);
 
+    // Super Admin is system-level — no company tenant.
     const superAdmin = new this.userModel({
       name,
       email,
       userName,
       password: encryptedPassword,
       roleType: 'super-admin',
-      companyId: company._id,
+      companyId: undefined,
+      roleId: superAdminRole?._id,
       isSuspended: false,
     });
 
@@ -133,13 +126,9 @@ export class UserService {
         }
         companyOid = new Types.ObjectId(mine);
       } else if (u.companyId) {
+        // Super Admin / Super Staff may create company users only when the
+        // payload explicitly includes companyId. Do NOT inherit actor.companyId.
         companyOid = new Types.ObjectId(u.companyId);
-      } else if (actor?.companyId) {
-        const cid =
-          typeof actor.companyId === 'object'
-            ? actor.companyId._id
-            : actor.companyId;
-        if (cid) companyOid = new Types.ObjectId(String(cid));
       }
 
       let deptId: Types.ObjectId | undefined;
@@ -167,10 +156,9 @@ export class UserService {
 
       const provisionalUser = {
         companyId: companyOid,
-        roleType:
-          actor?.roleType === 'super-admin' && !companyOid
-            ? UserRoleType.SUPER_STAFF
-            : UserRoleType.COMPANY_USER,
+        roleType: companyOid
+          ? UserRoleType.COMPANY_USER
+          : UserRoleType.SUPER_STAFF,
       };
 
       if (u.roleId && actor) {
@@ -291,6 +279,10 @@ export class UserService {
       );
     }
 
+    if (_actor) {
+      assertActorMayAccessUserRecord(_actor, user);
+    }
+
     const data = await this.buildUserPayload(user);
     return { status: true, data };
   }
@@ -300,7 +292,7 @@ export class UserService {
       throw new ForbiddenException('Authentication required');
     }
 
-    if (isSuperAdminActor(_actor) || isSuperStaffActor(_actor)) {
+    if (isSuperAdminActor(_actor)) {
       const users = await this.userModel
         .find({ companyId: new Types.ObjectId(companyId) })
         .populate('departmentId')
@@ -342,7 +334,7 @@ export class UserService {
       throw new ForbiddenException('Authentication required');
     }
 
-    if (isSuperAdminActor(_actor) || isSuperStaffActor(_actor)) {
+    if (isSuperAdminActor(_actor)) {
       const users = await this.userModel
         .find({ departmentId: new Types.ObjectId(departmentId) })
         .populate('departmentId')
@@ -384,7 +376,7 @@ export class UserService {
       throw new ForbiddenException('Authentication required');
     }
 
-    if (isSuperAdminActor(_actor) || isSuperStaffActor(_actor)) {
+    if (isSuperAdminActor(_actor)) {
       const departmentExist = await this.departmentModel.findById(departmentId);
       if (!departmentExist) {
         throw new NotFoundException(
@@ -462,7 +454,7 @@ export class UserService {
       );
     }
 
-    if (isSuperAdminActor(_actor) || isSuperStaffActor(_actor)) {
+    if (isSuperAdminActor(_actor)) {
       // no restriction
     } else if (isCompanyAdminActor(_actor)) {
       assertActorMayAccessCompany(_actor, companyId);
@@ -491,7 +483,7 @@ export class UserService {
       .populate('companyId')
       .exec();
 
-    if (!(isSuperAdminActor(_actor) || isSuperStaffActor(_actor))) {
+    if (!(isSuperAdminActor(_actor))) {
       // self-only actors get only their own record even if department matches
       if (!isCompanyAdminActor(_actor)) {
         const self = users.find((u) => String(u._id) === String(_actor._id));
@@ -554,9 +546,10 @@ export class UserService {
     }
 
     // Company actors must not move users across companies or escalate roleType.
-    if (_actor && !isSuperAdminActor(_actor) && !isSuperStaffActor(_actor)) {
+    if (_actor && !isSuperAdminActor(_actor)) {
       if (
         updates.companyId != null &&
+        !isSuperStaffActor(_actor) &&
         String(updates.companyId) !== actorCompanyIdString(_actor)
       ) {
         throw new ForbiddenException('You may only keep users in your company');
@@ -566,7 +559,7 @@ export class UserService {
         ['super-admin', 'super-staff'].includes(String(updates.roleType))
       ) {
         throw new ForbiddenException(
-          'Company actors may not grant global system role types',
+          'Only Super Admin may grant global system role types',
         );
       }
     }
@@ -835,9 +828,19 @@ export class UserService {
       throw new ForbiddenException('Authentication required');
     }
 
-    if (isSuperAdminActor(_actor) || isSuperStaffActor(_actor)) {
+    if (isSuperAdminActor(_actor)) {
       return this.userModel
         .find()
+        .populate('companyId')
+        .populate('departmentId')
+        .exec();
+    }
+
+    if (isSuperStaffActor(_actor)) {
+      return this.userModel
+        .find({
+          $or: [{ companyId: null }, { companyId: { $exists: false } }],
+        })
         .populate('companyId')
         .populate('departmentId')
         .exec();

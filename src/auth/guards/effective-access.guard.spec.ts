@@ -4,6 +4,7 @@ import { EffectiveAccessGuard } from './effective-access.guard';
 import { AuthorizationService } from '../../rbac/authorization.service';
 
 const COMPETENCY_MODULE_ID = 'mod-competency';
+const ADMIN_MODULE_ID = 'mod-admin';
 
 function mockContext(
   user: Record<string, unknown> | null,
@@ -61,6 +62,18 @@ describe('EffectiveAccessGuard — Competency routes', () => {
       path: '/monthly-training-plans/:id',
       moduleId: COMPETENCY_MODULE_ID,
     },
+    {
+      key: 'EP_GET_USERS',
+      method: 'GET',
+      path: '/users',
+      moduleId: ADMIN_MODULE_ID,
+    },
+    {
+      key: 'EP_DELETE_USERS_ID',
+      method: 'DELETE',
+      path: '/users/:id',
+      moduleId: ADMIN_MODULE_ID,
+    },
   ];
 
   beforeEach(() => {
@@ -83,6 +96,7 @@ describe('EffectiveAccessGuard — Competency routes', () => {
             .fn()
             .mockResolvedValue([
               { _id: COMPETENCY_MODULE_ID, key: 'COMPETENCY_MANAGEMENT' },
+              { _id: ADMIN_MODULE_ID, key: 'ADMIN_MANAGEMENT' },
             ]),
         }),
       }),
@@ -201,6 +215,46 @@ describe('EffectiveAccessGuard — Competency routes', () => {
           { roleType: 'company-user', companyId: 'c1' },
           'GET',
           '/employees/all',
+        ),
+      ),
+    ).rejects.toThrow('Missing required permissions');
+  });
+
+  it('denies System Staff GET /users without user list permission', async () => {
+    authorizationService.resolvePermissionKeysForUser.mockResolvedValue([
+      'FS_VIEW_HACCP',
+    ]);
+
+    await expect(
+      guard.canActivate(
+        mockContext({ roleType: 'super-staff', companyId: null }, 'GET', '/users'),
+      ),
+    ).rejects.toThrow('Missing required permissions');
+  });
+
+  it('allows System Staff GET /users with user list permission', async () => {
+    authorizationService.resolvePermissionKeysForUser.mockResolvedValue([
+      'EP_GET_USERS',
+    ]);
+
+    await expect(
+      guard.canActivate(
+        mockContext({ roleType: 'super-staff', companyId: null }, 'GET', '/users'),
+      ),
+    ).resolves.toBe(true);
+  });
+
+  it('denies System Staff DELETE /users/:id without delete permission', async () => {
+    authorizationService.resolvePermissionKeysForUser.mockResolvedValue([
+      'EP_GET_USERS',
+    ]);
+
+    await expect(
+      guard.canActivate(
+        mockContext(
+          { roleType: 'super-staff', companyId: null },
+          'DELETE',
+          '/users/abc123',
         ),
       ),
     ).rejects.toThrow('Missing required permissions');

@@ -12,6 +12,7 @@ import { DerivedModuleService } from './company-rbac.service';
 import { CompanyModuleAssignmentService } from './company-module-assignment.service';
 import { AuthorizationService } from './authorization.service';
 import { AccessVersionService } from './access-version.service';
+import { RbacBootstrapService } from './rbac-bootstrap.service';
 import { RbacController } from './rbac.controller';
 import { RbacService } from './rbac.service';
 import {
@@ -55,6 +56,7 @@ import {
   controllers: [RbacController],
   providers: [
     RbacService,
+    RbacBootstrapService,
     DerivedModuleService,
     CompanyModuleAssignmentService,
     AuthorizationService,
