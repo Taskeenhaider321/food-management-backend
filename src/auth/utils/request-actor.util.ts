@@ -136,15 +136,31 @@ export function isCompanyAdminTenantRoute(
 /**
  * Tenant isolation for user records:
  * - Super-admin: any user
+ * - System Staff (super-staff): own record + global/system users only (no company tenants)
  * - Company-admin: any user in the same company
  * - Company-user: only their own document
+ *
+ * Route permission guards must allow the operation first; this function enforces record scope.
  */
 export function assertActorMayAccessUserRecord(
   actor: any,
   targetUser: any,
 ): void {
   if (!targetUser) return;
-  if (isSuperAdminActor(actor) || isSuperStaffActor(actor)) return;
+  if (isSuperAdminActor(actor)) return;
+
+  if (isSuperStaffActor(actor)) {
+    const aid = actorIdString(actor);
+    const tid = targetUser._id != null ? String(targetUser._id) : null;
+    if (aid && tid && aid === tid) return;
+
+    const userCid = targetUserCompanyId(targetUser);
+    if (!userCid) return;
+
+    throw new ForbiddenException(
+      'System users may not access company-scoped user records',
+    );
+  }
 
   // Company-scoped users (company-user / company-trainer / company-employee)
   // may access only their own user record.
@@ -156,13 +172,7 @@ export function assertActorMayAccessUserRecord(
   }
 
   if (isCompanyAdminActor(actor)) {
-    const tid =
-      targetUser.companyId == null
-        ? null
-        : typeof targetUser.companyId === 'object' &&
-            targetUser.companyId._id != null
-          ? String(targetUser.companyId._id)
-          : String(targetUser.companyId);
+    const tid = targetUserCompanyId(targetUser);
     const mine = actorCompanyIdString(actor);
     if (!mine || !tid || mine !== tid) {
       throw new ForbiddenException('You may only access users in your company');
@@ -171,4 +181,11 @@ export function assertActorMayAccessUserRecord(
   }
 
   throw new ForbiddenException('You may not access this user record');
+}
+
+function targetUserCompanyId(user: any): string | null {
+  if (user?.companyId == null) return null;
+  const c = user.companyId;
+  if (typeof c === 'object' && c?._id != null) return String(c._id);
+  return String(c);
 }
