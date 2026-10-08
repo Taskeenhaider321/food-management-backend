@@ -15,7 +15,7 @@ export class UpdateConductHaccpDto {
 
   @IsOptional()
   @IsString()
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
+  @IsString()
   DocumentType?: string;
 
   @IsOptional()

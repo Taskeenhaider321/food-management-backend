@@ -237,16 +237,20 @@ export class DepartmentService {
     await this.userModel.deleteMany({ Department: id }).exec();
   }
 
-  async downloadDepartmentsPdf(actor: any) {
+  async downloadDepartmentsPdf(actor: any, companyIdOverride?: string) {
     const companyId =
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+      companyIdOverride ||
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString();
     if (!companyId) {
       throw new BadRequestException(
         'Company context is required to export departments PDF',
       );
     }
 
-    const company = await resolveActorCompany(this.companyModel, actor);
+    const companyDoc = await this.companyModel.findById(companyId).exec();
+    const company =
+      companyDoc || (await resolveActorCompany(this.companyModel, actor));
     const departments = await this.findByCompany(companyId);
 
     const pdfBytes = await buildBrandedListPdf({
@@ -273,9 +277,15 @@ export class DepartmentService {
     };
   }
 
-  async downloadDepartmentByIdPdf(id: string, actor: any) {
+  async downloadDepartmentByIdPdf(
+    id: string,
+    actor: any,
+    companyIdOverride?: string,
+  ) {
     const companyId =
-      actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+      companyIdOverride ||
+      actor?.companyId?._id?.toString() ||
+      actor?.companyId?.toString();
     if (!companyId) {
       throw new BadRequestException(
         'Company context is required to export department PDF',
@@ -283,7 +293,9 @@ export class DepartmentService {
     }
 
     const department = await this.findOne(id, companyId);
-    const company = await resolveActorCompany(this.companyModel, actor);
+    const companyDoc = await this.companyModel.findById(companyId).exec();
+    const company =
+      companyDoc || (await resolveActorCompany(this.companyModel, actor));
     const populatedCompany = department.companyId as any;
     const companyName =
       populatedCompany?.companyName || company.companyName || '---';

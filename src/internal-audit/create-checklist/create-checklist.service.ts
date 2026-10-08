@@ -65,6 +65,7 @@ export class CreateChecklistService {
       title: createDto.title,
       description: createDto.description,
       DocumentType: createDto.DocumentType,
+      DocumentTypeCode: createDto.DocumentTypeCode,
       Department: createDto.Department,
       Departments: createDto.Departments ?? [createDto.Department],
       CreatedBy: createDto.createdBy,

@@ -16,6 +16,7 @@ import {
   MasterPermission,
   MasterPermissionDocument,
 } from './schemas/master-permission.schema';
+import { MASTER_RESOURCE_GROUP_LABELS } from './constants/master-access.seed';
 import { resourceDefaultDisplayName } from './utils/display-name.util';
 
 export type AccessPermissionDto = {
@@ -249,12 +250,17 @@ export class AuthorizationService {
       ),
     ].sort();
 
-    const subTabs: AccessSubTabDto[] = resourceKeys.map((rk) => ({
-      key: rk,
-      name: resourceNameOverrides[rk] || resourceDefaultDisplayName(rk),
-      resource: rk,
-      permissions: permissions.filter((p) => p.resource === rk),
-    }));
+    const subTabs: AccessSubTabDto[] = resourceKeys.map((rk) => {
+      const seeded =
+        MASTER_RESOURCE_GROUP_LABELS[`${key}:${rk}`] ||
+        resourceDefaultDisplayName(rk);
+      return {
+        key: rk,
+        name: resourceNameOverrides[rk] || seeded,
+        resource: rk,
+        permissions: permissions.filter((p) => p.resource === rk),
+      };
+    });
 
     return {
       key,

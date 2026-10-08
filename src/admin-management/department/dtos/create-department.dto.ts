@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, ValidateNested } from 'class-validator';
+import { IsArray, IsMongoId, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 
@@ -30,4 +30,10 @@ export class CreateDepartmentDto {
   @ValidateNested({ each: true })
   @Type(() => DepartmentItemDto)
   departments: DepartmentItemDto[];
+
+  /** Super Admin must pass the target company when user has no companyId. */
+  @ApiPropertyOptional({ description: 'Target company (Super Admin)' })
+  @IsOptional()
+  @IsMongoId()
+  companyId?: string;
 }

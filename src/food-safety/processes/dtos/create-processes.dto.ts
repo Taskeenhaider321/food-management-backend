@@ -1,10 +1,12 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEnum,
   IsArray,
   ValidateNested,
   IsOptional,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProcessDetailDto } from './process-detail.dto';
@@ -24,8 +26,13 @@ export class CreateProcessesDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
   DocumentType: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  DocumentTypeCode?: number;
 
   @IsArray()
   @ValidateNested({ each: true })

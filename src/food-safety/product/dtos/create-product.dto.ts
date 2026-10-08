@@ -1,4 +1,12 @@
-import { IsString, IsNotEmpty, IsEnum, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsInt,
+  IsOptional,
+  Min,
+  Max,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProductDetailsDto } from './product-details.dto';
 
@@ -17,8 +25,14 @@ export class CreateProductDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
   DocumentType: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  DocumentTypeCode?: number;
 
   @ValidateNested()
   @Type(() => ProductDetailsDto)

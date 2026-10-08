@@ -1,5 +1,34 @@
 import { ChecklistDocument } from '../schemas/checklist.schema';
 
+/** Legacy fixed codes — kept so existing Manuals/Procedures docs still resolve. */
+const LEGACY_DOCUMENT_TYPE_MAP: Record<string, number> = {
+  Manuals: 1,
+  Procedures: 2,
+  SOPs: 3,
+  Forms: 4,
+  Manual: 1,
+  Procedure: 2,
+  SOP: 3,
+  Form: 4,
+};
+
+function resolveTypeCode(doc: ChecklistDocument): number {
+  const code = doc.DocumentTypeCode;
+  if (typeof code === 'number' && Number.isFinite(code) && code >= 1) {
+    return Math.floor(code);
+  }
+
+  const legacy = LEGACY_DOCUMENT_TYPE_MAP[doc.DocumentType];
+  if (legacy) return legacy;
+
+  const asNum = Number(doc.DocumentType);
+  if (Number.isFinite(asNum) && asNum >= 1) return Math.floor(asNum);
+
+  throw new Error(
+    'Invalid Document Type — provide DocumentTypeCode from a custom document type',
+  );
+}
+
 export class ChecklistHooks {
   static async generateChecklistId(this: ChecklistDocument) {
     if (!this.isNew || this.ChecklistId) return;
@@ -17,15 +46,7 @@ export class ChecklistHooks {
     if (!department.shortName)
       throw new Error('Department short name not configured');
 
-    const documentTypeNumber: Record<string, number> = {
-      Manuals: 1,
-      Procedures: 2,
-      SOPs: 3,
-      Forms: 4,
-    };
-
-    const typeNumber = documentTypeNumber[this.DocumentType];
-    if (!typeNumber) throw new Error('Invalid Document Type');
+    const typeNumber = resolveTypeCode(this);
 
     const prefix = `${company.shortName}/${department.shortName}/${typeNumber}/`;
 

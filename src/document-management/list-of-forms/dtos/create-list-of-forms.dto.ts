@@ -10,10 +10,11 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
-import { DOCUMENT_TYPES, QUESTION_TYPES } from '../../common/constants';
-import type { DocumentType, QuestionType } from '../../common/constants';
+import { QUESTION_TYPES } from '../../common/constants';
+import type { QuestionType } from '../../common/constants';
 
 export class FormQuestionDto {
   @ApiProperty({ enum: QUESTION_TYPES })
@@ -122,9 +123,17 @@ export class CreateListOfFormsDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ enum: DOCUMENT_TYPES })
-  @IsEnum(DOCUMENT_TYPES)
-  documentType: DocumentType;
+  @ApiProperty({ description: 'Custom document type title' })
+  @IsString()
+  @IsNotEmpty()
+  documentType: string;
+
+  @ApiPropertyOptional({ description: 'Numeric DocumentId code' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  documentTypeCode?: number;
 
   @ApiProperty({ type: [String] })
   @IsArray()
@@ -162,10 +171,17 @@ export class UpdateListOfFormsDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ enum: DOCUMENT_TYPES })
+  @ApiPropertyOptional({ description: 'Custom document type title' })
   @IsOptional()
-  @IsEnum(DOCUMENT_TYPES)
-  documentType?: DocumentType;
+  @IsString()
+  documentType?: string;
+
+  @ApiPropertyOptional({ description: 'Numeric DocumentId code' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  documentTypeCode?: number;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

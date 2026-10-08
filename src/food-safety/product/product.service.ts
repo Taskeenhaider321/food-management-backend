@@ -195,6 +195,7 @@ export class ProductService {
     const createdProduct = new this.productModel({
       Department: createProductDto.Department,
       DocumentType: createProductDto.DocumentType,
+      DocumentTypeCode: (createProductDto as any).DocumentTypeCode,
       ProductDetails: createProductDto.ProductDetails,
       CreatedBy: createProductDto.createdBy,
       CreationDate: new Date(),

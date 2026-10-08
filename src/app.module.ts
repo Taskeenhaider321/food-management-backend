@@ -23,6 +23,7 @@ import { ChangeRequestModule } from './document-management/change-request/change
 import { DocumentModule } from './document-management/document/document.module';
 import { FormRecordsModule } from './document-management/form-records/form-records.module';
 import { ListOfFormsModule } from './document-management/list-of-forms/list-of-forms.module';
+import { CustomDocumentTypeModule } from './document-management/custom-document-type/custom-document-type.module';
 // Competency-Management (was hr — employee, training, trainer, etc.)
 import { EmployeeModule } from './competency-management/employee/employee.module';
 import { TrainingModule } from './competency-management/training/training.module';
@@ -93,6 +94,7 @@ import { RbacModule } from './rbac/rbac.module';
     DocumentModule,
     FormRecordsModule,
     ListOfFormsModule,
+    CustomDocumentTypeModule,
     // Competency-Management
     EmployeeModule,
     TrainingModule,

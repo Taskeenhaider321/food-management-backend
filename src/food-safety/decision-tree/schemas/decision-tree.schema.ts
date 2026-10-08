@@ -23,8 +23,11 @@ export class DecisionTree extends Document {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Department' })
   UserDepartment?: MongooseSchema.Types.ObjectId;
 
-  @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
+  @Prop({ required: true })
   DocumentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  DocumentTypeCode?: number;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'ConductHaccp' })
   ConductHaccp?: MongooseSchema.Types.ObjectId;

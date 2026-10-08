@@ -60,8 +60,11 @@ export class Product extends Document {
   })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
-  @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
+  @Prop({ required: true })
   DocumentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  DocumentTypeCode?: number;
 
   @Prop({ type: ProductDetails, required: true })
   ProductDetails: ProductDetails;

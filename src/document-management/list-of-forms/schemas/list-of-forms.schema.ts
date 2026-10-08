@@ -174,8 +174,11 @@ export class ListOfForms extends MongooseDocument {
   @Prop()
   description?: string;
 
-  @Prop({ required: true, enum: DOCUMENT_TYPES })
-  documentType: DocumentType;
+  @Prop({ required: true })
+  documentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  documentTypeCode?: number;
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: 'Department' }],

@@ -18,6 +18,13 @@ import { CreateHaccpTeamDto } from './dtos/create-haccp-team.dto';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
+function coerceDocumentTypeCode(value: unknown): number | undefined {
+  if (value == null || value === '') return undefined;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 1) return undefined;
+  return Math.floor(n);
+}
+
 @ApiTags('HACCP Team')
 @Controller('haccp-team')
 export class HaccpTeamController {
@@ -40,6 +47,7 @@ export class HaccpTeamController {
       teamName: data.teamName,
       Department: data.Department,
       DocumentType: data.DocumentType,
+      DocumentTypeCode: coerceDocumentTypeCode(data.DocumentTypeCode),
       TeamMembers: data.TeamMembers,
       files: memberFiles,
     };
@@ -63,6 +71,7 @@ export class HaccpTeamController {
       teamName: data.teamName,
       Department: data.Department,
       DocumentType: data.DocumentType,
+      DocumentTypeCode: coerceDocumentTypeCode(data.DocumentTypeCode),
       TeamMembers: data.TeamMembers,
       files: memberFiles,
       updatedBy: body.updatedBy,
