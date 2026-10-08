@@ -52,12 +52,12 @@ export const MASTER_RESOURCE_GROUP_LABELS: Partial<Record<string, string>> = {
   'INTERNAL_AUDIT:reports': 'Reports',
   'INTERNAL_AUDIT:yearly_auditing_plan': 'Yearly auditing plan',
 
-  'FOOD_SAFETY:conduct_haccp': 'Conduct HACCP',
-  'FOOD_SAFETY:decision_tree': 'Decision tree',
-  'FOOD_SAFETY:food_safety_plan': 'Food safety plan',
-  'FOOD_SAFETY:haccp_team': 'HACCP team',
-  'FOOD_SAFETY:processes': 'Processes',
-  'FOOD_SAFETY:product': 'Product',
+  'FOOD_SAFETY:conduct_haccp': 'Risk Assessment',
+  'FOOD_SAFETY:decision_tree': 'CCP / OPRP',
+  'FOOD_SAFETY:food_safety_plan': 'Food Safety Plan',
+  'FOOD_SAFETY:haccp_team': 'Team',
+  'FOOD_SAFETY:processes': 'Flow Diagram',
+  'FOOD_SAFETY:product': 'Describe Product',
 
   'MAINTENANCE_PROGRAM:calibration_record': 'Calibration record',
   'MAINTENANCE_PROGRAM:equipment': 'Equipment',

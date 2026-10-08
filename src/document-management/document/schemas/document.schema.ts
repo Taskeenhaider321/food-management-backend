@@ -3,12 +3,10 @@ import { Document as MongooseDocument, Types } from 'mongoose';
 import {
   CREATION_METHODS,
   DOCUMENT_STATUSES,
-  DOCUMENT_TYPES,
 } from '../../common/constants';
 import type {
   CreationMethod,
   DocumentStatus,
-  DocumentType,
 } from '../../common/constants';
 import {
   TimelineEntry,
@@ -72,8 +70,11 @@ export class Document {
   @Prop({ required: true, trim: true })
   name: string;
 
-  @Prop({ required: true, enum: DOCUMENT_TYPES })
-  documentType: DocumentType;
+  @Prop({ required: true })
+  documentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  documentTypeCode?: number;
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: 'Department' }],

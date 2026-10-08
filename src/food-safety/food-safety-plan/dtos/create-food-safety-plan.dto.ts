@@ -20,7 +20,7 @@ export class CreateFoodSafetyPlanDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
+  @IsString()
   DocumentType: string;
 
   @IsOptional()

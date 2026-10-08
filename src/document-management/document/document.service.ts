@@ -105,6 +105,7 @@ export class DocumentService {
       this.documentModel,
       departmentIds[0],
       dto.documentType,
+      dto.documentTypeCode,
     );
 
     const userName = actorDisplayName(actor);
@@ -113,6 +114,7 @@ export class DocumentService {
       companyId,
       name: dto.name,
       documentType: dto.documentType,
+      documentTypeCode: dto.documentTypeCode,
       departments: departmentIds.map((id) => new Types.ObjectId(id)),
       creationMethod: dto.creationMethod,
       fileUrl,

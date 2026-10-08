@@ -87,8 +87,11 @@ export class Checklist {
   @Prop({ unique: true })
   ChecklistId: string;
 
-  @Prop({ enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'], required: true })
+  @Prop({ required: true })
   DocumentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  DocumentTypeCode?: number;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Department' }] })
   Departments: MongooseSchema.Types.ObjectId[];

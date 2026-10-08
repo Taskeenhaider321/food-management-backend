@@ -1,6 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Model } from 'mongoose';
-import { DOCUMENT_TYPE_CODES, DocumentType } from './constants';
+import { DOCUMENT_TYPE_CODES } from './constants';
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -10,17 +10,44 @@ export function actorDisplayName(actor: any): string {
   return actor?.name || actor?.userName || actor?.email || 'Unknown user';
 }
 
+function resolveDocumentTypeCode(
+  documentType: string,
+  documentTypeCode?: number,
+): number {
+  if (
+    typeof documentTypeCode === 'number' &&
+    Number.isFinite(documentTypeCode) &&
+    documentTypeCode >= 1
+  ) {
+    return Math.floor(documentTypeCode);
+  }
+
+  const legacy =
+    (DOCUMENT_TYPE_CODES as Record<string, number>)[documentType] ??
+    ({
+      Manuals: 1,
+      Procedures: 2,
+      SOPs: 3,
+      Forms: 4,
+    } as Record<string, number>)[documentType];
+
+  if (legacy) return legacy;
+
+  throw new BadRequestException(
+    'Invalid document type — provide documentTypeCode from a custom document type',
+  );
+}
+
 /**
- * Generates a controlled document id in the format
+ * Generates a controlled document id:
  * `CompanyShortName/DepartmentShortName/DocumentTypeCode/IncrementNumber`
- * (e.g. ABC/QA/1/001). The increment is scoped to the company + department +
- * document type prefix within the given collection.
  */
 export async function generateDocumentId(
   departmentModel: Model<any>,
   scopeModel: Model<any>,
   departmentId: string,
-  documentType: DocumentType,
+  documentType: string,
+  documentTypeCode?: number,
 ): Promise<{ documentId: string; companyId: any }> {
   const department = await departmentModel
     .findById(departmentId)
@@ -38,11 +65,7 @@ export async function generateDocumentId(
     );
   }
 
-  const typeCode = DOCUMENT_TYPE_CODES[documentType];
-  if (!typeCode) {
-    throw new BadRequestException('Invalid document type');
-  }
-
+  const typeCode = resolveDocumentTypeCode(documentType, documentTypeCode);
   const prefix = `${company.shortName}/${department.shortName}/${typeCode}/`;
 
   const existing = await scopeModel

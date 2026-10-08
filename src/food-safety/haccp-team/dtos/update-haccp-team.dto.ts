@@ -3,7 +3,10 @@ import {
   IsMongoId,
   IsArray,
   ValidateNested,
-  IsEnum,
+  IsInt,
+  IsOptional,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TeamMemberDto } from './team-member.dto';
@@ -18,8 +21,15 @@ export class UpdateHaccpTeamDto {
   @IsMongoId()
   Department: string;
 
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
+  @IsString()
   DocumentType: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  DocumentTypeCode?: number;
 
   @IsArray()
   @ValidateNested({ each: true })

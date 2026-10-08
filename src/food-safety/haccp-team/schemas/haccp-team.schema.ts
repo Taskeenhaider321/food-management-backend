@@ -32,8 +32,13 @@ export class HaccpTeam extends Document {
   })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
-  @Prop({ enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'], required: true })
+  /** Custom or legacy document type title (no longer a fixed enum). */
+  @Prop({ required: true })
   DocumentType: string;
+
+  /** Numeric code used in DocumentId (from custom document type). */
+  @Prop({ min: 1, max: 99 })
+  DocumentTypeCode?: number;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'TeamMember' }] })
   TeamMembers: MongooseSchema.Types.ObjectId[];

@@ -27,8 +27,11 @@ export class ConductHaccp extends Document {
   })
   UserDepartment: MongooseSchema.Types.ObjectId;
 
-  @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
+  @Prop({ required: true })
   DocumentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  DocumentTypeCode?: number;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,

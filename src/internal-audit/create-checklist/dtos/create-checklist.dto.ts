@@ -5,7 +5,9 @@ import {
   IsMongoId,
   IsArray,
   IsOptional,
-  IsEnum,
+  IsInt,
+  Min,
+  Max,
   ValidateNested,
 } from 'class-validator';
 import { ChecklistQuestionDto } from './checklist-question.dto';
@@ -21,9 +23,20 @@ export class CreateChecklistDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
+  @ApiProperty({
+    description: 'Custom or legacy document type title for this checklist',
+  })
+  @IsString()
   DocumentType: string;
+
+  @ApiPropertyOptional({
+    description: 'Numeric type code from custom document type (1–99)',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  DocumentTypeCode?: number;
 
   @ApiProperty({ description: 'Primary department for document ID generation' })
   @IsMongoId()

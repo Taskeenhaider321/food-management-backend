@@ -12,6 +12,7 @@ import {
   Header,
   StreamableFile,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -21,6 +22,10 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import {
+  isSuperAdminActor,
+  isSuperStaffActor,
+} from '../../auth/utils/request-actor.util';
 import { DepartmentService } from './department.service';
 import { CreateDepartmentDto } from './dtos/create-department.dto';
 import { UpdateDepartmentDto } from './dtos/update-department.dto';
@@ -30,7 +35,7 @@ type RequestCompanyRef = {
 };
 
 type DepartmentRequestUser = {
-  companyId: RequestCompanyRef;
+  companyId?: RequestCompanyRef | string | null;
   [key: string]: unknown;
 };
 
@@ -38,21 +43,43 @@ type DepartmentRequest = {
   user: DepartmentRequestUser;
 };
 
-function requestCompanyId(req: DepartmentRequest): string {
-  const company = req.user?.companyId as
+function actorCompanyId(user: DepartmentRequestUser | undefined): string | null {
+  const company = user?.companyId as
     | string
     | { _id?: { toString(): string } | string }
     | null
     | undefined;
-  if (!company) {
-    throw new BadRequestException('Company context is required');
-  }
+  if (!company) return null;
   if (typeof company === 'string') return company;
   const id = company._id;
-  if (!id) {
-    throw new BadRequestException('Company context is required');
-  }
+  if (!id) return null;
   return typeof id === 'string' ? id : id.toString();
+}
+
+/**
+ * Prefer the actor's own company. Super Admin / Super Staff may pass
+ * `companyId` (query or body) to manage any tenant.
+ */
+function requestCompanyId(
+  req: DepartmentRequest,
+  overrideCompanyId?: string,
+): string {
+  const mine = actorCompanyId(req.user);
+  if (mine) return mine;
+
+  const override = String(overrideCompanyId || '').trim();
+  if (override) {
+    if (!isSuperAdminActor(req.user) && !isSuperStaffActor(req.user)) {
+      throw new ForbiddenException(
+        'Only Super Admin can select another company',
+      );
+    }
+    return override;
+  }
+
+  throw new BadRequestException(
+    'Company context is required. Select a company first.',
+  );
 }
 
 @ApiTags('Departments')
@@ -67,7 +94,7 @@ export class DepartmentController {
     @Body() createDepartmentDto: CreateDepartmentDto,
     @Req() req: DepartmentRequest,
   ) {
-    const companyId = requestCompanyId(req);
+    const companyId = requestCompanyId(req, createDepartmentDto.companyId);
 
     return this.departmentService.createBulk(
       createDepartmentDto.departments,
@@ -84,6 +111,12 @@ export class DepartmentController {
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiQuery({ name: 'sortBy', required: false, type: String })
   @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    type: String,
+    description: 'Required for Super Admin (no company on user)',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of all departments',
@@ -96,8 +129,9 @@ export class DepartmentController {
     @Query('status') status?: string,
     @Query('sortBy') sortBy?: string,
     @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('companyId') companyIdQuery?: string,
   ) {
-    const companyId = requestCompanyId(req);
+    const companyId = requestCompanyId(req, companyIdQuery);
 
     const result = await this.departmentService.findAllForUser(companyId, {
       page: page ? Number(page) : undefined,
@@ -114,9 +148,18 @@ export class DepartmentController {
   @Get('analytics')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get department analytics for your company' })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    type: String,
+    description: 'Required for Super Admin (no company on user)',
+  })
   @ApiResponse({ status: HttpStatus.OK, description: 'Department analytics' })
-  async analytics(@Req() req: DepartmentRequest) {
-    const companyId = requestCompanyId(req);
+  async analytics(
+    @Req() req: DepartmentRequest,
+    @Query('companyId') companyIdQuery?: string,
+  ) {
+    const companyId = requestCompanyId(req, companyIdQuery);
     const data = await this.departmentService.analytics(companyId);
     return { status: true, data };
   }
@@ -124,11 +167,18 @@ export class DepartmentController {
   @Get('company')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get departments by company ID' })
-  // @ApiParam({ name: 'companyId', description: 'Company ID' })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    type: String,
+    description: 'Required for Super Admin (no company on user)',
+  })
   @ApiResponse({ status: HttpStatus.OK, description: 'Departments found' })
-  async findByCompany(@Req() req: DepartmentRequest) {
-    const companyId = requestCompanyId(req);
-    // assertActorMayAccessCompany(req.user, companyId);
+  async findByCompany(
+    @Req() req: DepartmentRequest,
+    @Query('companyId') companyIdQuery?: string,
+  ) {
+    const companyId = requestCompanyId(req, companyIdQuery);
     const departments = await this.departmentService.findByCompany(companyId);
     return { status: true, data: departments };
   }
@@ -136,12 +186,20 @@ export class DepartmentController {
   @Get('download-pdf')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Download departments directory PDF' })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    type: String,
+    description: 'Required for Super Admin (no company on user)',
+  })
   @Header('Content-Type', 'application/pdf')
   async downloadDepartmentsPdf(
     @Req() req: DepartmentRequest,
+    @Query('companyId') companyIdQuery?: string,
   ): Promise<StreamableFile> {
+    const companyId = requestCompanyId(req, companyIdQuery);
     const { buffer, fileName } =
-      await this.departmentService.downloadDepartmentsPdf(req.user);
+      await this.departmentService.downloadDepartmentsPdf(req.user, companyId);
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
@@ -156,9 +214,15 @@ export class DepartmentController {
   async downloadDepartmentByIdPdf(
     @Param('id') id: string,
     @Req() req: DepartmentRequest,
+    @Query('companyId') companyIdQuery?: string,
   ): Promise<StreamableFile> {
+    const companyId = requestCompanyId(req, companyIdQuery);
     const { buffer, fileName } =
-      await this.departmentService.downloadDepartmentByIdPdf(id, req.user);
+      await this.departmentService.downloadDepartmentByIdPdf(
+        id,
+        req.user,
+        companyId,
+      );
     return new StreamableFile(buffer, {
       type: 'application/pdf',
       disposition: `attachment; filename="${fileName}"`,
@@ -169,13 +233,23 @@ export class DepartmentController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get department by ID' })
   @ApiParam({ name: 'id', description: 'Department ID' })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    type: String,
+    description: 'Required for Super Admin (no company on user)',
+  })
   @ApiResponse({ status: HttpStatus.OK, description: 'Department found' })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Department not found',
   })
-  async findOne(@Param('id') id: string, @Req() req: DepartmentRequest) {
-    const companyId = requestCompanyId(req);
+  async findOne(
+    @Param('id') id: string,
+    @Req() req: DepartmentRequest,
+    @Query('companyId') companyIdQuery?: string,
+  ) {
+    const companyId = requestCompanyId(req, companyIdQuery);
     return this.departmentService.findOne(id, companyId);
   }
 

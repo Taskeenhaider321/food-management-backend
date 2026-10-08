@@ -1,10 +1,12 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEnum,
   IsOptional,
   IsMongoId,
   ValidateNested,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -87,9 +89,11 @@ export class CreateProductDto {
   @IsNotEmpty()
   departmentId: string;
 
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
+  @IsString()
   @IsNotEmpty()
   DocumentType: string;
+
+  DocumentTypeCode?: number;
 
   @ValidateNested()
   @Type(() => ProductDetailsDto)
@@ -110,7 +114,7 @@ export class UpdateProductDto {
   @IsOptional()
   Department?: string;
 
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
+  @IsString()
   @IsOptional()
   DocumentType?: string;
 

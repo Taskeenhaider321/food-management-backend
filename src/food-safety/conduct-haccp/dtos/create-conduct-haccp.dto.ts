@@ -1,9 +1,12 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEnum,
   IsArray,
   ValidateNested,
+  IsInt,
+  IsOptional,
+  Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { HazardDto } from './hazard.dto';
@@ -19,8 +22,13 @@ export class CreateConductHaccpDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsEnum(['Manuals', 'Procedures', 'SOPs', 'Forms'])
   DocumentType: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  DocumentTypeCode?: number;
 
   @IsString()
   @IsNotEmpty()

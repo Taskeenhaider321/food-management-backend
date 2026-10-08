@@ -30,8 +30,11 @@ export class Processes extends Document {
   @Prop()
   ProcessName?: string;
 
-  @Prop({ required: true, enum: ['Manuals', 'Procedures', 'SOPs', 'Forms'] })
+  @Prop({ required: true })
   DocumentType: string;
+
+  @Prop({ min: 1, max: 99 })
+  DocumentTypeCode?: number;
 
   @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'ProcessDetail' }],

@@ -255,6 +255,7 @@ export class HaccpTeamService {
 
     const createdTeam = new this.haccpTeamModel({
       DocumentType: createDto.DocumentType,
+      DocumentTypeCode: createDto.DocumentTypeCode,
       TeamName: createDto.teamName,
       Department: createDto.Department,
       UserDepartment: userDepartmentId,

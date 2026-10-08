@@ -1,7 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { CREATION_METHODS, DOCUMENT_TYPES } from '../../common/constants';
-import type { CreationMethod, DocumentType } from '../../common/constants';
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CREATION_METHODS } from '../../common/constants';
+import type { CreationMethod } from '../../common/constants';
 
 export class CreateDocumentDto {
   @ApiProperty({ description: 'Document name' })
@@ -9,9 +18,18 @@ export class CreateDocumentDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ enum: DOCUMENT_TYPES })
-  @IsEnum(DOCUMENT_TYPES)
-  documentType: DocumentType;
+  @ApiProperty({ description: 'Custom document type title' })
+  @IsString()
+  @IsNotEmpty()
+  documentType: string;
+
+  @ApiPropertyOptional({ description: 'Numeric DocumentId code' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  documentTypeCode?: number;
 
   @ApiProperty({
     description: 'JSON array (or comma separated list) of department ids',
@@ -36,10 +54,18 @@ export class UpdateDocumentDto {
   @IsString()
   name?: string;
 
-  @ApiPropertyOptional({ enum: DOCUMENT_TYPES })
+  @ApiPropertyOptional({ description: 'Custom document type title' })
   @IsOptional()
-  @IsEnum(DOCUMENT_TYPES)
-  documentType?: DocumentType;
+  @IsString()
+  documentType?: string;
+
+  @ApiPropertyOptional({ description: 'Numeric DocumentId code' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  documentTypeCode?: number;
 
   @ApiPropertyOptional({
     description: 'JSON array (or comma separated list) of department ids',

@@ -66,6 +66,7 @@ export class ListOfFormsService {
       this.listOfFormsModel,
       dto.departments[0],
       dto.documentType,
+      dto.documentTypeCode,
     );
 
     const userName = actorDisplayName(actor);
@@ -75,6 +76,7 @@ export class ListOfFormsService {
       formName: dto.formName,
       description: dto.description,
       documentType: dto.documentType,
+      documentTypeCode: dto.documentTypeCode,
       departments: dto.departments.map((id) => new Types.ObjectId(id)),
       maintenanceFrequency: dto.maintenanceFrequency,
       customSettings: dto.customSettings,
