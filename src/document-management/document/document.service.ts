@@ -233,7 +233,9 @@ export class DocumentService {
 
     document.updatedBy = userName;
 
-    if (trackChanges) {
+    // After rejection/disapproval OR an approved change-request, keep a
+    // snapshot of the previous content and bump revision before re-review.
+    if (trackChanges || wasChangeRequest) {
       document.versions.push({
         ...previous,
         changedFields:
@@ -245,15 +247,7 @@ export class DocumentService {
       document.status = 'In Review';
       document.reason = undefined;
       document.timeline.push({
-        action: 'Resubmitted',
-        status: 'In Review',
-        user: userName,
-        at: new Date(),
-      } as any);
-    } else if (wasChangeRequest) {
-      document.status = 'In Review';
-      document.timeline.push({
-        action: 'Updated',
+        action: trackChanges ? 'Resubmitted' : 'Updated',
         status: 'In Review',
         user: userName,
         at: new Date(),

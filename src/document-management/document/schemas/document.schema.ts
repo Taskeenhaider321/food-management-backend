@@ -16,8 +16,9 @@ import {
 export type DocumentDocument = Document & MongooseDocument;
 
 /**
- * Snapshot of a document before a tracked edit (after a rejection or
- * disapproval), so previous and updated versions stay auditable.
+ * Snapshot of a document before a tracked edit (after rejection,
+ * disapproval, or an approved change-request edit), so previous content
+ * stays auditable against the new revision.
  */
 @Schema({ _id: false })
 export class DocumentVersionEntry {

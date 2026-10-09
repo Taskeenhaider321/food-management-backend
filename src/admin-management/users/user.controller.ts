@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Req,
 } from '@nestjs/common';
 import {
@@ -15,9 +16,11 @@ import {
   ApiOperation,
   ApiResponse,
   ApiParam,
+  ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { Public } from '../../auth/decorators/public.decorator';
+import { AuthenticatedOnly } from '../../auth/decorators/authenticated-only.decorator';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
@@ -119,6 +122,28 @@ export class UserController {
     @Req() req: any,
   ) {
     return this.userService.getUsersByDepartment(departmentId, req.user);
+  }
+
+  @Get('check-email')
+  @AuthenticatedOnly()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Check whether an email is already registered (create forms)',
+  })
+  @ApiQuery({ name: 'email', required: true, type: String })
+  async checkEmail(@Query('email') email: string) {
+    return this.userService.checkEmailAvailable(email);
+  }
+
+  @Get('check-username')
+  @AuthenticatedOnly()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Check whether a username is already taken (create forms)',
+  })
+  @ApiQuery({ name: 'userName', required: true, type: String })
+  async checkUsername(@Query('userName') userName: string) {
+    return this.userService.checkUsernameAvailable(userName);
   }
 
   @Get(':id')
