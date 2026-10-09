@@ -823,6 +823,52 @@ export class UserService {
     return user;
   }
 
+  async checkEmailAvailable(email: string) {
+    const normalized = String(email || '')
+      .trim()
+      .toLowerCase();
+    if (!normalized) {
+      return {
+        status: true,
+        available: false,
+        message: 'Email is required',
+      };
+    }
+    const existing = await this.userModel
+      .findOne({ email: normalized })
+      .select('_id')
+      .lean()
+      .exec();
+    return {
+      status: true,
+      available: !existing,
+      message: existing
+        ? 'User with this email already exists'
+        : 'Email is available',
+    };
+  }
+
+  async checkUsernameAvailable(userName: string) {
+    const normalized = String(userName || '').trim();
+    if (!normalized) {
+      return {
+        status: true,
+        available: false,
+        message: 'Username is required',
+      };
+    }
+    const existing = await this.userModel
+      .findOne({ userName: normalized })
+      .select('_id')
+      .lean()
+      .exec();
+    return {
+      status: true,
+      available: !existing,
+      message: existing ? 'Username already exists' : 'Username is available',
+    };
+  }
+
   async findAll(_actor?: any): Promise<UserDocument[]> {
     if (!_actor) {
       throw new ForbiddenException('Authentication required');

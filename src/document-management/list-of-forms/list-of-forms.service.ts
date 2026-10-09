@@ -187,7 +187,9 @@ export class ListOfFormsService {
 
     form.updatedBy = userName;
 
-    if (trackChanges) {
+    // After rejection/disapproval OR an approved change-request, snapshot
+    // previous form data and bump revision before re-review.
+    if (trackChanges || wasChangeRequest) {
       form.versions.push({
         ...previous,
         changedFields:
@@ -199,15 +201,7 @@ export class ListOfFormsService {
       form.status = 'In Review';
       form.reason = undefined;
       form.timeline.push({
-        action: 'Resubmitted',
-        status: 'In Review',
-        user: userName,
-        at: new Date(),
-      } as any);
-    } else if (wasChangeRequest) {
-      form.status = 'In Review';
-      form.timeline.push({
-        action: 'Updated',
+        action: trackChanges ? 'Resubmitted' : 'Updated',
         status: 'In Review',
         user: userName,
         at: new Date(),
