@@ -140,9 +140,20 @@ export class FormRecordsService {
       throw new NotFoundException('Form record not found');
     }
 
-    response.Status = 'Verified';
+    if (response.Status && response.Status !== 'Pending') {
+      throw new BadRequestException(
+        `This response is already ${response.Status}`,
+      );
+    }
+
+    const decision = verifyDto.decision || 'Verified';
+    response.Status = decision;
     response.VerifiedBy = verifyDto.verifiedBy;
     response.VerificationDate = new Date();
+    if (verifyDto.comment?.trim()) {
+      response.Comment = verifyDto.comment.trim();
+    }
+
     const updated = await this.formRecordsModel.findByIdAndUpdate(
       response._id,
       response,
@@ -150,7 +161,10 @@ export class FormRecordsService {
     );
     return {
       status: true,
-      message: 'Response Verified successfully',
+      message:
+        decision === 'Rejected'
+          ? 'Response disapproved successfully'
+          : 'Response approved successfully',
       data: updated,
     };
   }
