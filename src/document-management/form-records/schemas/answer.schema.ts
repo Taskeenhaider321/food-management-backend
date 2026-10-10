@@ -27,11 +27,13 @@ export class Answer {
   @Prop()
   dropdownAnswer?: string;
 
-  @Prop({ type: Date })
-  timeAnswer?: Date;
+  /** Stored as HH:mm (or free-text time), not a Date — avoids CastError on submit. */
+  @Prop()
+  timeAnswer?: string;
 
-  @Prop({ type: Date })
-  dateAnswer?: Date;
+  /** Stored as YYYY-MM-DD (or free-text date), not a Date — avoids CastError on submit. */
+  @Prop()
+  dateAnswer?: string;
 
   @Prop()
   linearScaleAnswer?: number;

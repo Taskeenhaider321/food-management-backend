@@ -3,10 +3,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { FormRecordsController } from './form-records.controller';
 import { FormRecordsService } from './form-records.service';
 import { FormRecords, FormRecordsSchema } from './schemas/form-records.schema';
+import { FormRecordsHooks } from './hooks/form-records.hooks';
 import {
   ListOfForms,
   ListOfFormsSchema,
 } from '../list-of-forms/schemas/list-of-forms.schema';
+
+FormRecordsHooks(FormRecordsSchema);
 
 @Module({
   imports: [

@@ -3,7 +3,6 @@ import {
   IsString,
   IsNumber,
   IsArray,
-  IsDateString,
   IsMongoId,
 } from 'class-validator';
 
@@ -40,12 +39,12 @@ export class AnswerDto {
   dropdownAnswer?: string;
 
   @IsOptional()
-  @IsDateString()
-  timeAnswer?: Date;
+  @IsString()
+  timeAnswer?: string;
 
   @IsOptional()
-  @IsDateString()
-  dateAnswer?: Date;
+  @IsString()
+  dateAnswer?: string;
 
   @IsOptional()
   @IsNumber()

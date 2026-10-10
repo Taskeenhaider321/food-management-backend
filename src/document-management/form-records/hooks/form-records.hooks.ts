@@ -1,4 +1,4 @@
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Model } from 'mongoose';
 import { FormRecords } from '../schemas/form-records.schema';
 
 export function FormRecordsHooks(schema: any) {
@@ -7,16 +7,23 @@ export function FormRecordsHooks(schema: any) {
 
     if (!doc.isNew || doc.FormRecordId) return;
 
-    const latestRecord = await (doc.constructor as any)
-      .findOne({}, { FormRecordId: 1 })
+    const model = doc.constructor as Model<FormRecords>;
+    const latestRecord = await model
+      .findOne(
+        { FormRecordId: { $exists: true, $nin: [null, ''] } },
+        { FormRecordId: 1 },
+      )
       .sort({ FormRecordId: -1 })
-      .exec();
+      .lean();
 
     let nextNumericPart = 1;
 
     if (latestRecord?.FormRecordId) {
-      const numericPart = parseInt(latestRecord.FormRecordId.slice(2), 10);
-      if (!isNaN(numericPart)) {
+      const numericPart = parseInt(
+        String(latestRecord.FormRecordId).replace(/^FR/i, ''),
+        10,
+      );
+      if (!Number.isNaN(numericPart)) {
         nextNumericPart = numericPart + 1;
       }
     }
