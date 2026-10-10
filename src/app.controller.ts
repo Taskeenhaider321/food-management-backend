@@ -11,4 +11,11 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  /** Public keep-alive / uptime probe — no auth, no DB. */
+  @Public()
+  @Get('health')
+  getHealth() {
+    return this.appService.getHealth();
+  }
 }

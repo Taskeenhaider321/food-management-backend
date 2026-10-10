@@ -19,4 +19,14 @@ describe('AppController', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
   });
+
+  describe('health', () => {
+    it('should return ok status', () => {
+      const result = appController.getHealth();
+      expect(result.status).toBe('ok');
+      expect(result.service).toBe('food-safety-quality-backend');
+      expect(typeof result.timestamp).toBe('string');
+      expect(typeof result.uptime).toBe('number');
+    });
+  });
 });
