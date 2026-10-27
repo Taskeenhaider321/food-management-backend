@@ -49,6 +49,11 @@ import {
   isOwnScopeCompetencyActor,
 } from '../utils/competency-tenant.util';
 import { actorCompanyIdString } from '../../auth/utils/request-actor.util';
+import {
+  normalizeOptionalEmail,
+  resolvePersonName,
+} from '../../admin-management/users/utils/person-name.util';
+import type { PersonRole } from '../../admin-management/users/schemas/user.schema';
 
 @Injectable()
 export class EmployeeService {
@@ -78,11 +83,15 @@ export class EmployeeService {
     const companyId =
       actor?.companyId?._id?.toString() || actor?.companyId?.toString();
 
-    const emailTaken = await this.userModel.findOne({
-      email: user.email.toLowerCase(),
-    });
-    if (emailTaken) {
-      throw new ConflictException('User with this email already exists');
+    const resolvedName = resolvePersonName(user);
+    const normalizedEmail = normalizeOptionalEmail(user.email);
+    if (normalizedEmail) {
+      const emailTaken = await this.userModel.findOne({
+        email: normalizedEmail,
+      });
+      if (emailTaken) {
+        throw new ConflictException('User with this email already exists');
+      }
     }
 
     const requestedTrainingIds = (employee.trainings || [])
@@ -109,20 +118,25 @@ export class EmployeeService {
       }
     }
 
-    const generatedUserName = await this.generateUniqueUserName(user.name);
+    const generatedUserName = await this.generateUniqueUserName(
+      resolvedName.name,
+    );
     const generatedPassword = this.generateRandomPassword();
 
     const data = await this.profileService.withTransaction(async (session) => {
       const u = await this.userService.createUserRecord(
         {
-          name: user.name,
-          email: user.email,
+          name: resolvedName.name,
+          firstName: resolvedName.firstName,
+          lastName: resolvedName.lastName,
+          email: normalizedEmail,
           userName: generatedUserName,
           passwordPlain: generatedPassword,
           ...(user.roleId ? { roleId: user.roleId } : {}),
           roleType: UserRoleType.COMPANY_EMPLOYEE,
           companyId,
           departmentId: user.departmentId,
+          personRoles: ['employee'] as PersonRole[],
         },
         session,
       );
@@ -569,6 +583,7 @@ export class EmployeeService {
       if (p.DOB !== undefined) $set.DOB = new Date(p.DOB);
       if (p.phoneNo !== undefined) $set.phoneNo = p.phoneNo;
       if (p.address !== undefined) $set.address = p.address;
+      if (p.gender !== undefined) $set.gender = p.gender;
       if (p.identity !== undefined) $set.identity = p.identity;
       if (p.qualification !== undefined) $set.qualification = p.qualification;
       if (p.experience !== undefined) $set.experience = p.experience;

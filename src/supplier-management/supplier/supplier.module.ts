@@ -17,6 +17,10 @@ import {
   Profile,
   ProfileSchema,
 } from '../../admin-management/profile/schemas/profile.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../../admin-management/company/schemas/company.schema';
 
 @Module({
   imports: [
@@ -27,6 +31,7 @@ import {
       { name: Department.name, schema: DepartmentSchema },
       { name: User.name, schema: UserSchema },
       { name: Profile.name, schema: ProfileSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
   ],
   controllers: [SupplierController],

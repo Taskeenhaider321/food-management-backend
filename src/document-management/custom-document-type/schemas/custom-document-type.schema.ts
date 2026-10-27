@@ -41,6 +41,9 @@ export class CustomDocumentType {
   @Prop({ default: true })
   isActive: boolean;
 
+  @Prop({ default: false })
+  isDefault?: boolean;
+
   @Prop()
   createdBy?: string;
 }

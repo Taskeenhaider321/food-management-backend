@@ -31,9 +31,20 @@ export class TrainerRolePayloadDto {
 
 /** Trainer user fields (company comes from JWT; no department on create). */
 export class TrainerUserInputDto {
-  @ApiProperty({ example: 'Ali' })
+  @ApiPropertyOptional({ example: 'Ali Khan' })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'Ali' })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Khan' })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
 
   @ApiProperty({ example: 'ali@test.com' })
   @IsEmail()

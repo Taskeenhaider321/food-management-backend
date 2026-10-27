@@ -36,9 +36,20 @@ export function normalizeRoleType(input?: string): UserRoleType {
 
 /** Authentication + RBAC fields only (no profile data). */
 export class UserCoreDto {
-  @ApiProperty({ example: 'Ali' })
+  @ApiPropertyOptional({ example: 'Ali' })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
+
+  @ApiPropertyOptional({ example: 'Ali' })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Khan' })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
 
   @ApiProperty({ example: 'ali@test.com' })
   @IsEmail()

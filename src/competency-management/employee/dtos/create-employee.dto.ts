@@ -38,13 +38,28 @@ export class EmployeeRolePayloadDto {
 }
 
 export class EmployeeUserInputDto {
-  @ApiProperty({ example: 'Ali' })
+  @ApiPropertyOptional({
+    example: 'Ali Khan',
+    description: 'Legacy full name; omit when firstName and lastName are provided',
+  })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
-  @ApiProperty({ example: 'ali@test.com' })
+  @ApiPropertyOptional({ example: 'Ali' })
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @ApiPropertyOptional({ example: 'Khan' })
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @ApiPropertyOptional({ example: 'ali@test.com' })
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   /** Optional in request; generated on backend for employee onboarding. */
   @ApiPropertyOptional({ example: 'ali123' })

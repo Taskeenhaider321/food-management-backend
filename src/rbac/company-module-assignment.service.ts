@@ -391,6 +391,102 @@ export class CompanyModuleAssignmentService implements OnModuleInit {
     return keys;
   }
 
+  /** Master permission _ids in the company ceiling (for derived-module clamps). */
+  async getCompanyPermissionIdCeiling(companyId: string): Promise<Set<string>> {
+    const assignments = await this.listForCompany(companyId);
+    const ids = new Set<string>();
+    for (const a of assignments) {
+      for (const id of a.selectedPermissionIds || []) {
+        if (id) ids.add(String(id));
+      }
+    }
+    return ids;
+  }
+
+  /**
+   * When master seed adds new endpoint permissions, append them to companies
+   * that already have that master module assigned (keeps company-admin ceiling
+   * current without requiring a full Super Admin re-assign).
+   */
+  /**
+   * Ensure companies that already have a module also receive specific
+   * permission keys (e.g. newly shipped create-person) without wiping
+   * intentional exclusions of unrelated actions.
+   */
+  async ensurePermissionKeysOnModuleAssignments(permissionKeys: string[]) {
+    if (!permissionKeys.length) return { updatedAssignments: 0 };
+
+    const perms = await this.masterPermissionModel
+      .find({ key: { $in: permissionKeys }, isActive: true })
+      .select('_id moduleId key')
+      .lean();
+
+    return this.appendNewMasterPermissionsToAssignments(
+      perms.map((p) => ({
+        _id: p._id as Types.ObjectId,
+        moduleId: p.moduleId as Types.ObjectId,
+      })),
+    );
+  }
+
+  async appendNewMasterPermissionsToAssignments(
+    newPermissions: Array<{ _id: Types.ObjectId; moduleId: Types.ObjectId }>,
+  ) {
+    if (!newPermissions.length) return { updatedAssignments: 0 };
+
+    const byModule = new Map<string, Types.ObjectId[]>();
+    for (const p of newPermissions) {
+      const mid = String(p.moduleId);
+      if (!byModule.has(mid)) byModule.set(mid, []);
+      byModule.get(mid)!.push(p._id);
+    }
+
+    let updatedAssignments = 0;
+    const touchedCompanies = new Set<string>();
+
+    for (const [moduleId, permIds] of byModule) {
+      const rows = await this.assignmentModel
+        .find({
+          masterModuleId: new Types.ObjectId(moduleId),
+          isActive: true,
+        })
+        .exec();
+
+      for (const row of rows) {
+        const existing = new Set(
+          (row.selectedPermissionIds || []).map((id) => String(id)),
+        );
+        let dirty = false;
+        for (const pid of permIds) {
+          if (existing.has(String(pid))) continue;
+          row.selectedPermissionIds = [
+            ...(row.selectedPermissionIds || []),
+            pid,
+          ] as any;
+          existing.add(String(pid));
+          dirty = true;
+        }
+        if (dirty) {
+          await row.save();
+          updatedAssignments += 1;
+          touchedCompanies.add(String(row.companyId));
+        }
+      }
+    }
+
+    for (const companyId of touchedCompanies) {
+      await this.accessVersionService.bumpCompany(companyId);
+    }
+
+    if (updatedAssignments) {
+      this.logger.log(
+        `Appended new master permissions to ${updatedAssignments} company module assignment(s)`,
+      );
+    }
+
+    return { updatedAssignments };
+  }
+
   /** Module keys the company may use. */
   async getCompanyModuleKeys(companyId: string): Promise<Set<string>> {
     const assignments = await this.listForCompany(companyId);

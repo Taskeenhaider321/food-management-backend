@@ -38,6 +38,10 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  resolvePersonName,
+} from '../../admin-management/users/utils/person-name.util';
+import type { PersonRole } from '../../admin-management/users/schemas/user.schema';
 
 const AUDITOR_POPULATE = [
   {
@@ -70,6 +74,8 @@ export class InternalAuditorService {
     if (!user.companyId) {
       throw new BadRequestException('user.companyId is required');
     }
+
+    const resolvedName = resolvePersonName(user);
 
     const requestUser = await this.userModel
       .findById(actorUserId)
@@ -141,13 +147,17 @@ export class InternalAuditorService {
     const row = await this.profileService.withTransaction(async (session) => {
       const u = await this.userService.createUserRecord(
         {
-          name: user.name,
+          name: resolvedName.name,
+          firstName: resolvedName.firstName,
+          lastName: resolvedName.lastName,
           email: user.email,
           userName: user.userName,
           passwordPlain: user.password,
-          roleType: 'super-admin',
+          roleType: 'company-user',
           companyId: user.companyId!,
           departmentId: user.departmentId,
+          ...(user.roleId ? { roleId: user.roleId } : {}),
+          personRoles: ['auditor'] as PersonRole[],
         },
         session,
       );
@@ -164,6 +174,7 @@ export class InternalAuditorService {
           ? new Types.ObjectId(user.departmentId)
           : undefined,
         roleInTeam: auditor.roleInTeam,
+        auditorType: auditor.auditorType ?? 'internal',
         experience: auditor.experience,
         skills: auditor.skills ?? [],
         education: auditor.education,
@@ -222,6 +233,8 @@ Food Safety Quality Team`;
 
     const updateData: any = {};
     if (updateDto.roleInTeam) updateData.roleInTeam = updateDto.roleInTeam;
+    if (updateDto.auditorType !== undefined)
+      updateData.auditorType = updateDto.auditorType;
     if (updateDto.experience !== undefined)
       updateData.experience = updateDto.experience;
     if (updateDto.skills) updateData.skills = updateDto.skills;

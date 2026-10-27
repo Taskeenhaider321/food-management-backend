@@ -50,6 +50,9 @@ export class Profile {
   @Prop()
   address?: string;
 
+  @Prop({ enum: ['male', 'female', 'other', 'prefer-not-to-say'] })
+  gender?: string;
+
   @Prop({ type: ProfileIdentity })
   identity?: ProfileIdentity;
 

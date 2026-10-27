@@ -45,6 +45,10 @@ import {
   isOwnScopeCompetencyActor,
 } from '../utils/competency-tenant.util';
 import { actorCompanyIdString } from '../../auth/utils/request-actor.util';
+import {
+  resolvePersonName,
+} from '../../admin-management/users/utils/person-name.util';
+import type { PersonRole } from '../../admin-management/users/schemas/user.schema';
 
 @Injectable()
 export class TrainerService {
@@ -75,6 +79,8 @@ export class TrainerService {
 
     const companyId =
       actor?.companyId?._id?.toString() || actor?.companyId?.toString();
+
+    const resolvedName = resolvePersonName(user);
 
     const emailTaken = await this.userModel.findOne({
       email: user.email.toLowerCase(),
@@ -152,12 +158,16 @@ export class TrainerService {
       async (session) => {
         const u = await this.userService.createUserRecord(
           {
-            name: user.name,
+            name: resolvedName.name,
+            firstName: resolvedName.firstName,
+            lastName: resolvedName.lastName,
             email: user.email,
             userName: user.userName,
             passwordPlain: user.password,
-            roleType: UserRoleType.SUPER_ADMIN,
+            roleType: UserRoleType.COMPANY_TRAINER,
             companyId,
+            ...(user.roleId ? { roleId: user.roleId } : {}),
+            personRoles: ['trainer'] as PersonRole[],
           },
           session,
         );

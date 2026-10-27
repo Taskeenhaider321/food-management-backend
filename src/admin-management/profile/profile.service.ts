@@ -31,6 +31,7 @@ export class ProfileService {
       DOB: dto?.DOB ? new Date(dto.DOB) : undefined,
       phoneNo: dto?.phoneNo,
       address: dto?.address,
+      gender: dto?.gender,
       identity: dto?.identity,
       qualification: dto?.qualification ?? [],
       experience: dto?.experience ?? [],
