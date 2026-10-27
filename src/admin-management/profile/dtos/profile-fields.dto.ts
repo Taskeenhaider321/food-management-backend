@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDateString,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -74,6 +75,13 @@ export class ProfilePayloadDto {
   @IsOptional()
   @IsString()
   address?: string;
+
+  @ApiPropertyOptional({
+    enum: ['male', 'female', 'other', 'prefer-not-to-say'],
+  })
+  @IsOptional()
+  @IsIn(['male', 'female', 'other', 'prefer-not-to-say'])
+  gender?: string;
 
   @ApiPropertyOptional({ type: ProfileIdentityDto })
   @IsOptional()

@@ -22,11 +22,42 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { EmployeeService } from './employee.service';
 import { CreateEmployeeDto } from './dtos/create-employee.dto';
 import { UpdateEmployeeDto } from './dtos/update-employee.dto';
+import { BulkImportEmployeesDto } from './dtos/bulk-import-employees.dto';
+import { CreatePersonDto } from './dtos/create-person.dto';
+import { PeopleService } from './people.service';
 
 @ApiTags('Employees')
 @Controller('employees')
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(
+    private readonly employeeService: EmployeeService,
+    private readonly peopleService: PeopleService,
+  ) {}
+
+  @Post('bulk-import')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Bulk import employees from JSON rows' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Import result' })
+  async bulkImport(
+    @Body() body: BulkImportEmployeesDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.peopleService.bulkImport(body, actor);
+  }
+
+  @Post('create-person')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Create one user/profile with employee, trainer, and/or auditor roles',
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Person created' })
+  async createPerson(
+    @Body() body: CreatePersonDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.peopleService.createPerson(body, actor);
+  }
 
   @Post()
   @ApiBearerAuth()

@@ -1,7 +1,7 @@
 // TEST/hr/supplier/dtos/update-supplier.dto.ts
-import { PartialType, ApiProperty } from '@nestjs/swagger';
+import { PartialType, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CreateSupplierDto } from './create-supplier.dto';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateSupplierDto extends PartialType(CreateSupplierDto) {}
 
@@ -13,6 +13,11 @@ export class ApproveSupplierDto {
   @ApiProperty({ example: 'John Doe' })
   @IsString()
   approvedBy: string;
+
+  @ApiPropertyOptional({ example: 'Approved raw material supply scope' })
+  @IsOptional()
+  @IsString()
+  approvedScope?: string;
 }
 
 export class DisapproveSupplierDto {

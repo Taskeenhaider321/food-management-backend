@@ -29,7 +29,13 @@ import {
 import { CreateSuperAdminDto } from './dtos/create-super-admin.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
-import { User, UserDocument, UserRoleType } from './schemas/user.schema';
+import {
+  PersonRole,
+  User,
+  UserDocument,
+  UserRoleType,
+} from './schemas/user.schema';
+import { normalizeOptionalEmail } from './utils/person-name.util';
 
 @Injectable()
 export class UserService {
@@ -74,15 +80,17 @@ export class UserService {
 
     const savedUser = await superAdmin.save();
 
-    try {
-      await this.emailService.sendRegistrationEmail(
-        savedUser.email,
-        savedUser.name,
-        savedUser.userName,
-        password,
-      );
-    } catch (error) {
-      console.error('Email sending failed:', error);
+    if (savedUser.email) {
+      try {
+        await this.emailService.sendRegistrationEmail(
+          savedUser.email,
+          savedUser.name,
+          savedUser.userName,
+          password,
+        );
+      } catch (error) {
+        console.error('Email sending failed:', error);
+      }
     }
 
     return {
@@ -187,15 +195,17 @@ export class UserService {
         await this.requirePopulatedUser(savedUser._id.toString()),
       );
 
-      try {
-        await this.emailService.sendRegistrationEmail(
-          newUser.email,
-          newUser.name,
-          newUser.userName,
-          u.password,
-        );
-      } catch (error) {
-        console.error('Email sending failed:', error);
+      if (newUser.email) {
+        try {
+          await this.emailService.sendRegistrationEmail(
+            newUser.email,
+            newUser.name,
+            newUser.userName,
+            u.password,
+          );
+        } catch (error) {
+          console.error('Email sending failed:', error);
+        }
       }
     }
 
@@ -209,13 +219,16 @@ export class UserService {
   async createUserRecord(
     params: {
       name: string;
-      email: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
       userName: string;
       passwordPlain: string;
       roleType?: string;
       companyId: string;
       departmentId?: string;
       roleId?: string;
+      personRoles?: PersonRole[];
     },
     session?: ClientSession | null,
   ): Promise<UserDocument> {
@@ -224,6 +237,16 @@ export class UserService {
       .session(session ?? null);
     if (existingUser) {
       throw new ConflictException(`User ${params.userName} already exists`);
+    }
+
+    const normalizedEmail = normalizeOptionalEmail(params.email);
+    if (normalizedEmail) {
+      const emailTaken = await this.userModel
+        .findOne({ email: normalizedEmail })
+        .session(session ?? null);
+      if (emailTaken) {
+        throw new ConflictException('User with this email already exists');
+      }
     }
 
     const company = await this.companyModel
@@ -255,13 +278,16 @@ export class UserService {
 
     const doc = new this.userModel({
       name: params.name,
-      email: params.email,
+      ...(params.firstName ? { firstName: params.firstName } : {}),
+      ...(params.lastName ? { lastName: params.lastName } : {}),
+      ...(normalizedEmail ? { email: normalizedEmail } : {}),
       userName: params.userName,
       password: this.encryptPassword(params.passwordPlain),
       roleType,
       companyId: new Types.ObjectId(params.companyId),
       departmentId: deptId,
       roleId: params.roleId ? new Types.ObjectId(params.roleId) : undefined,
+      personRoles: params.personRoles ?? [],
       isSuspended: false,
     });
 

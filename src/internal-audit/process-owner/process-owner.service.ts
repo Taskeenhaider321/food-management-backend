@@ -16,6 +16,7 @@ import {
 import { EmailService } from '../../email/email.service';
 import { ProfileService } from '../../admin-management/profile/profile.service';
 import { UserService } from '../../admin-management/users/user.service';
+import { resolvePersonName } from '../../admin-management/users/utils/person-name.util';
 import {
   User,
   UserDocument,
@@ -76,10 +77,14 @@ export class ProcessOwnerService {
       throw new BadRequestException('Username already exists!');
     }
 
+    const resolvedName = resolvePersonName(user);
+
     const row = await this.profileService.withTransaction(async (session) => {
       const u = await this.userService.createUserRecord(
         {
-          name: user.name,
+          name: resolvedName.name,
+          firstName: resolvedName.firstName,
+          lastName: resolvedName.lastName,
           email: user.email,
           userName: user.userName,
           passwordPlain: user.password,

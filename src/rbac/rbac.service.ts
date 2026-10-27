@@ -97,6 +97,9 @@ export class RbacService {
   async seedMasterData() {
     const resourceGroupLabels = this.buildResourceGroupLabelMap();
     const moduleMap = new Map<string, MasterModuleDocument>();
+    const existingKeys = new Set(
+      await this.masterPermissionModel.distinct('key'),
+    );
 
     for (const moduleSeed of MASTER_MODULE_SEED) {
       const module = await this.masterModuleModel.findOneAndUpdate(
@@ -141,6 +144,43 @@ export class RbacService {
       );
     }
 
+    const newlyAdded = await this.masterPermissionModel
+      .find({
+        key: { $nin: [...existingKeys] },
+        isActive: true,
+      })
+      .select('_id moduleId key')
+      .lean();
+
+    if (newlyAdded.length) {
+      await this.companyModuleAssignmentService.appendNewMasterPermissionsToAssignments(
+        newlyAdded.map((p) => ({
+          _id: p._id as Types.ObjectId,
+          moduleId: p.moduleId as Types.ObjectId,
+        })),
+      );
+    }
+
+    // Idempotent: companies with Competency already assigned also get
+    // create-person / bulk-import even if those keys were seeded earlier.
+    await this.companyModuleAssignmentService.ensurePermissionKeysOnModuleAssignments(
+      [
+        'EP_POST_EMPLOYEES_CREATE_PERSON',
+        'EP_POST_EMPLOYEES_BULK_IMPORT',
+        // Supplier company-scoped list + catalogue (added after initial ceilings).
+        'EP_GET_SUPPLIERS_COMPANY_COMPANYID',
+        'EP_GET_SUPPLIERS_COMPANY_COMPANYID_APPROVED',
+        'EP_GET_SUPPLIERS_CATALOGUE_CERTIFICATIONS',
+        'EP_PATCH_SUPPLIERS_ID_SUBMIT_REVIEW',
+        'EP_PATCH_SUPPLIERS_ID_RETURN',
+        'EP_PATCH_SUPPLIERS_ID_HOLD',
+        'EP_PATCH_SUPPLIERS_ID_REJECT',
+        'EP_PATCH_SUPPLIERS_ID_EVALUATION',
+        'EP_PATCH_SUPPLIERS_ID_APPROVE',
+        'EP_PATCH_SUPPLIERS_ID_CERTIFICATIONS',
+      ],
+    );
+
     return {
       status: true,
       message: 'Global modules and permissions seeded successfully',
@@ -148,6 +188,7 @@ export class RbacService {
         masterModulesCount: await this.masterModuleModel.countDocuments(),
         masterPermissionsCount:
           await this.masterPermissionModel.countDocuments(),
+        newlyAddedPermissionCount: newlyAdded.length,
       },
     };
   }

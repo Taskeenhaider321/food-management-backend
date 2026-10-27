@@ -12,6 +12,9 @@ export enum UserRoleType {
   COMPANY_EMPLOYEE = 'company-employee',
 }
 
+export const PERSON_ROLE_VALUES = ['employee', 'trainer', 'auditor'] as const;
+export type PersonRole = (typeof PERSON_ROLE_VALUES)[number];
+
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class User {
   @Prop({ type: Types.ObjectId, ref: 'Company' })
@@ -23,8 +26,17 @@ export class User {
   @Prop({ required: true })
   name: string;
 
-  @Prop({ required: true, trim: true, lowercase: true })
-  email: string;
+  @Prop()
+  firstName?: string;
+
+  @Prop()
+  lastName?: string;
+
+  @Prop({ trim: true, lowercase: true })
+  email?: string;
+
+  @Prop({ type: [String], enum: PERSON_ROLE_VALUES, default: [] })
+  personRoles?: PersonRole[];
 
   @Prop({ required: true, unique: true, trim: true })
   userName: string;

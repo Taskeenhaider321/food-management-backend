@@ -133,6 +133,7 @@ export class RbacController {
     @Req() req: any,
   ) {
     const user = req.user;
+    let allowedPermissionIds: Set<string> | undefined;
     if (isCompanyAdminActor(user)) {
       const companyId = actorCompanyIdString(user);
       if (!companyId) {
@@ -142,8 +143,14 @@ export class RbacController {
         companyId,
         dto.selectedPermissionIds,
       );
+      allowedPermissionIds =
+        await this.companyModuleAssignmentService.getCompanyPermissionIdCeiling(
+          companyId,
+        );
     }
-    return this.derivedModuleService.create(dto, req.user?._id?.toString());
+    return this.derivedModuleService.create(dto, req.user?._id?.toString(), {
+      allowedPermissionIds,
+    });
   }
 
   @Get('derived-modules')
@@ -173,6 +180,7 @@ export class RbacController {
     @Body() dto: UpdateDerivedModuleDto,
     @CurrentUser() actor: any,
   ) {
+    let allowedPermissionIds: Set<string> | undefined;
     if (isCompanyAdminActor(actor) && dto.selectedPermissionIds?.length) {
       const companyId = actorCompanyIdString(actor);
       if (!companyId) {
@@ -183,8 +191,12 @@ export class RbacController {
         companyId,
         dto.selectedPermissionIds,
       );
+      allowedPermissionIds =
+        await this.companyModuleAssignmentService.getCompanyPermissionIdCeiling(
+          companyId,
+        );
     }
-    return this.derivedModuleService.update(id, dto);
+    return this.derivedModuleService.update(id, dto, { allowedPermissionIds });
   }
 
   @Delete('derived-modules/:derivedModuleId')

@@ -23,6 +23,12 @@ import {
   UserSchema,
 } from '../../admin-management/users/schemas/user.schema';
 import { Training, TrainingSchema } from '../training/schemas/training.schema';
+import { Trainer, TrainerSchema } from '../trainer/schemas/trainer.schema';
+import {
+  InternalAuditor,
+  InternalAuditorSchema,
+} from '../../internal-audit/internal-auditor/schemas/internal-auditor.schema';
+import { PeopleService } from './people.service';
 
 @Module({
   imports: [
@@ -35,11 +41,13 @@ import { Training, TrainingSchema } from '../training/schemas/training.schema';
       { name: Profile.name, schema: ProfileSchema },
       { name: User.name, schema: UserSchema },
       { name: Training.name, schema: TrainingSchema },
+      { name: Trainer.name, schema: TrainerSchema },
+      { name: InternalAuditor.name, schema: InternalAuditorSchema },
     ]),
     CloudinaryModule,
   ],
   controllers: [EmployeeController],
-  providers: [EmployeeService],
-  exports: [EmployeeService],
+  providers: [EmployeeService, PeopleService],
+  exports: [EmployeeService, PeopleService],
 })
 export class EmployeeModule {}

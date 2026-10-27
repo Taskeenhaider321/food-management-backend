@@ -51,6 +51,11 @@ export class UpdateAuditorDto {
   @IsEnum(['Lead Auditor', 'Staff Auditor'])
   roleInTeam?: string;
 
+  @ApiPropertyOptional({ enum: ['internal', 'external'] })
+  @IsOptional()
+  @IsEnum(['internal', 'external'])
+  auditorType?: 'internal' | 'external';
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

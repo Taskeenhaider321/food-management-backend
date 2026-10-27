@@ -14,6 +14,9 @@ export class InternalAuditor {
   @Prop({ enum: ['Lead Auditor', 'Staff Auditor'], default: 'Staff Auditor' })
   roleInTeam: string;
 
+  @Prop({ enum: ['internal', 'external'], default: 'internal' })
+  auditorType: string;
+
   @Prop()
   experience?: string;
 

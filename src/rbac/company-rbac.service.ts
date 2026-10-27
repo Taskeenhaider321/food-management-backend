@@ -61,7 +61,11 @@ export class DerivedModuleService {
     return { module: masterModule, resources };
   }
 
-  async create(dto: CreateDerivedModuleDto, createdBy?: string) {
+  async create(
+    dto: CreateDerivedModuleDto,
+    createdBy?: string,
+    options?: { allowedPermissionIds?: Set<string> },
+  ) {
     this.ensureObjectId(dto.masterModuleId, 'masterModuleId');
 
     const masterModule = await this.masterModuleModel.findOne({
@@ -75,6 +79,7 @@ export class DerivedModuleService {
     const expandedIds = await this.expandWithImpliedViewPermissionIds(
       masterModule._id,
       dto.selectedPermissionIds,
+      options?.allowedPermissionIds,
     );
 
     const permOids = this.uniqueObjectIds(expandedIds, 'selectedPermissionIds');
@@ -107,7 +112,11 @@ export class DerivedModuleService {
     };
   }
 
-  async update(derivedModuleId: string, dto: UpdateDerivedModuleDto) {
+  async update(
+    derivedModuleId: string,
+    dto: UpdateDerivedModuleDto,
+    options?: { allowedPermissionIds?: Set<string> },
+  ) {
     this.ensureObjectId(derivedModuleId, 'derivedModuleId');
 
     const existing = await this.derivedModuleModel.findById(derivedModuleId);
@@ -128,6 +137,7 @@ export class DerivedModuleService {
       const expandedIds = await this.expandWithImpliedViewPermissionIds(
         existing.masterModuleId,
         dto.selectedPermissionIds,
+        options?.allowedPermissionIds,
       );
       const permOids = this.uniqueObjectIds(
         expandedIds,
@@ -159,9 +169,15 @@ export class DerivedModuleService {
    * Create/Edit/Delete without View leaves users unable to see records they
    * just created. Auto-include view/read for the same module+resource.
    */
+  /**
+   * Auto-include View for resources where Create/Edit/Delete were selected.
+   * When `allowedPermissionIds` is set (company ceiling), only add View keys
+   * that the company was actually granted — never invent ceiling extras.
+   */
   private async expandWithImpliedViewPermissionIds(
     masterModuleId: Types.ObjectId | string,
     selectedPermissionIds: string[],
+    allowedPermissionIds?: Set<string>,
   ): Promise<string[]> {
     const MUTATING = new Set([
       'create',
@@ -211,9 +227,10 @@ export class DerivedModuleService {
 
     const next = new Set(selected);
     for (const p of viewPerms) {
-      if (VIEW.has(String(p.action || '').toLowerCase())) {
-        next.add(String(p._id));
-      }
+      if (!VIEW.has(String(p.action || '').toLowerCase())) continue;
+      const id = String(p._id);
+      if (allowedPermissionIds && !allowedPermissionIds.has(id)) continue;
+      next.add(id);
     }
     return [...next];
   }
