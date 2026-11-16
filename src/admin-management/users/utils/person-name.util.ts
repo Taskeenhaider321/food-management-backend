@@ -27,9 +27,7 @@ export function resolvePersonName(input: PersonNameInput): {
   if (legacy) {
     return { name: legacy };
   }
-  throw new BadRequestException(
-    'Provide name or both firstName and lastName',
-  );
+  throw new BadRequestException('Provide name or both firstName and lastName');
 }
 
 export function normalizeOptionalEmail(

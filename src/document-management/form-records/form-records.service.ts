@@ -33,7 +33,10 @@ export class FormRecordsService {
 
     let next = 1;
     if (latest?.FormRecordId) {
-      const numeric = parseInt(String(latest.FormRecordId).replace(/^FR/i, ''), 10);
+      const numeric = parseInt(
+        String(latest.FormRecordId).replace(/^FR/i, ''),
+        10,
+      );
       if (!Number.isNaN(numeric)) next = numeric + 1;
     }
     return `FR${next.toString().padStart(3, '0')}`;
@@ -73,7 +76,11 @@ export class FormRecordsService {
     try {
       await formRecords.save();
     } catch (err: unknown) {
-      const mongoErr = err as { code?: number; message?: string; name?: string };
+      const mongoErr = err as {
+        code?: number;
+        message?: string;
+        name?: string;
+      };
       this.logger.error(
         `submitResponse failed: ${mongoErr?.message || err}`,
         err instanceof Error ? err.stack : undefined,

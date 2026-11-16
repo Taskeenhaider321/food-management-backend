@@ -140,7 +140,9 @@ export class CustomDocumentTypeService {
   async create(dto: CreateCustomDocumentTypeDto, actor: any) {
     this.assertCompanyAccess(actor, dto.companyId);
 
-    const icon = String(dto.icon || 'file').toLowerCase().trim();
+    const icon = String(dto.icon || 'file')
+      .toLowerCase()
+      .trim();
     if (!ALLOWED_ICONS.has(icon)) {
       throw new BadRequestException(
         `Invalid icon. Allowed: ${[...ALLOWED_ICONS].join(', ')}`,
@@ -158,8 +160,7 @@ export class CustomDocumentTypeService {
         icon,
         scopeKey,
         companyId: new Types.ObjectId(dto.companyId) as any,
-        createdBy:
-          actor?.name || actor?.userName || actor?.email || 'Unknown',
+        createdBy: actor?.name || actor?.userName || actor?.email || 'Unknown',
         isActive: true,
       });
 

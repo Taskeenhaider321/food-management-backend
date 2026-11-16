@@ -59,7 +59,10 @@ export class SupplierController {
     status: HttpStatus.OK,
     description: 'Approved suppliers for company',
   })
-  listApprovedByCompany(@Param('companyId') companyId: string, @Req() req: any) {
+  listApprovedByCompany(
+    @Param('companyId') companyId: string,
+    @Req() req: any,
+  ) {
     return this.supplierService.listApproved(companyId, req.user);
   }
 
@@ -95,7 +98,10 @@ export class SupplierController {
     status: HttpStatus.OK,
     description: 'Supplier disapproved successfully',
   })
-  async disapprove(@Body() disapproveDto: DisapproveSupplierDto, @Req() req: any) {
+  async disapprove(
+    @Body() disapproveDto: DisapproveSupplierDto,
+    @Req() req: any,
+  ) {
     return this.supplierService.disapprove(
       disapproveDto.id,
       disapproveDto.disapprovedBy,

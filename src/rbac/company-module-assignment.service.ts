@@ -423,8 +423,8 @@ export class CompanyModuleAssignmentService implements OnModuleInit {
 
     return this.appendNewMasterPermissionsToAssignments(
       perms.map((p) => ({
-        _id: p._id as Types.ObjectId,
-        moduleId: p.moduleId as Types.ObjectId,
+        _id: p._id,
+        moduleId: p.moduleId,
       })),
     );
   }

@@ -10,7 +10,6 @@ import { randomInt } from 'crypto';
 import { ProfileService } from '../../admin-management/profile/profile.service';
 import { UserService } from '../../admin-management/users/user.service';
 import {
-  PersonRole,
   User,
   UserDocument,
   UserRoleType,
@@ -121,13 +120,12 @@ export class PeopleService {
             phoneNo: row.phoneNo ?? row.profile?.phoneNo,
             address: row.address ?? row.profile?.address,
             DOB: row.dob ?? row.profile?.DOB,
-            identity:
-              row.nationalIdentity?.trim()
-                ? {
-                    type: 'National Identity',
-                    number: row.nationalIdentity.trim(),
-                  }
-                : row.profile?.identity,
+            identity: row.nationalIdentity?.trim()
+              ? {
+                  type: 'National Identity',
+                  number: row.nationalIdentity.trim(),
+                }
+              : row.profile?.identity,
           },
           employee: {
             designation: row.designation,
@@ -141,9 +139,7 @@ export class PeopleService {
         const reason =
           err instanceof Error
             ? err.message
-            : typeof err === 'object' &&
-                err !== null &&
-                'message' in err
+            : typeof err === 'object' && err !== null && 'message' in err
               ? String((err as { message: unknown }).message)
               : 'Import failed';
         failed.push({ index, reason, row });
@@ -204,8 +200,7 @@ export class PeopleService {
       }
     } else {
       userName =
-        userName ||
-        (await this.generateUniqueUserName(resolvedName.name));
+        userName || (await this.generateUniqueUserName(resolvedName.name));
       passwordPlain = passwordPlain || this.generateRandomPassword();
     }
 
@@ -221,7 +216,7 @@ export class PeopleService {
     await this.assertTrainingsBelongToCompany(dto, companyId);
 
     const roleType = this.resolveRoleType(roles);
-    const personRoles = roles as PersonRole[];
+    const personRoles = roles;
 
     const profilePayload = {
       ...dto.profile,
@@ -233,8 +228,7 @@ export class PeopleService {
       ],
     };
 
-    const actorUserId =
-      actor?._id != null ? String(actor._id) : undefined;
+    const actorUserId = actor?._id != null ? String(actor._id) : undefined;
 
     const result = await this.profileService.withTransaction(
       async (session) => {
@@ -244,8 +238,8 @@ export class PeopleService {
             firstName: resolvedName.firstName,
             lastName: resolvedName.lastName,
             email: normalizedEmail,
-            userName: userName!,
-            passwordPlain: passwordPlain!,
+            userName: userName,
+            passwordPlain: passwordPlain,
             roleType,
             companyId,
             departmentId: dto.user.departmentId,
@@ -268,9 +262,7 @@ export class PeopleService {
         if (roles.includes('employee')) {
           const trainings =
             dto.employee?.trainings?.map((t) => ({
-              training: t.training
-                ? new Types.ObjectId(t.training)
-                : undefined,
+              training: t.training ? new Types.ObjectId(t.training) : undefined,
             })) ?? [];
           employeeDoc = await new this.employeeModel({
             profileId: profile._id,
@@ -319,7 +311,7 @@ export class PeopleService {
           auditor: auditorDoc,
           credentials: needsLoginAccount
             ? undefined
-            : { userName: userName!, password: passwordPlain! },
+            : { userName: userName, password: passwordPlain },
         };
       },
     );
@@ -351,9 +343,7 @@ export class PeopleService {
       }
       const dept = await this.departmentModel.findById(row.departmentId).lean();
       if (!dept || String(dept.companyId) !== companyId) {
-        throw new BadRequestException(
-          'Department not found in your company',
-        );
+        throw new BadRequestException('Department not found in your company');
       }
       return row.departmentId;
     }

@@ -16,8 +16,6 @@ import { UserService } from '../admin-management/users/user.service';
 const companyA = '507f1f77bcf86cd799439011';
 const companyB = '507f1f77bcf86cd799439012';
 const roleGlobal = '607f1f77bcf86cd799439011';
-const roleCompanyA = '607f1f77bcf86cd799439012';
-const roleCompanyB = '607f1f77bcf86cd799439013';
 const superAdminRoleId = '607f1f77bcf86cd799439099';
 
 describe('RBAC security levels — four-tier isolation', () => {
@@ -125,13 +123,17 @@ describe('RBAC security levels — four-tier isolation', () => {
           .fn()
           .mockResolvedValue(['FS_VIEW_HACCP']),
       };
-      const companyModules = { listForCompany: jest.fn().mockResolvedValue([]) };
+      const companyModules = {
+        listForCompany: jest.fn().mockResolvedValue([]),
+      };
       const accessVersion = {
         versionForUser: jest.fn().mockResolvedValue('global:1'),
       };
       const masterModuleModel = {
         find: jest.fn().mockReturnValue({
-          sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
+          sort: jest
+            .fn()
+            .mockReturnValue({ lean: jest.fn().mockResolvedValue([]) }),
         }),
       };
       const masterPermissionModel = {
@@ -189,9 +191,9 @@ describe('RBAC security levels — four-tier isolation', () => {
 
     it('System Staff cannot escalate to super-admin via roleType update rule', () => {
       const updates = { roleType: 'super-admin' };
-      expect(['super-admin', 'super-staff'].includes(String(updates.roleType))).toBe(
-        true,
-      );
+      expect(
+        ['super-admin', 'super-staff'].includes(String(updates.roleType)),
+      ).toBe(true);
     });
   });
 

@@ -27,8 +27,7 @@ export const SUPPLIER_RISK_LEVELS = [
   'very_high',
 ] as const;
 
-export type SupplierEvaluationRiskLevel =
-  (typeof SUPPLIER_RISK_LEVELS)[number];
+export type SupplierEvaluationRiskLevel = (typeof SUPPLIER_RISK_LEVELS)[number];
 
 export const SUPPLIER_REVIEW_ACTIONS = [
   'submitted',

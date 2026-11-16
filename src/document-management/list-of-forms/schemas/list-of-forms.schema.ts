@@ -1,10 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document as MongooseDocument, Types } from 'mongoose';
-import {
-  DOCUMENT_STATUSES,
-  DOCUMENT_TYPES,
-  QUESTION_TYPES,
-} from '../../common/constants';
+import { DOCUMENT_STATUSES, QUESTION_TYPES } from '../../common/constants';
 import type {
   DocumentStatus,
   DocumentType,

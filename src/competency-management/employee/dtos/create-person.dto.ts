@@ -105,7 +105,8 @@ export class CreatePersonDto {
   auditor?: InternalAuditorRolePayloadDto;
 
   @ApiPropertyOptional({
-    description: 'HTTPS URL of trainer PDF (stored on profile docs when trainer role)',
+    description:
+      'HTTPS URL of trainer PDF (stored on profile docs when trainer role)',
   })
   @IsOptional()
   @IsString()

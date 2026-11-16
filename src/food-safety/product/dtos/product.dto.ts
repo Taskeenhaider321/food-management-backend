@@ -4,9 +4,6 @@ import {
   IsOptional,
   IsMongoId,
   ValidateNested,
-  IsInt,
-  Min,
-  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 

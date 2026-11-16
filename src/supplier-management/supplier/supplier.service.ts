@@ -75,7 +75,9 @@ export class SupplierService {
     return legacyName?.trim() || 'Supplier';
   }
 
-  private mapCertificationsFromDto(certifications?: SupplierCertificationDto[]) {
+  private mapCertificationsFromDto(
+    certifications?: SupplierCertificationDto[],
+  ) {
     if (!certifications?.length) {
       return [];
     }
@@ -111,7 +113,12 @@ export class SupplierService {
   }
 
   private buildProductList(dto: CreateSupplierDto): string[] {
-    return dto.productServiceOffered ?? dto.products ?? dto.supplier?.productServiceOffered ?? [];
+    return (
+      dto.productServiceOffered ??
+      dto.products ??
+      dto.supplier?.productServiceOffered ??
+      []
+    );
   }
 
   async create(
@@ -144,9 +151,7 @@ export class SupplierService {
     const row = new this.supplierModel({
       supplierName: createSupplierDto.supplierName.trim(),
       companyId: new Types.ObjectId(createSupplierDto.companyId),
-      departmentId: departmentId
-        ? new Types.ObjectId(departmentId)
-        : undefined,
+      departmentId: departmentId ? new Types.ObjectId(departmentId) : undefined,
       supplierType: createSupplierDto.supplierType,
       address: createSupplierDto.address,
       contactNo: createSupplierDto.contactNo ?? [],
@@ -282,10 +287,7 @@ export class SupplierService {
     const suppliers = await this.supplierModel
       .find({
         companyId: new Types.ObjectId(companyId),
-        $or: [
-          { workflowStatus: 'approved' },
-          { approvalStatus: 'approved' },
-        ],
+        $or: [{ workflowStatus: 'approved' }, { approvalStatus: 'approved' }],
       })
       .populate([...supplierPopulate])
       .exec();
@@ -370,13 +372,18 @@ export class SupplierService {
   }
 
   private assertCanApproveSupplier(supplier: SupplierDocument) {
-    if (supplier.criticalIssuesFlag || supplier.evaluation?.criticalIssuesFlag) {
+    if (
+      supplier.criticalIssuesFlag ||
+      supplier.evaluation?.criticalIssuesFlag
+    ) {
       throw new BadRequestException(
         'Supplier cannot be approved while critical issues are flagged.',
       );
     }
 
-    const certCheck = validateCertificationsForApproval(supplier.certifications);
+    const certCheck = validateCertificationsForApproval(
+      supplier.certifications,
+    );
     if (!certCheck.valid) {
       throw new BadRequestException(certCheck.reasons.join(' '));
     }
@@ -535,10 +542,7 @@ export class SupplierService {
     this.assertActorMayAccessSupplier(actor, supplier);
 
     const allowed = ['draft', 'returned', 'on_hold'];
-    if (
-      supplier.workflowStatus &&
-      !allowed.includes(supplier.workflowStatus)
-    ) {
+    if (supplier.workflowStatus && !allowed.includes(supplier.workflowStatus)) {
       throw new BadRequestException(
         `Cannot submit supplier in status "${supplier.workflowStatus}".`,
       );

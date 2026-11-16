@@ -152,10 +152,7 @@ export const SUPPLIER_CERTIFICATION_CATALOGUE: CertificationCatalogueCategory[] 
       items: [
         item('globalgap', 'GLOBALG.A.P. – Good Agricultural Practices'),
         item('globalgap-ifa', 'GLOBALG.A.P. Integrated Farm Assurance (IFA)'),
-        item(
-          'globalgap-pha',
-          'GLOBALG.A.P. Produce Handling Assurance (PHA)',
-        ),
+        item('globalgap-pha', 'GLOBALG.A.P. Produce Handling Assurance (PHA)'),
         item('globalgap-coc', 'GLOBALG.A.P. Chain of Custody'),
         item('leaf-marque', 'LEAF Marque – Sustainable farming'),
         item('red-tractor', 'Red Tractor Assurance – UK agriculture'),

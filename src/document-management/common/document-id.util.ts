@@ -24,12 +24,14 @@ function resolveDocumentTypeCode(
 
   const legacy =
     (DOCUMENT_TYPE_CODES as Record<string, number>)[documentType] ??
-    ({
-      Manuals: 1,
-      Procedures: 2,
-      SOPs: 3,
-      Forms: 4,
-    } as Record<string, number>)[documentType];
+    (
+      {
+        Manuals: 1,
+        Procedures: 2,
+        SOPs: 3,
+        Forms: 4,
+      } as Record<string, number>
+    )[documentType];
 
   if (legacy) return legacy;
 

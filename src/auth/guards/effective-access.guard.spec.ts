@@ -92,12 +92,10 @@ describe('EffectiveAccessGuard — Competency routes', () => {
     masterModuleModel = {
       find: jest.fn().mockReturnValue({
         select: jest.fn().mockReturnValue({
-          lean: jest
-            .fn()
-            .mockResolvedValue([
-              { _id: COMPETENCY_MODULE_ID, key: 'COMPETENCY_MANAGEMENT' },
-              { _id: ADMIN_MODULE_ID, key: 'ADMIN_MANAGEMENT' },
-            ]),
+          lean: jest.fn().mockResolvedValue([
+            { _id: COMPETENCY_MODULE_ID, key: 'COMPETENCY_MANAGEMENT' },
+            { _id: ADMIN_MODULE_ID, key: 'ADMIN_MANAGEMENT' },
+          ]),
         }),
       }),
     };
@@ -227,7 +225,11 @@ describe('EffectiveAccessGuard — Competency routes', () => {
 
     await expect(
       guard.canActivate(
-        mockContext({ roleType: 'super-staff', companyId: null }, 'GET', '/users'),
+        mockContext(
+          { roleType: 'super-staff', companyId: null },
+          'GET',
+          '/users',
+        ),
       ),
     ).rejects.toThrow('Missing required permissions');
   });
@@ -239,7 +241,11 @@ describe('EffectiveAccessGuard — Competency routes', () => {
 
     await expect(
       guard.canActivate(
-        mockContext({ roleType: 'super-staff', companyId: null }, 'GET', '/users'),
+        mockContext(
+          { roleType: 'super-staff', companyId: null },
+          'GET',
+          '/users',
+        ),
       ),
     ).resolves.toBe(true);
   });

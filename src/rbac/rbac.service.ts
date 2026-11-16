@@ -155,8 +155,8 @@ export class RbacService {
     if (newlyAdded.length) {
       await this.companyModuleAssignmentService.appendNewMasterPermissionsToAssignments(
         newlyAdded.map((p) => ({
-          _id: p._id as Types.ObjectId,
-          moduleId: p.moduleId as Types.ObjectId,
+          _id: p._id,
+          moduleId: p.moduleId,
         })),
       );
     }
