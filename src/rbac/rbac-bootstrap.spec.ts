@@ -57,7 +57,11 @@ describe('RbacService.bootstrapRbac', () => {
     );
     masterPermissionModel.findOneAndUpdate.mockResolvedValue({});
     masterModuleModel.find.mockResolvedValue(
-      MASTER_MODULE_SEED.map((m) => ({ _id: moduleId, key: m.key, isActive: true })),
+      MASTER_MODULE_SEED.map((m) => ({
+        _id: moduleId,
+        key: m.key,
+        isActive: true,
+      })),
     );
     roleModel.findOne.mockResolvedValue(null);
     roleModel.create.mockResolvedValue({
@@ -100,7 +104,9 @@ describe('RbacService.bootstrapRbac', () => {
       Promise.resolve({ _id: moduleId, key }),
     );
     masterPermissionModel.findOneAndUpdate.mockResolvedValue({});
-    masterModuleModel.find.mockResolvedValue([{ _id: moduleId, isActive: true }]);
+    masterModuleModel.find.mockResolvedValue([
+      { _id: moduleId, isActive: true },
+    ]);
     roleModel.findOne.mockResolvedValue(existingRole);
 
     const result = await service.bootstrapRbac();
@@ -147,6 +153,10 @@ describe('RbacService.bootstrapRbac', () => {
   });
 });
 
-function moduleIdFor(key: string, oldId: Types.ObjectId, newId: Types.ObjectId) {
+function moduleIdFor(
+  key: string,
+  oldId: Types.ObjectId,
+  newId: Types.ObjectId,
+) {
   return key === MASTER_MODULE_SEED[0].key ? oldId : newId;
 }

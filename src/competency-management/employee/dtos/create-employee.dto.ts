@@ -40,7 +40,8 @@ export class EmployeeRolePayloadDto {
 export class EmployeeUserInputDto {
   @ApiPropertyOptional({
     example: 'Ali Khan',
-    description: 'Legacy full name; omit when firstName and lastName are provided',
+    description:
+      'Legacy full name; omit when firstName and lastName are provided',
   })
   @IsOptional()
   @IsString()

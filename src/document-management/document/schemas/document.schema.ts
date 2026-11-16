@@ -1,13 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document as MongooseDocument, Types } from 'mongoose';
-import {
-  CREATION_METHODS,
-  DOCUMENT_STATUSES,
-} from '../../common/constants';
-import type {
-  CreationMethod,
-  DocumentStatus,
-} from '../../common/constants';
+import { CREATION_METHODS, DOCUMENT_STATUSES } from '../../common/constants';
+import type { CreationMethod, DocumentStatus } from '../../common/constants';
 import {
   TimelineEntry,
   TimelineEntrySchema,

@@ -141,7 +141,10 @@ export class CreateSupplierDto {
   @IsMongoId()
   companyId?: string;
 
-  @ApiPropertyOptional({ type: [String], description: 'Alias for productServiceOffered' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Alias for productServiceOffered',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -190,7 +193,9 @@ export class CreateSupplierDto {
   @IsString()
   createdBy: string;
 
-  @ApiPropertyOptional({ description: 'Legacy path — creates linked user + profile' })
+  @ApiPropertyOptional({
+    description: 'Legacy path — creates linked user + profile',
+  })
   @IsOptional()
   @ValidateNested()
   @Type(() => LegacySupplierUserDto)
@@ -208,7 +213,9 @@ export class CreateSupplierDto {
   @Type(() => SupplierRolePayloadDto)
   supplier?: SupplierRolePayloadDto;
 
-  @ApiPropertyOptional({ description: 'Scope supplier listing by department (legacy)' })
+  @ApiPropertyOptional({
+    description: 'Scope supplier listing by department (legacy)',
+  })
   @IsOptional()
   @IsMongoId()
   departmentId?: string;

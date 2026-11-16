@@ -38,9 +38,7 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
-import {
-  resolvePersonName,
-} from '../../admin-management/users/utils/person-name.util';
+import { resolvePersonName } from '../../admin-management/users/utils/person-name.util';
 import type { PersonRole } from '../../admin-management/users/schemas/user.schema';
 
 const AUDITOR_POPULATE = [

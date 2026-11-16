@@ -264,7 +264,7 @@ describe('UserService.createSuperAdmin — RBAC bootstrap', () => {
       {} as any,
       { sendRegistrationEmail: jest.fn() } as any,
       {} as any,
-      rbacService as any,
+      rbacService,
     );
 
     jest.spyOn(service as any, 'encryptPassword').mockReturnValue('encrypted');

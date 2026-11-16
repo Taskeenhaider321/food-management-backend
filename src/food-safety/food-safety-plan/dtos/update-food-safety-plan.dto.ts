@@ -1,10 +1,4 @@
-import {
-  IsString,
-  IsOptional,
-  IsEnum,
-  IsArray,
-  ValidateNested,
-} from 'class-validator';
+import { IsString, IsOptional, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PlanDto } from './plan.dto';
 

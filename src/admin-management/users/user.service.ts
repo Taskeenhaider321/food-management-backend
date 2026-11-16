@@ -509,7 +509,7 @@ export class UserService {
       .populate('companyId')
       .exec();
 
-    if (!(isSuperAdminActor(_actor))) {
+    if (!isSuperAdminActor(_actor)) {
       // self-only actors get only their own record even if department matches
       if (!isCompanyAdminActor(_actor)) {
         const self = users.find((u) => String(u._id) === String(_actor._id));

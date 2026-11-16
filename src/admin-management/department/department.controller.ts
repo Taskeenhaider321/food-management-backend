@@ -43,7 +43,9 @@ type DepartmentRequest = {
   user: DepartmentRequestUser;
 };
 
-function actorCompanyId(user: DepartmentRequestUser | undefined): string | null {
+function actorCompanyId(
+  user: DepartmentRequestUser | undefined,
+): string | null {
   const company = user?.companyId as
     | string
     | { _id?: { toString(): string } | string }

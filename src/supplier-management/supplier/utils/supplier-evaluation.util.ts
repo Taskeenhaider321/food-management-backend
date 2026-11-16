@@ -38,7 +38,9 @@ export function riskLevelFromWeightedScore(
   return undefined;
 }
 
-export function isCertificationExpired(expiryDate?: Date | string | null): boolean {
+export function isCertificationExpired(
+  expiryDate?: Date | string | null,
+): boolean {
   if (!expiryDate) {
     return true;
   }

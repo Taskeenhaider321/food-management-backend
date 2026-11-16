@@ -52,10 +52,7 @@ export class EmployeeController {
       'Create one user/profile with employee, trainer, and/or auditor roles',
   })
   @ApiResponse({ status: HttpStatus.CREATED, description: 'Person created' })
-  async createPerson(
-    @Body() body: CreatePersonDto,
-    @CurrentUser() actor: any,
-  ) {
+  async createPerson(@Body() body: CreatePersonDto, @CurrentUser() actor: any) {
     return this.peopleService.createPerson(body, actor);
   }
 

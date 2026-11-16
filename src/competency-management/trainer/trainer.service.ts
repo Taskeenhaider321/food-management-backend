@@ -45,9 +45,7 @@ import {
   isOwnScopeCompetencyActor,
 } from '../utils/competency-tenant.util';
 import { actorCompanyIdString } from '../../auth/utils/request-actor.util';
-import {
-  resolvePersonName,
-} from '../../admin-management/users/utils/person-name.util';
+import { resolvePersonName } from '../../admin-management/users/utils/person-name.util';
 import type { PersonRole } from '../../admin-management/users/schemas/user.schema';
 
 @Injectable()

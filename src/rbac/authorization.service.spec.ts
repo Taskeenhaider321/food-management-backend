@@ -34,8 +34,18 @@ describe('AuthorizationService.buildAccessForUser — Super Admin', () => {
     masterModuleModel.find.mockReturnValue({
       sort: jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue([
-          { _id: foodSafetyId, key: 'FOOD_SAFETY', name: 'Food Safety', isActive: true },
-          { _id: adminId, key: 'ADMIN_MANAGEMENT', name: 'Admin Management', isActive: true },
+          {
+            _id: foodSafetyId,
+            key: 'FOOD_SAFETY',
+            name: 'Food Safety',
+            isActive: true,
+          },
+          {
+            _id: adminId,
+            key: 'ADMIN_MANAGEMENT',
+            name: 'Admin Management',
+            isActive: true,
+          },
         ]),
       }),
     });
@@ -63,7 +73,9 @@ describe('AuthorizationService.buildAccessForUser — Super Admin', () => {
       }),
     });
 
-    const access = await service.buildAccessForUser({ roleType: 'super-admin' });
+    const access = await service.buildAccessForUser({
+      roleType: 'super-admin',
+    });
 
     const keys = access.modules.map((m) => m.key);
     expect(keys).toContain('FOOD_SAFETY');
@@ -88,7 +100,9 @@ describe('AuthorizationService.buildAccessForUser — Super Admin', () => {
       }),
     });
 
-    const access = await service.buildAccessForUser({ roleType: 'super-admin' });
+    const access = await service.buildAccessForUser({
+      roleType: 'super-admin',
+    });
     expect(access.modules).toEqual([]);
   });
 
@@ -103,9 +117,7 @@ describe('AuthorizationService.buildAccessForUser — Super Admin', () => {
     });
 
     expect(access.modules).toEqual([]);
-    expect(
-      access.modules.some((m) => m.key === 'FOOD_SAFETY'),
-    ).toBe(false);
+    expect(access.modules.some((m) => m.key === 'FOOD_SAFETY')).toBe(false);
   });
 });
 

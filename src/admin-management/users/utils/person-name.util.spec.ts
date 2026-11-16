@@ -1,13 +1,8 @@
-import {
-  normalizeOptionalEmail,
-  resolvePersonName,
-} from './person-name.util';
+import { normalizeOptionalEmail, resolvePersonName } from './person-name.util';
 
 describe('person-name.util', () => {
   it('builds full name from first + last and keeps split fields', () => {
-    expect(
-      resolvePersonName({ firstName: 'Ali', lastName: 'Khan' }),
-    ).toEqual({
+    expect(resolvePersonName({ firstName: 'Ali', lastName: 'Khan' })).toEqual({
       firstName: 'Ali',
       lastName: 'Khan',
       name: 'Ali Khan',
