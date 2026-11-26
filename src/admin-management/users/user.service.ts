@@ -11,6 +11,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Model, Types } from 'mongoose';
 import * as CryptoJS from 'crypto-js';
+import { createHash, randomBytes } from 'crypto';
 import * as jwt from 'jsonwebtoken';
 import { EmailService } from '../../email/email.service';
 import { AuthorizationService } from '../../rbac/authorization.service';
@@ -29,6 +30,7 @@ import {
 import { CreateSuperAdminDto } from './dtos/create-super-admin.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { UpdateMyProfileDto } from './dtos/update-my-profile.dto';
 import {
   PersonRole,
   User,
@@ -311,6 +313,297 @@ export class UserService {
 
     const data = await this.buildUserPayload(user);
     return { status: true, data };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Password setup invitations (Company Admin onboarding)
+  // ---------------------------------------------------------------------------
+
+  /** Random, unguessable password for accounts that must set their own. */
+  generateUnusablePassword(): string {
+    return randomBytes(24).toString('base64url');
+  }
+
+  private hashSetupToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private passwordSetupTtlHours(): number {
+    const n = Number(process.env.PASSWORD_SETUP_TOKEN_TTL_HOURS);
+    return Number.isFinite(n) && n > 0 ? n : 72;
+  }
+
+  private frontendBaseUrl(): string {
+    const url = (process.env.FRONTEND_URL || '').trim().replace(/\/+$/, '');
+    if (!url) {
+      console.warn(
+        'FRONTEND_URL is not set; invitation links will point to http://localhost:3000',
+      );
+      return 'http://localhost:3000';
+    }
+    return url;
+  }
+
+  /**
+   * Issue a fresh single-use setup token for a user (invalidates any earlier
+   * one) and email the invitation. Returns whether the email was sent.
+   */
+  async sendCompanyAdminInvite(
+    userId: string,
+  ): Promise<{ emailSent: boolean; email?: string; error?: string }> {
+    const user = await this.userModel
+      .findById(userId)
+      .populate('companyId')
+      .exec();
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.email) {
+      return { emailSent: false, error: 'User has no email address' };
+    }
+
+    const token = randomBytes(32).toString('base64url');
+    const ttlHours = this.passwordSetupTtlHours();
+    await this.userModel.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          passwordSetupTokenHash: this.hashSetupToken(token),
+          passwordSetupTokenExpiresAt: new Date(
+            Date.now() + ttlHours * 3600_000,
+          ),
+        },
+      },
+    );
+
+    const base = this.frontendBaseUrl();
+    const company = user.companyId as any;
+    try {
+      await this.emailService.sendCompanyAdminInviteEmail({
+        email: user.email,
+        name: user.name,
+        userName: user.userName,
+        companyName: company?.companyName,
+        setupUrl: `${base}/set-password?token=${encodeURIComponent(token)}`,
+        signInUrl: `${base}/signin?username=${encodeURIComponent(user.userName)}`,
+        websiteUrl: base,
+        expiresInHours: ttlHours,
+      });
+      return { emailSent: true, email: user.email };
+    } catch (error: any) {
+      console.error('Company admin invite email failed:', error);
+      return {
+        emailSent: false,
+        email: user.email,
+        error: error?.message || 'Email delivery failed',
+      };
+    }
+  }
+
+  private async findUserBySetupToken(token: string) {
+    const raw = String(token || '').trim();
+    if (!raw) return null;
+    return this.userModel
+      .findOne({
+        passwordSetupTokenHash: this.hashSetupToken(raw),
+        passwordSetupTokenExpiresAt: { $gt: new Date() },
+      })
+      .select('+passwordSetupTokenHash +passwordSetupTokenExpiresAt')
+      .populate('companyId')
+      .exec();
+  }
+
+  async verifyPasswordSetupToken(token: string) {
+    const user = await this.findUserBySetupToken(token);
+    if (!user) {
+      throw new BadRequestException(
+        'This password setup link is invalid or has expired. Ask your administrator to resend the invitation.',
+      );
+    }
+    const company = user.companyId as any;
+    return {
+      status: true,
+      data: {
+        name: user.name,
+        userName: user.userName,
+        email: user.email,
+        companyName: company?.companyName ?? null,
+      },
+    };
+  }
+
+  async completePasswordSetup(token: string, password: string) {
+    if (typeof password !== 'string' || password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+    const user = await this.findUserBySetupToken(token);
+    if (!user) {
+      throw new BadRequestException(
+        'This password setup link is invalid or has expired. Ask your administrator to resend the invitation.',
+      );
+    }
+    // Single use: the token hash is removed in the same update.
+    const res = await this.userModel.updateOne(
+      { _id: user._id, passwordSetupTokenHash: user.passwordSetupTokenHash },
+      {
+        $set: { password: this.encryptPassword(password) },
+        $unset: { passwordSetupTokenHash: '', passwordSetupTokenExpiresAt: '' },
+      },
+    );
+    if (res.modifiedCount !== 1) {
+      throw new BadRequestException(
+        'This password setup link was already used.',
+      );
+    }
+    return {
+      status: true,
+      message: 'Password set successfully. You can now sign in.',
+      data: { userName: user.userName },
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Self-service profile (/users/me/profile)
+  // The target is always the JWT actor — never an id from the request.
+  // ---------------------------------------------------------------------------
+
+  async getMyProfile(actor: any) {
+    const userId = actorIdString(actor);
+    if (!userId) throw new UnauthorizedException();
+    const user = await this.userModel
+      .findById(userId)
+      .populate('companyId')
+      .populate('departmentId')
+      .populate({ path: 'roleId', select: 'roleName systemRole' })
+      .exec();
+    if (!user) throw new NotFoundException('User not found');
+    return { status: true, data: this.toProfilePayload(user) };
+  }
+
+  async updateMyProfile(actor: any, dto: UpdateMyProfileDto) {
+    const userId = actorIdString(actor);
+    if (!userId) throw new UnauthorizedException();
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException('User not found');
+
+    const trim = (v: unknown) => (typeof v === 'string' ? v.trim() : v);
+    const $set: Record<string, unknown> = {};
+    const $unset: Record<string, ''> = {};
+    for (const key of [
+      'firstName',
+      'lastName',
+      'phone',
+      'bio',
+      'country',
+      'city',
+      'avatarUrl',
+    ] as const) {
+      if (dto[key] !== undefined) $set[key] = trim(dto[key]);
+    }
+
+    if (dto.email !== undefined) {
+      const email = normalizeOptionalEmail(dto.email);
+      if (email && email !== user.email) {
+        const taken = await this.userModel
+          .findOne({ email, _id: { $ne: user._id } })
+          .select('_id')
+          .lean()
+          .exec();
+        if (taken) {
+          throw new ConflictException('User with this email already exists');
+        }
+      }
+      if (email) $set.email = email;
+      else $unset.email = '';
+    }
+
+    // Display name: explicit `name` wins; otherwise rebuild from first/last.
+    const explicitName = typeof dto.name === 'string' ? dto.name.trim() : '';
+    if (explicitName) {
+      $set.name = explicitName;
+    } else if (dto.firstName !== undefined || dto.lastName !== undefined) {
+      const first = String($set.firstName ?? user.firstName ?? '').trim();
+      const last = String($set.lastName ?? user.lastName ?? '').trim();
+      const combined = [first, last].filter(Boolean).join(' ');
+      if (combined) $set.name = combined;
+    }
+
+    const updated = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        Object.keys($unset).length ? { $set, $unset } : { $set },
+        { returnDocument: 'after' },
+      )
+      .populate('companyId')
+      .populate('departmentId')
+      .populate({ path: 'roleId', select: 'roleName systemRole' })
+      .exec();
+    if (!updated) throw new NotFoundException('User not found');
+
+    return {
+      status: true,
+      message: 'Profile updated successfully',
+      data: this.toProfilePayload(updated),
+    };
+  }
+
+  async changeMyPassword(
+    actor: any,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const userId = actorIdString(actor);
+    if (!userId) throw new UnauthorizedException();
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException('User not found');
+
+    const stored = CryptoJS.AES.decrypt(
+      user.password,
+      process.env.PASS_CODE || 'default-secret',
+    ).toString(CryptoJS.enc.Utf8);
+    if (!stored || stored !== currentPassword) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+    if (newPassword === currentPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
+
+    await this.userModel.updateOne(
+      { _id: user._id },
+      {
+        $set: { password: this.encryptPassword(newPassword) },
+        // Any outstanding invitation link must not override the new password.
+        $unset: { passwordSetupTokenHash: '', passwordSetupTokenExpiresAt: '' },
+      },
+    );
+    return { status: true, message: 'Password changed successfully' };
+  }
+
+  private toProfilePayload(user: UserDocument) {
+    const raw: any = user.toObject();
+    const role =
+      raw.roleId && typeof raw.roleId === 'object' ? raw.roleId : null;
+    return {
+      _id: raw._id,
+      name: raw.name,
+      firstName: raw.firstName ?? '',
+      lastName: raw.lastName ?? '',
+      userName: raw.userName,
+      email: raw.email ?? '',
+      phone: raw.phone ?? '',
+      bio: raw.bio ?? '',
+      country: raw.country ?? '',
+      city: raw.city ?? '',
+      avatarUrl: raw.avatarUrl ?? '',
+      roleType: raw.roleType,
+      roleName: role?.roleName ?? null,
+      personRoles: raw.personRoles ?? [],
+      companyId: this.sanitizeCompanyForSession(raw.companyId),
+      departmentId: this.sanitizeDepartmentForSession(raw.departmentId),
+      isSuspended: raw.isSuspended,
+      created_at: raw.created_at,
+      updated_at: raw.updated_at,
+    };
   }
 
   async getUserByCompany(companyId: string, _actor?: any) {
@@ -778,18 +1071,32 @@ export class UserService {
     };
   }
 
-  async changePassword(userId: string, newPassword: string) {
+  async changePassword(userId: string, newPassword: string, actor?: any) {
     if (!userId || !newPassword) {
       throw new BadRequestException('userId and newPassword are required');
     }
 
+    if (actor) {
+      const target = await this.userModel.findById(userId).lean();
+      if (!target) throw new NotFoundException('User not found');
+      assertActorMayAccessUserRecord(actor, target);
+    }
+
     const hashedPassword = this.encryptPassword(newPassword);
 
-    const updatedUser = await this.userModel.findByIdAndUpdate(
-      userId,
-      { password: hashedPassword },
-      { new: true },
-    );
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $set: { password: hashedPassword },
+          $unset: {
+            passwordSetupTokenHash: '',
+            passwordSetupTokenExpiresAt: '',
+          },
+        },
+        { new: true },
+      )
+      .select('-password');
 
     if (!updatedUser) {
       throw new NotFoundException('User not found');

@@ -35,16 +35,19 @@ export class MachineryController {
     status: HttpStatus.CREATED,
     description: 'Machinery created successfully',
   })
-  async create(@Body() createDto: CreateMachineryDto) {
-    return this.service.create(createDto);
+  async create(
+    @Body() createDto: CreateMachineryDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.create(createDto, actor);
   }
 
   @Get('all')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all machinery' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Machinery found' })
-  async findAll() {
-    return this.service.findAll();
+  async findAll(@CurrentUser() actor: any) {
+    return this.service.findAll(actor);
   }
 
   @Get('all/:departmentId')
@@ -52,8 +55,11 @@ export class MachineryController {
   @ApiOperation({ summary: 'Get all machinery by department' })
   @ApiParam({ name: 'departmentId', description: 'Department ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Machinery found' })
-  async findByDepartment(@Param('departmentId') departmentId: string) {
-    return this.service.findByDepartment(departmentId);
+  async findByDepartment(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.findByDepartment(departmentId, actor);
   }
 
   @Get('download-pdf')
@@ -94,8 +100,8 @@ export class MachineryController {
   @ApiOperation({ summary: 'Get machinery by ID' })
   @ApiParam({ name: 'id', description: 'Machinery ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Machinery found' })
-  async findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.findOne(id, actor);
   }
 
   @Patch(':id')
@@ -106,8 +112,23 @@ export class MachineryController {
     status: HttpStatus.OK,
     description: 'Machinery updated successfully',
   })
-  async update(@Param('id') id: string, @Body() updateDto: UpdateMachineryDto) {
-    return this.service.update(id, updateDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateMachineryDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.update(id, updateDto, actor);
+  }
+
+  @Delete('all')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete all machinery' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'All machinery deleted successfully',
+  })
+  async removeAll(@CurrentUser() actor: any) {
+    return this.service.removeAll(actor);
   }
 
   @Delete(':id')
@@ -118,18 +139,7 @@ export class MachineryController {
     status: HttpStatus.OK,
     description: 'Machinery deleted successfully',
   })
-  async remove(@Param('id') id: string) {
-    return this.service.remove(id);
-  }
-
-  @Delete('all')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete all machinery' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'All machinery deleted successfully',
-  })
-  async removeAll() {
-    return this.service.removeAll();
+  async remove(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.remove(id, actor);
   }
 }

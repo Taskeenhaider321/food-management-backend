@@ -107,6 +107,17 @@ export class CompanyController {
     return this.companyService.update(id, dto, req.user);
   }
 
+  @Post(':companyId/resend-admin-invite')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Re-send the Company Admin password setup email (super-admin / system staff)',
+  })
+  @ApiParam({ name: 'companyId', description: 'Company ID' })
+  async resendAdminInvite(@Param('companyId') id: string, @Req() req: any) {
+    return this.companyService.resendAdminInvite(id, req.user);
+  }
+
   @Delete(':companyId')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete company and associated data' })

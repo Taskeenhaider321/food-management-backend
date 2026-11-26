@@ -35,16 +35,19 @@ export class EquipmentController {
     status: HttpStatus.CREATED,
     description: 'Equipment created successfully',
   })
-  async create(@Body() createDto: CreateEquipmentDto) {
-    return this.service.create(createDto);
+  async create(
+    @Body() createDto: CreateEquipmentDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.create(createDto, actor);
   }
 
   @Get('all')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all equipment' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Equipment found' })
-  async findAll() {
-    return this.service.findAll();
+  async findAll(@CurrentUser() actor: any) {
+    return this.service.findAll(actor);
   }
 
   @Get('all/:departmentId')
@@ -52,8 +55,11 @@ export class EquipmentController {
   @ApiOperation({ summary: 'Get all equipment by department' })
   @ApiParam({ name: 'departmentId', description: 'Department ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Equipment found' })
-  async findByDepartment(@Param('departmentId') departmentId: string) {
-    return this.service.findByDepartment(departmentId);
+  async findByDepartment(
+    @Param('departmentId') departmentId: string,
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.findByDepartment(departmentId, actor);
   }
 
   @Get('download-pdf')
@@ -97,8 +103,12 @@ export class EquipmentController {
     status: HttpStatus.OK,
     description: 'Equipment updated successfully',
   })
-  async update(@Param('id') id: string, @Body() updateDto: UpdateEquipmentDto) {
-    return this.service.update(id, updateDto);
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateEquipmentDto,
+    @CurrentUser() actor: any,
+  ) {
+    return this.service.update(id, updateDto, actor);
   }
 
   @Get(':id')
@@ -106,8 +116,19 @@ export class EquipmentController {
   @ApiOperation({ summary: 'Get equipment by ID' })
   @ApiParam({ name: 'id', description: 'Equipment ID' })
   @ApiResponse({ status: HttpStatus.OK, description: 'Equipment found' })
-  async findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.findOne(id, actor);
+  }
+
+  @Delete('all')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete all equipment' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'All equipment deleted successfully',
+  })
+  async removeAll(@CurrentUser() actor: any) {
+    return this.service.removeAll(actor);
   }
 
   @Delete(':id')
@@ -118,18 +139,7 @@ export class EquipmentController {
     status: HttpStatus.OK,
     description: 'Equipment deleted successfully',
   })
-  async remove(@Param('id') id: string) {
-    return this.service.remove(id);
-  }
-
-  @Delete('all')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete all equipment' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'All equipment deleted successfully',
-  })
-  async removeAll() {
-    return this.service.removeAll();
+  async remove(@Param('id') id: string, @CurrentUser() actor: any) {
+    return this.service.remove(id, actor);
   }
 }

@@ -21,6 +21,11 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessMaintenanceRecord,
+  maintenanceCompanyFilter,
+  requireActorCompanyId,
+} from '../common/maintenance-tenant.util';
 
 @Injectable()
 export class EquipmentService {
@@ -32,6 +37,7 @@ export class EquipmentService {
 
   async create(
     createDto: CreateEquipmentDto,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: EquipmentDocument }> {
     const { createdBy, equipmentName, equipmentLocation, Range, callibration } =
       createDto;
@@ -40,6 +46,8 @@ export class EquipmentService {
       throw new BadRequestException('All fields are required.');
     }
 
+    const companyId = requireActorCompanyId(actor, createDto.companyId);
+
     const creationDate = new Date();
     const normalizedCalibration = initializeCalibrationConfig(
       normalizeEquipmentCalibration(callibration),
@@ -47,11 +55,12 @@ export class EquipmentService {
     );
 
     const equipment = new this.equipmentModel({
+      companyId,
       equipmentName,
       equipmentLocation,
       Range,
       callibration: normalizedCalibration,
-      CreatedBy: createdBy,
+      CreatedBy: createdBy || actor?.name || actor?.userName,
       CreationDate: creationDate,
     });
 
@@ -59,13 +68,13 @@ export class EquipmentService {
     return { status: true, message: 'The Equipment is added!', data: saved };
   }
 
-  async findAll(): Promise<{
+  async findAll(actor: any): Promise<{
     status: boolean;
     message: string;
     data: EquipmentDocument[];
   }> {
     const equipment = await this.equipmentModel
-      .find()
+      .find(maintenanceCompanyFilter(actor))
       .sort({ created_at: -1 })
       .exec();
     return {
@@ -77,9 +86,13 @@ export class EquipmentService {
 
   async findByDepartment(
     departmentId: string,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: EquipmentDocument[] }> {
     const equipment = await this.equipmentModel
-      .find({ UserDepartment: departmentId })
+      .find({
+        ...maintenanceCompanyFilter(actor),
+        UserDepartment: departmentId,
+      })
       .populate('UserDepartment')
       .sort({ created_at: -1 })
       .exec();
@@ -93,11 +106,10 @@ export class EquipmentService {
   async update(
     id: string,
     updateDto: UpdateEquipmentDto,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: EquipmentDocument }> {
     const equipment = await this.equipmentModel.findById(id).exec();
-    if (!equipment) {
-      throw new NotFoundException('Equipment not found');
-    }
+    assertActorMayAccessMaintenanceRecord(actor, equipment, 'Equipment');
 
     if (updateDto.equipmentName !== undefined) {
       equipment.equipmentName = updateDto.equipmentName;
@@ -132,24 +144,27 @@ export class EquipmentService {
 
   async findOne(
     id: string,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: EquipmentDocument }> {
     const equipment = await this.equipmentModel.findById(id).exec();
-    if (!equipment) {
-      throw new NotFoundException('Equipment not found');
-    }
+    assertActorMayAccessMaintenanceRecord(actor, equipment, 'Equipment');
     return { status: true, message: 'Equipment found!', data: equipment };
   }
 
-  async remove(id: string): Promise<{ status: boolean; message: string }> {
-    const equipment = await this.equipmentModel.findByIdAndDelete(id).exec();
-    if (!equipment) {
-      throw new NotFoundException('Equipment not found');
-    }
+  async remove(
+    id: string,
+    actor: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const equipment = await this.equipmentModel.findById(id).exec();
+    assertActorMayAccessMaintenanceRecord(actor, equipment, 'Equipment');
+    await this.equipmentModel.deleteOne({ _id: equipment._id }).exec();
     return { status: true, message: 'Equipment successfully deleted!' };
   }
 
-  async removeAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.equipmentModel.deleteMany({}).exec();
+  async removeAll(actor: any): Promise<{ status: boolean; message: string }> {
+    const result = await this.equipmentModel
+      .deleteMany(maintenanceCompanyFilter(actor))
+      .exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('No Equipment found to delete!');
     }
@@ -169,7 +184,7 @@ export class EquipmentService {
 
   async downloadEquipmentPdf(actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data } = await this.findAll();
+    const { data } = await this.findAll(actor);
 
     const pdfBytes = await buildBrandedListPdf({
       company,
@@ -194,7 +209,7 @@ export class EquipmentService {
 
   async downloadEquipmentByIdPdf(id: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: equipment } = await this.findOne(id);
+    const { data: equipment } = await this.findOne(id, actor);
     const row = this.mapEquipmentPdfRow(equipment);
 
     const pdfBytes = await buildBrandedDetailPdf({
