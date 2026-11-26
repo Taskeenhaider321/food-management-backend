@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   forwardRef,
   Inject,
   Injectable,
@@ -17,6 +18,8 @@ import {
   actorCompanyIdString,
   assertActorMayAccessCompany,
   isCompanyAdminActor,
+  isSuperAdminActor,
+  isSuperStaffActor,
 } from '../../auth/utils/request-actor.util';
 import {
   buildBrandedDetailPdf,
@@ -99,9 +102,9 @@ export class CompanyService {
     dto: CreateCompanyDto,
     userId?: string,
   ): Promise<{ status: boolean; message: string; data: any }> {
-    if (!dto.admin?.userName?.trim() || !dto.admin?.password) {
+    if (!dto.admin?.userName?.trim() || !dto.admin?.email?.trim()) {
       throw new BadRequestException(
-        'Company admin username and password are required',
+        'Company admin username and email are required',
       );
     }
 
@@ -136,7 +139,10 @@ export class CompanyService {
               name: admin.name.trim(),
               email: admin.email.trim(),
               userName: adminUserName,
-              passwordPlain: admin.password,
+              // The admin chooses their own password via the emailed setup
+              // link; until then the account has an unusable random password.
+              passwordPlain:
+                admin.password || this.userService.generateUnusablePassword(),
               roleType: 'company-admin',
               companyId: company._id.toString(),
               roleId: admin.roleId,
@@ -186,14 +192,23 @@ export class CompanyService {
       );
     }
 
+    // Invitation email with a single-use password setup link (never the
+    // password itself). Delivery failure must not undo the company.
+    const invite = await this.userService.sendCompanyAdminInvite(
+      adminUser._id.toString(),
+    );
+
     return {
       status: true,
-      message: `Company created successfully. Sign in as company admin with username "${adminUserName}".`,
+      message: invite.emailSent
+        ? `Company created. A password setup link was emailed to ${invite.email}.`
+        : `Company created, but the invitation email could not be sent (${invite.error}). Use "Resend invite" once email is working.`,
       data: {
         company: saved,
         modules: modules?.length
           ? await this.companyModuleAssignmentService.listForCompany(companyId)
           : [],
+        invite: { emailSent: invite.emailSent, email: invite.email },
         admin: {
           _id: adminUser._id,
           userName: adminUser.userName,
@@ -201,6 +216,44 @@ export class CompanyService {
           roleType: adminUser.roleType,
         },
       },
+    };
+  }
+
+  /** Super-admin / system staff: re-send the Company Admin setup link. */
+  async resendAdminInvite(companyId: string, actor: any) {
+    if (!isSuperAdminActor(actor) && !isSuperStaffActor(actor)) {
+      throw new ForbiddenException(
+        'Only system administrators can resend company admin invitations',
+      );
+    }
+    if (!Types.ObjectId.isValid(companyId)) {
+      throw new NotFoundException('Company not found');
+    }
+    const company = await this.companyModel.findById(companyId).lean();
+    if (!company) throw new NotFoundException('Company not found');
+
+    const admin = await this.userModel
+      .findOne({
+        companyId: new Types.ObjectId(companyId),
+        roleType: 'company-admin',
+      })
+      .sort({ created_at: 1 })
+      .lean<{ _id: Types.ObjectId }>();
+    if (!admin) {
+      throw new NotFoundException('No company admin found for this company');
+    }
+
+    const invite = await this.userService.sendCompanyAdminInvite(
+      String(admin._id),
+    );
+    if (!invite.emailSent) {
+      throw new BadRequestException(
+        `Invitation could not be sent: ${invite.error}`,
+      );
+    }
+    return {
+      status: true,
+      message: `A new password setup link was emailed to ${invite.email}. Earlier links no longer work.`,
     };
   }
 

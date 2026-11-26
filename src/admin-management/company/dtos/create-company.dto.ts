@@ -31,10 +31,15 @@ export class CompanyAdminDto {
   @IsNotEmpty()
   userName: string;
 
-  @ApiProperty({ example: 'SecurePass1', minLength: 7 })
+  @ApiPropertyOptional({
+    description:
+      'Deprecated. Leave empty: the admin receives a secure password setup link by email instead.',
+    minLength: 7,
+  })
+  @IsOptional()
   @IsString()
   @MinLength(7)
-  password: string;
+  password?: string;
 
   @ApiPropertyOptional({ description: 'Optional Role _id' })
   @IsOptional()

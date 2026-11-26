@@ -49,6 +49,34 @@ export class EmailService {
     console.log(`Registration email sent to ${email}`);
   }
 
+  /**
+   * Company Admin invitation: contains a single-use password setup link —
+   * never a plain-text password.
+   */
+  async sendCompanyAdminInviteEmail(params: {
+    email: string;
+    name: string;
+    userName: string;
+    companyName?: string;
+    setupUrl: string;
+    signInUrl: string;
+    websiteUrl: string;
+    expiresInHours: number;
+  }): Promise<void> {
+    const html = this.renderTemplate('companyAdminInvite', {
+      ...params,
+      companyName: params.companyName || '',
+    });
+
+    await this.transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: params.email,
+      subject: 'FSQ360 - Set up your Company Admin account',
+      html,
+    });
+    console.log(`Company admin invite email sent to ${params.email}`);
+  }
+
   async sendTrainerRegistrationEmail(
     email: string,
     name: string,

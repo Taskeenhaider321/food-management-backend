@@ -22,6 +22,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import axios from 'axios';
 
+import { assertAssetBelongsToUserCompany } from '../common/maintenance-tenant.util';
+
 @Injectable()
 export class CalibrationRecordService {
   constructor(
@@ -162,6 +164,7 @@ export class CalibrationRecordService {
 
     const user = await this.userModel.findById(dto.userId);
     if (!user) throw new NotFoundException('User not found');
+    assertAssetBelongsToUserCompany(equipment, user, 'Equipment');
 
     const company = dto.companyId
       ? await this.companyModel.findById(dto.companyId)

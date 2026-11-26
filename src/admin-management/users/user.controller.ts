@@ -29,6 +29,11 @@ import { ChangePasswordBodyDto } from './dtos/change-password-body.dto';
 import { AssignUserRoleDto } from './dtos/assign-user-role.dto';
 import { CreateSuperAdminDto } from './dtos/create-super-admin.dto';
 import { SuspendUserDto } from './dtos/suspend-user.dto';
+import {
+  ChangeMyPasswordDto,
+  UpdateMyProfileDto,
+} from './dtos/update-my-profile.dto';
+import { CompletePasswordSetupDto } from './dtos/password-setup.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -54,6 +59,25 @@ export class UserController {
   })
   async userLogin(@Body() loginDto: LoginUserDto) {
     return this.userService.userLogin(loginDto);
+  }
+
+  @Public()
+  @Get('password-setup/verify')
+  @ApiOperation({
+    summary: 'Validate a password setup (invitation) token — public',
+  })
+  @ApiQuery({ name: 'token', required: true, type: String })
+  async verifyPasswordSetup(@Query('token') token: string) {
+    return this.userService.verifyPasswordSetupToken(token);
+  }
+
+  @Public()
+  @Post('password-setup')
+  @ApiOperation({
+    summary: 'Set password using a single-use invitation token — public',
+  })
+  async completePasswordSetup(@Body() dto: CompletePasswordSetupDto) {
+    return this.userService.completePasswordSetup(dto.token, dto.password);
   }
 
   @Post()
@@ -146,6 +170,41 @@ export class UserController {
     return this.userService.checkUsernameAvailable(userName);
   }
 
+  @Get('me/profile')
+  @AuthenticatedOnly()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Logged-in user's own profile (always resolved from the JWT)",
+  })
+  async getMyProfile(@Req() req: any) {
+    return this.userService.getMyProfile(req.user);
+  }
+
+  @Patch('me/profile')
+  @AuthenticatedOnly()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      "Update the logged-in user's own profile (name, email, phone, bio, location only)",
+  })
+  async updateMyProfile(@Body() body: UpdateMyProfileDto, @Req() req: any) {
+    return this.userService.updateMyProfile(req.user, body);
+  }
+
+  @Post('me/change-password')
+  @AuthenticatedOnly()
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Change your own password (requires the current password)',
+  })
+  async changeMyPassword(@Body() body: ChangeMyPasswordDto, @Req() req: any) {
+    return this.userService.changeMyPassword(
+      req.user,
+      body.currentPassword,
+      body.newPassword,
+    );
+  }
+
   @Get(':id')
   @ApiBearerAuth()
   @ApiOperation({
@@ -203,15 +262,17 @@ export class UserController {
     return this.userService.suspendUser(id, body.suspended, req.user);
   }
 
-  @Public()
+  // Was @Public(), which let anyone reset any user's password by id.
   @Patch(':id/change-password')
-  @ApiOperation({ summary: 'Change password' })
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Admin: set a user's password (tenant-scoped)" })
   @ApiParam({ name: 'id', description: 'User _id' })
   async changePassword(
     @Param('id') id: string,
     @Body() body: ChangePasswordBodyDto,
+    @Req() req: any,
   ) {
-    return this.userService.changePassword(id, body.password);
+    return this.userService.changePassword(id, body.password, req.user);
   }
 
   @Patch(':id/reassign-access')

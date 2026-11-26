@@ -35,6 +35,23 @@ export class User {
   @Prop({ trim: true, lowercase: true })
   email?: string;
 
+  /** Self-service profile fields (editable by the user on /profile). */
+  @Prop({ trim: true })
+  phone?: string;
+
+  @Prop({ trim: true })
+  bio?: string;
+
+  @Prop({ trim: true })
+  country?: string;
+
+  @Prop({ trim: true })
+  city?: string;
+
+  /** Profile photo (HTTPS URL from the upload service). */
+  @Prop({ trim: true })
+  avatarUrl?: string;
+
   @Prop({ type: [String], enum: PERSON_ROLE_VALUES, default: [] })
   personRoles?: PersonRole[];
 
@@ -62,6 +79,16 @@ export class User {
 
   @Prop({ default: false })
   isSuspended: boolean;
+
+  /**
+   * Password-setup invitation (Company Admin onboarding). Only a SHA-256 hash
+   * of the emailed token is stored; hidden from queries by default.
+   */
+  @Prop({ select: false, index: true, sparse: true })
+  passwordSetupTokenHash?: string;
+
+  @Prop({ select: false })
+  passwordSetupTokenExpiresAt?: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

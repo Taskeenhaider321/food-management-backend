@@ -15,6 +15,12 @@ import {
   resolveActorCompany,
   safePdfFileName,
 } from '../../common/branded-pdf.util';
+import {
+  assertActorMayAccessMaintenanceRecord,
+  assertDepartmentInCompany,
+  maintenanceCompanyFilter,
+  requireActorCompanyId,
+} from '../common/maintenance-tenant.util';
 
 function formatMaintenanceFrequency(freq: unknown): string {
   if (!freq) return '---';
@@ -37,6 +43,7 @@ export class MachineryService {
 
   async create(
     createDto: CreateMachineryDto,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: MachineryDocument }> {
     const {
       departmentId,
@@ -46,13 +53,14 @@ export class MachineryService {
       maintenanceFrequency,
     } = createDto;
 
+    const companyId = requireActorCompanyId(actor, createDto.companyId);
+
     if (departmentId) {
-      const department = await this.departmentModel
-        .findById(departmentId)
-        .exec();
-      if (!department) {
-        throw new NotFoundException('Department not found');
-      }
+      await assertDepartmentInCompany(
+        this.departmentModel,
+        departmentId,
+        companyId,
+      );
     }
 
     const creationDate = new Date();
@@ -63,10 +71,11 @@ export class MachineryService {
 
     const machinery = new this.machineryModel({
       machineName,
+      companyId,
       ...(departmentId ? { UserDepartment: departmentId } : {}),
       machinaryLocation,
       maintenanceFrequency,
-      CreatedBy: createdBy,
+      CreatedBy: createdBy || actor?.name || actor?.userName,
       CreationDate: creationDate,
       nextMaintenanceDueDate,
     });
@@ -78,11 +87,10 @@ export class MachineryService {
   async update(
     id: string,
     updateDto: UpdateMachineryDto,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: MachineryDocument }> {
     const machinery = await this.machineryModel.findById(id).exec();
-    if (!machinery) {
-      throw new NotFoundException('Machinery not found');
-    }
+    assertActorMayAccessMaintenanceRecord(actor, machinery, 'Machinery');
 
     if (updateDto.machineName !== undefined) {
       machinery.machineName = updateDto.machineName;
@@ -119,13 +127,13 @@ export class MachineryService {
     };
   }
 
-  async findAll(): Promise<{
+  async findAll(actor: any): Promise<{
     status: boolean;
     message: string;
     data: MachineryDocument[];
   }> {
     const machinery = await this.machineryModel
-      .find()
+      .find(maintenanceCompanyFilter(actor))
       .sort({ created_at: -1 })
       .exec();
     return {
@@ -137,9 +145,13 @@ export class MachineryService {
 
   async findByDepartment(
     departmentId: string,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: MachineryDocument[] }> {
     const machinery = await this.machineryModel
-      .find({ UserDepartment: departmentId })
+      .find({
+        ...maintenanceCompanyFilter(actor),
+        UserDepartment: departmentId,
+      })
       .populate('UserDepartment')
       .sort({ created_at: -1 })
       .exec();
@@ -152,24 +164,27 @@ export class MachineryService {
 
   async findOne(
     id: string,
+    actor: any,
   ): Promise<{ status: boolean; message: string; data: MachineryDocument }> {
     const machinery = await this.machineryModel.findById(id).exec();
-    if (!machinery) {
-      throw new NotFoundException('Machinery not found');
-    }
+    assertActorMayAccessMaintenanceRecord(actor, machinery, 'Machinery');
     return { status: true, message: 'Machinery found', data: machinery };
   }
 
-  async remove(id: string): Promise<{ status: boolean; message: string }> {
-    const machinery = await this.machineryModel.findByIdAndDelete(id).exec();
-    if (!machinery) {
-      throw new NotFoundException('Machinery not found');
-    }
+  async remove(
+    id: string,
+    actor: any,
+  ): Promise<{ status: boolean; message: string }> {
+    const machinery = await this.machineryModel.findById(id).exec();
+    assertActorMayAccessMaintenanceRecord(actor, machinery, 'Machinery');
+    await this.machineryModel.deleteOne({ _id: machinery._id }).exec();
     return { status: true, message: 'Machinery deleted successfully' };
   }
 
-  async removeAll(): Promise<{ status: boolean; message: string }> {
-    const result = await this.machineryModel.deleteMany({}).exec();
+  async removeAll(actor: any): Promise<{ status: boolean; message: string }> {
+    const result = await this.machineryModel
+      .deleteMany(maintenanceCompanyFilter(actor))
+      .exec();
     if (result.deletedCount === 0) {
       throw new NotFoundException('No machinery found to delete!');
     }
@@ -191,7 +206,7 @@ export class MachineryService {
 
   async downloadMachineryPdf(actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data } = await this.findAll();
+    const { data } = await this.findAll(actor);
 
     const pdfBytes = await buildBrandedListPdf({
       company,
@@ -218,7 +233,7 @@ export class MachineryService {
 
   async downloadMachineryByIdPdf(id: string, actor: any) {
     const company = await resolveActorCompany(this.companyModel, actor);
-    const { data: machinery } = await this.findOne(id);
+    const { data: machinery } = await this.findOne(id, actor);
     const row = this.mapMachineryPdfRow(machinery);
 
     const pdfBytes = await buildBrandedDetailPdf({

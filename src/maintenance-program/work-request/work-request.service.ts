@@ -32,6 +32,8 @@ import {
   safePdfFileName,
 } from '../../common/branded-pdf.util';
 
+import { assertAssetBelongsToUserCompany } from '../common/maintenance-tenant.util';
+
 @Injectable()
 export class WorkRequestService {
   constructor(
@@ -92,17 +94,19 @@ export class WorkRequestService {
       );
     }
 
+    const user = await this.userModel.findById(dto.userId);
+    if (!user) throw new NotFoundException('User not found');
+
     if (dto.MachineId) {
       const machinery = await this.machineryModel.findById(dto.MachineId);
       if (!machinery) throw new NotFoundException('Machinery not found.');
+      assertAssetBelongsToUserCompany(machinery, user, 'Machinery');
     }
     if (dto.EquipmentId) {
       const equipment = await this.equipmentModel.findById(dto.EquipmentId);
       if (!equipment) throw new NotFoundException('Equipment not found.');
+      assertAssetBelongsToUserCompany(equipment, user, 'Equipment');
     }
-
-    const user = await this.userModel.findById(dto.userId);
-    if (!user) throw new NotFoundException('User not found');
 
     const inferredDepartmentId = dto.departmentId || (user as any).departmentId;
 
@@ -431,9 +435,21 @@ export class WorkRequestService {
       (mwr as any).Department = dto.departmentId;
     }
 
+    // Company of the asset currently linked to this request; a replacement
+    // machine/equipment must come from the same company.
+    const currentAsset: any = (mwr as any).Machinery
+      ? await this.machineryModel.findById((mwr as any).Machinery).lean()
+      : (mwr as any).Equipment
+        ? await this.equipmentModel.findById((mwr as any).Equipment).lean()
+        : null;
+    const currentCompany = currentAsset
+      ? { companyId: currentAsset.companyId }
+      : null;
+
     if (dto.MachineId) {
       const machinery = await this.machineryModel.findById(dto.MachineId);
       if (!machinery) throw new NotFoundException('Machinery not found.');
+      assertAssetBelongsToUserCompany(machinery, currentCompany, 'Machinery');
       (mwr as any).Machinery = dto.MachineId;
       (mwr as any).Equipment = undefined;
     }
@@ -441,6 +457,7 @@ export class WorkRequestService {
     if (dto.EquipmentId) {
       const equipment = await this.equipmentModel.findById(dto.EquipmentId);
       if (!equipment) throw new NotFoundException('Equipment not found.');
+      assertAssetBelongsToUserCompany(equipment, currentCompany, 'Equipment');
       (mwr as any).Equipment = dto.EquipmentId;
       (mwr as any).Machinery = undefined;
     }

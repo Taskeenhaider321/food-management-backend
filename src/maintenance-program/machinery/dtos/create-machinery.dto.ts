@@ -25,6 +25,14 @@ export class CreateMachineryDto {
   @IsString()
   departmentId?: string;
 
+  @ApiPropertyOptional({
+    description:
+      'Company ID (super-admin only; ignored for company users, who always create in their own company)',
+  })
+  @IsOptional()
+  @IsString()
+  companyId?: string;
+
   @ApiProperty()
   @IsString()
   createdBy: string;

@@ -9,6 +9,9 @@ export class Machinery {
   @Prop({ unique: true })
   machineCode: string;
 
+  @Prop({ type: Types.ObjectId, ref: 'Company', index: true })
+  companyId: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'Department' })
   UserDepartment: Types.ObjectId;
 

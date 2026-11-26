@@ -20,6 +20,8 @@ import {
 } from '../common/maintenance-verification.util';
 import { v2 as cloudinary } from 'cloudinary';
 
+import { assertAssetBelongsToUserCompany } from '../common/maintenance-tenant.util';
+
 @Injectable()
 export class PreventiveMaintenanceService {
   constructor(
@@ -82,6 +84,7 @@ export class PreventiveMaintenanceService {
 
     const user = await this.userModel.findById(dto.userId);
     if (!user) throw new NotFoundException('User not found');
+    assertAssetBelongsToUserCompany(machine, user, 'Machine');
 
     const imageUrls = this.parseUrlList(dto.imageUrls);
     if (imageFile) {
